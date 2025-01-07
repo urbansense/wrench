@@ -1,0 +1,15 @@
+__pycache__/
+.teleclass_cache*/
+*.json
+.pylintrc
+*.egg-info
+dist/
+
+.pytest_cache/
+.trunk
+
+poetry.lock
+pyproject.toml
+.python-version
+
+/*.py
