@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from abc import ABC, abstractmethod
+
 model_config = ConfigDict(
     alias_generator=to_camel,
     populate_by_name=True,
@@ -39,15 +41,26 @@ class Datastream(FrostBase):
     )
 
 
+class GenericLocation(ABC, FrostBase):
+    encoding_type: str
+
+    @abstractmethod
+    def get_coordinates(self) -> Tuple[float, float]:
+        pass
+
+
 class GeoPoint(BaseModel):
     """Represents a GeoJSON Point Geometry"""
+
     type: str = "Point"
     coordinates: Tuple[float, float]  # longitude, latitude
 
 
-class Location(FrostBase):
-    encoding_type: str
+class Location(GenericLocation):
     location: GeoPoint
+
+    def get_coordinates(self) -> Tuple[float, float]:
+        return self.location.coordinates
 
 
 class Thing(FrostBase):

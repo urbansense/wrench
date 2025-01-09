@@ -1,9 +1,28 @@
 import requests
 
-from models import Thing
+from .models import Thing
+from autoreg_metadata.harvester.base import TranslationService
 
 
-class FrostTranslationService:
+class FrostTranslationService(TranslationService):
+    """
+    FrostTranslationService takes in a LibreTranslate base URL endpoint and can translate incoming SensorThings API Thing Entity into English.
+
+    Attributes:
+        url (str): The base URL endpoint for the LibreTranslate API.
+        source_lang (str): The source language of the text to be translated. Defaults to "auto" if not provided.
+        headers (dict): The headers to be used in the API request.
+
+    Methods:
+        translate(translated_thing: Thing) -> Thing:
+            Translates the given Thing entity into English, including its name, description, properties, and datastreams.
+
+        translate_value(value):
+            Recursively translates values that are strings, lists, or dictionaries.
+
+        translate_text(text: str):
+            Translates the input text from `source_lang` into English by calling the LibreTranslate API Endpoint.
+    """
     """FrostTranslationService takes in a LibreTranslate base URL endpoint and can translate incoming SensorThings API Thing Entity into english"""
 
     def __init__(self, url: str, source_lang):
@@ -12,6 +31,16 @@ class FrostTranslationService:
         self.headers = {"Content-Type": "application/json"}
 
     def translate(self, translated_thing: Thing) -> Thing:
+        """
+        Translates the attributes of a Thing object, including its name, description,
+        properties, and datastreams, into another language or format.
+
+        Args:
+            translated_thing (Thing): The Thing object to be translated.
+
+        Returns:
+            Thing: A new Thing object with translated attributes.
+        """
 
         # translate thing
         translated_thing = translated_thing.model_copy(deep=True)
@@ -57,6 +86,20 @@ class FrostTranslationService:
         return translated_thing
 
     def translate_value(self, value):
+        """
+        Recursively translate values that are strings, lists, or dictionaries.
+
+        Args:
+            value (str, list, dict): The value to be translated. It can be a string,
+                                     a list of values, or a dictionary with string keys
+                                     and values of any type.
+
+        Returns:
+            The translated value. If the input is a string, it returns the translated string.
+            If the input is a list, it returns a list with each item translated.
+            If the input is a dictionary, it returns a dictionary with translated keys and values.
+            If the input is of any other type, it returns the input value unchanged.
+        """
         """Recursively translate values that are strings or lists"""
         if isinstance(value, str):
             return self.translate_text(value)
@@ -70,6 +113,18 @@ class FrostTranslationService:
         return value
 
     def translate_text(self, text: str):
+        """
+        Translates the input text into English by calling the LibreTranslate API Endpoint.
+
+        Args:
+            text (str): The text to be translated.
+
+        Returns:
+            str: The translated text in English.
+
+        Raises:
+            requests.exceptions.RequestException: If there is an issue with the API request.
+        """
         """Translates the input text into english by calling the LibreTranslate API Endpoint"""
         payload = {"q": text, "source": self.source_lang, "target": "en"}
 

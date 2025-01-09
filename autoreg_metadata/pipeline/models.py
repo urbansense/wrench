@@ -1,9 +1,7 @@
 from datetime import datetime
-from typing import List, Set, Tuple, Optional
+from typing import List, Optional, Tuple
 
 from pydantic import BaseModel
-
-from harvester.frost import Thing
 
 
 class TimeFrame(BaseModel):
@@ -23,8 +21,3 @@ class EnrichedMetadata(BaseModel):
     measurements: Optional[List[str]] = None
     language: Optional[str] = None
     author: Optional[str] = None
-
-
-class ClassifiedThing(Thing):
-    classification: Set[str]
-    confidence: float
