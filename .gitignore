@@ -9,7 +9,8 @@ dist/
 .trunk
 
 poetry.lock
-pyproject.toml
 .python-version
 
 /*.py
+
+test_script/

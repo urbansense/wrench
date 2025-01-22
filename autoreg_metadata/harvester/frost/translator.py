@@ -1,7 +1,9 @@
 import requests
 
-from .models import Thing
+from autoreg_metadata.log import logger
 from autoreg_metadata.harvester.base import TranslationService
+
+from .models import Thing
 
 
 class FrostTranslationService(TranslationService):
@@ -23,12 +25,14 @@ class FrostTranslationService(TranslationService):
         translate_text(text: str):
             Translates the input text from `source_lang` into English by calling the LibreTranslate API Endpoint.
     """
+
     """FrostTranslationService takes in a LibreTranslate base URL endpoint and can translate incoming SensorThings API Thing Entity into english"""
 
     def __init__(self, url: str, source_lang):
         self.url = url
         self.source_lang = "auto" if not source_lang else source_lang
         self.headers = {"Content-Type": "application/json"}
+        self.logger = logger.getChild(self.__class__.__name__)
 
     def translate(self, translated_thing: Thing) -> Thing:
         """
@@ -44,6 +48,8 @@ class FrostTranslationService(TranslationService):
 
         # translate thing
         translated_thing = translated_thing.model_copy(deep=True)
+
+        self.logger.info("Starting translation for: %s", translated_thing.name)
 
         translated_thing.name = self.translate_text(translated_thing.name)
         translated_thing.description = self.translate_text(
