@@ -1,14 +1,14 @@
 import requests
 
-from autoreg_metadata.log import logger
 from autoreg_metadata.harvester.base import TranslationService
+from autoreg_metadata.log import logger
 
 from .models import Thing
 
 
-class FrostTranslationService(TranslationService):
+class LibreTranslateService(TranslationService):
     """
-    FrostTranslationService takes in a LibreTranslate base URL endpoint and can translate incoming SensorThings API Thing Entity into English.
+    LibreTranslateService takes in a LibreTranslate base URL endpoint and can translate incoming SensorThings API Thing Entity into English.
 
     Attributes:
         url (str): The base URL endpoint for the LibreTranslate API.
@@ -26,7 +26,7 @@ class FrostTranslationService(TranslationService):
             Translates the input text from `source_lang` into English by calling the LibreTranslate API Endpoint.
     """
 
-    """FrostTranslationService takes in a LibreTranslate base URL endpoint and can translate incoming SensorThings API Thing Entity into english"""
+    """LibreTranslateService takes in a LibreTranslate base URL endpoint and can translate incoming SensorThings API Thing Entity into english"""
 
     def __init__(self, url: str, source_lang):
         self.url = url
@@ -49,11 +49,10 @@ class FrostTranslationService(TranslationService):
         # translate thing
         translated_thing = translated_thing.model_copy(deep=True)
 
-        self.logger.info("Starting translation for: %s", translated_thing.name)
+        self.logger.debug("Starting translation for: %s", translated_thing.name)
 
         translated_thing.name = self.translate_text(translated_thing.name)
-        translated_thing.description = self.translate_text(
-            translated_thing.description)
+        translated_thing.description = self.translate_text(translated_thing.description)
 
         if translated_thing.properties:
             translated_props = {}
@@ -80,8 +79,7 @@ class FrostTranslationService(TranslationService):
                     "description": self.translate_text(ds.description),
                     "unitOfMeasurement": self.translate_value(ds.unit_of_measurement),
                     "properties": (
-                        self.translate_value(
-                            ds.properties) if ds.properties else None
+                        self.translate_value(ds.properties) if ds.properties else None
                     ),
                     "sensor": updated_sensor,
                 }

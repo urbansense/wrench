@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Generic, TypeVar, Any
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
 # Define a generic type for source-specific data
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class TimeFrame(BaseModel):
@@ -20,23 +20,12 @@ class Coordinate(BaseModel):
         return [self.longitude, self.latitude]
 
 
-class EndpointMetadata(BaseModel):
-    endpoint_url: str
-    timeframe: TimeFrame | None = None
-    geographical_extent: tuple[Coordinate, Coordinate] | None = None
-    sensor_types: list[str] | None = None
-    measurements: list[str] | None = None
-    language: str | None = None
-    author: str | None = None
-
-    model_config = {"extra": "allow"}
-
-
 class CommonMetadata(BaseModel, Generic[T]):
     """
     Extensible common metadata format that preserves source-specific information
     while providing standardized fields for common attributes
     """
+
     # required fields
     identifier: str
     title: str

@@ -1,5 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Generic, TypeVar
+
+from pydantic import BaseModel, Field
+
+T = TypeVar("T", bound=BaseModel)
+
+
+class ClassificationResult(BaseModel, Generic[T]):
+    attribute: str = Field(
+        description="Attribute by which the input is classified, examples may be 'size', 'color', 'type' "
+    )
+    classification_result: dict[str, list[T]]
+    # optional only for hierarchical classification
+    parent_classes: dict[str, set[str]] = {}
 
 
 class BaseClassifier(ABC):
@@ -19,7 +32,7 @@ class BaseClassifier(ABC):
         pass
 
     @abstractmethod
-    def classify_documents(self, documents: Any) -> dict[str, list]:
+    def classify_documents(self, documents: Any) -> ClassificationResult:
         """
         Return a dictionary where the keys are strings representing categories
         and the values are lists of items belonging to those categories.

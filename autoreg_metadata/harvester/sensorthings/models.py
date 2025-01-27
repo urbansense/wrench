@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from autoreg_metadata.common.models import CommonMetadata
-
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
@@ -13,17 +11,7 @@ model_config = ConfigDict(
 )
 
 
-class FrostData(BaseModel):
-    sensor_types: list[str] | None = None
-    measurements: list[str] | None = None
-    domains: list[str] | None = None
-
-
-class FrostMetadata(CommonMetadata[FrostData]):
-    pass
-
-
-class FrostBase(BaseModel):
+class SensorThingsBase(BaseModel):
     """Base mixin for common fields for relevant SensorThings API Entities"""
 
     model_config = model_config
@@ -33,15 +21,15 @@ class FrostBase(BaseModel):
     properties: dict[str, Any] | None = None
 
 
-class Sensor(FrostBase):
+class Sensor(SensorThingsBase):
     encoding_type: str
 
 
-class ObservedProperty(FrostBase):
+class ObservedProperty(SensorThingsBase):
     pass
 
 
-class Datastream(FrostBase):
+class Datastream(SensorThingsBase):
     unit_of_measurement: dict
     observed_area: dict | None = None
     phenomenon_time: str | None = None
@@ -52,7 +40,7 @@ class Datastream(FrostBase):
     )
 
 
-class Thing(FrostBase):
+class Thing(SensorThingsBase):
     datastreams: list[Datastream] = Field(alias="Datastreams")
 
     def __str__(self):
@@ -66,7 +54,7 @@ class GeoPoint(BaseModel):
     coordinates: tuple[float, float]  # longitude, latitude
 
 
-class GenericLocation(ABC, FrostBase):
+class GenericLocation(ABC, SensorThingsBase):
     encoding_type: str
 
     @abstractmethod

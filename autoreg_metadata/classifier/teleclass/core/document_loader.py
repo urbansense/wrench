@@ -4,8 +4,8 @@ from typing import Protocol, Union
 
 from pydantic import BaseModel
 
-from autoreg_metadata.classifier.teleclass.core.models.models import DocumentMeta
 from autoreg_metadata.classifier.teleclass.core.embeddings import EmbeddingService
+from autoreg_metadata.classifier.teleclass.core.models.models import DocumentMeta
 
 
 class DocumentLoader(Protocol):
@@ -47,7 +47,7 @@ class JSONDocumentLoader(DocumentLoader):
             DocumentMeta(
                 id=str(idx),
                 content=json.dumps(doc),
-                embeddings=encoder.get_embeddings(json.dumps(doc))
+                embeddings=encoder.get_embeddings(json.dumps(doc)),
             )
             for idx, doc in enumerate(data)
         ]
@@ -65,7 +65,7 @@ class ModelDocumentLoader(DocumentLoader):
             Initializes the ModelDocumentLoader with a list of BaseModel instances.
 
         load(encoder: EmbeddingService) -> list[DocumentMeta]:
-            Loads the documents, encodes their content using the provided encoder, 
+            Loads the documents, encodes their content using the provided encoder,
             and returns a list of DocumentMeta instances.
     """
 
@@ -73,16 +73,16 @@ class ModelDocumentLoader(DocumentLoader):
         if not isinstance(documents, list) or not all(
             isinstance(doc, BaseModel) for doc in documents
         ):
-            raise TypeError(
-                "documents must be a list of pydantic BaseModel instances")
+            raise TypeError("documents must be a list of pydantic BaseModel instances")
         self.documents = documents
 
     def load(self, encoder: EmbeddingService) -> list[DocumentMeta]:
+        print("Loading from model document loader")
         return [
             DocumentMeta(
                 id=str(i),
                 content=doc.model_dump_json(),
-                embeddings=encoder.get_embeddings(doc.model_dump_json())
+                embeddings=encoder.get_embeddings(doc.model_dump_json()),
             )
             for i, doc in enumerate(self.documents)
         ]

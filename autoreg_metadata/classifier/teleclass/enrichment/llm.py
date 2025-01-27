@@ -1,4 +1,3 @@
-import logging
 from typing import Dict, List, Set
 
 import numpy as np
@@ -13,8 +12,7 @@ from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import 
 )
 from autoreg_metadata.classifier.teleclass.core.models.models import DocumentMeta
 from autoreg_metadata.classifier.teleclass.core.taxonomy_manager import TaxonomyManager
-
-logger = logging.getLogger(__name__)
+from autoreg_metadata.log import logger
 
 
 class LLMEnricher:
@@ -22,7 +20,7 @@ class LLMEnricher:
         self.llm = model
         self.taxonomy_manager = taxonomy_manager
         self.prompt = """
-            Generate 10 specific urban sensor use case keywords for the class '{class_name}' which is a subclass of '{parent_class}'.
+            Generate 10 specific urban sensor use case keywords for the class '{class_name}' described as '{class_description}' which is a subclass of '{parent_class}'.
             These keywords should be relevant to '{class_name}' but not to these sibling classes: {siblings}. Be specific and relevant.
             Respond with only the comma-separated terms, no explanations.
             """
@@ -32,6 +30,7 @@ class LLMEnricher:
             node: EnrichedClass(class_name=node, terms=set())
             for node in self.taxonomy_manager.get_all_classes()
         }
+        self.logger = logger.getChild(self.__class__.__name__)
 
     def process(self, collection: List[DocumentMeta]) -> LLMEnrichmentResult:
         """Process generates both terms for each classes, and runs the core class selection for documents"""
@@ -71,8 +70,7 @@ class LLMEnricher:
                 )
                 class_term.embeddings = embeddings
 
-            logger.info("Enriched terms for %s: %s",
-                        node_name, class_term.terms)
+            logger.info("Enriched terms for %s: %s", node_name, class_term.terms)
 
         return self.class_terms
 
@@ -92,14 +90,13 @@ class LLMEnricher:
             logger.info("Generating terms for class: %s", class_name)
 
             response = self.llm.chat(
-                model="llama3.2:3b-instruct-fp16",
+                model="llama3.3:70b-instruct-q4_K_M",
                 messages=[{"role": "user", "content": prompt}],
                 options={"temperature": 0.1},
             )
 
             if not response:
-                logger.warning(
-                    "Empty response from LLM for class: %s", class_name)
+                logger.warning("Empty response from LLM for class: %s", class_name)
                 return set()
 
             terms = response["message"]["content"].strip().split(",")
@@ -108,8 +105,7 @@ class LLMEnricher:
             return set(TermScore(term=term.strip()) for term in terms)
 
         except Exception as e:
-            logger.error("Error generating terms for %s: %s",
-                         class_name, str(e))
+            logger.error("Error generating terms for %s: %s", class_name, str(e))
             return set()
 
     def assign_classes_to_docs(
@@ -126,11 +122,9 @@ class LLMEnricher:
             )
 
             logger.info("Candidates for document %s: %s", doc.id, candidates)
-            core_classes = self._select_core_classes(
-                doc.content, list(candidates))
+            core_classes = self._select_core_classes(doc.content, list(candidates))
             doc.initial_core_classes = set(core_classes)
-            logger.info("Assigned classes for document %s: %s",
-                        doc.id, core_classes)
+            logger.info("Assigned classes for document %s: %s", doc.id, core_classes)
 
         return collection
 
@@ -156,14 +150,13 @@ Important guidelines:
 Return only the selected class names separated by commas, nothing else."""
 
             response = self.llm.chat(
-                model="llama3.2:3b-instruct-fp16",
+                model="llama3.3:70b-instruct-q4_K_M",
                 messages=[{"role": "user", "content": prompt}],
                 options={"temperature": 0.1},
             )
 
             if not response:
-                logger.warning(
-                    "Empty response from LLM for core classes selection")
+                logger.warning("Empty response from LLM for core classes selection")
                 return []
 
             core_classes = response["message"]["content"].strip().split(",")
@@ -196,8 +189,7 @@ Return only the selected class names separated by commas, nothing else."""
 
             # Calculate similarities for current level
             similarities = [
-                (node, self._compute_similarity(
-                    doc_embedding, enriched_classes[node]))
+                (node, self._compute_similarity(doc_embedding, enriched_classes[node]))
                 for node in current_level
             ]
 
@@ -225,8 +217,7 @@ Return only the selected class names separated by commas, nothing else."""
             return 0.0
 
         if not hasattr(enriched_class, "embeddings"):
-            logger.error("Class %s has no embeddings attribute",
-                         enriched_class.terms)
+            logger.error("Class %s has no embeddings attribute", enriched_class.terms)
             return 0.0
 
         if enriched_class.embeddings is None:

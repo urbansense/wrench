@@ -26,7 +26,7 @@ class BaseDataset(BaseModel):
     owner_org: str
     title: str
     # optional with predefined defaults
-    api_url: str = ""
+    url: str | None = None
     author: str = ""
     author_email: str = ""
     end_collection_date: str = ""
@@ -42,6 +42,7 @@ class BaseDataset(BaseModel):
     spatial: str = ""
     state: str = "active"
     tags: list[dict] = []
+    type: str = "dataset"
 
 
 class APIService(BaseDataset):
@@ -55,17 +56,40 @@ class APIService(BaseDataset):
                 "name": "API Service URL",
                 "description": "URL for the API service",
                 "format": "api",
-                "url": self.api_url,
+                "url": self.url,
             }
         ]
 
 
-class DeviceGroup(APIService):
+class DeviceGroup(BaseDataset):
     groups: list[dict] = [{"name": SDDICategory.device.value}]
-    resource: None = None
+    resources: list[dict] = []
 
     @classmethod
-    def from_api_service(cls, api_service: APIService) -> "DeviceGroup":
+    def from_api_service(
+        cls,
+        api_service: APIService,
+        name: str,
+        description: str,
+        tags: list[dict[str, str]],
+        resources: list = None,
+    ) -> "DeviceGroup":
         # Get all fields from api_service except 'groups' and 'resources'
+        ckan_name = name.lower().strip().replace(" ", "_")
         data = api_service.model_dump(exclude={"groups", "resources"})
+        data.update(
+            {
+                "name": ckan_name,
+                "title": name,
+                "notes": description,
+                "tags": tags,
+                "resources": resources or [],
+            }
+        )
         return cls(**data)
+
+
+class Relationship(BaseModel):
+    subject: str
+    object: str
+    type: str

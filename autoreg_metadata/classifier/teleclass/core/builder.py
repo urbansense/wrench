@@ -16,11 +16,11 @@ class TELEClassConfig(BaseModel):
     LLM_HOST: str = "http://localhost:11434"
     DEFAULT_TAXONOMY: set[tuple[str, str]] = set(
         {
-            ("domain", "mobility"),
+            # ("domain", "mobility"),
             # ("domain", "health"),
             # ("domain", "information technology"),
-            ("domain", "energy"),
-            ("domain", "environment"),
+            # ("domain", "energy"),
+            # ("domain", "environment"),
             # ("domain", "trade"),
             # ("domain", "construction"),
             # ("domain", "culture"),
@@ -79,12 +79,10 @@ class TELEClassBuilder:
         )
 
         # Initialize LLM client
-        llm_client = self._custom_llm_client or Client(
-            host=self._config.LLM_HOST)
+        llm_client = self._custom_llm_client or Client(host=self._config.LLM_HOST)
 
         # Initialize enrichers
-        llm_enricher = LLMEnricher(
-            model=llm_client, taxonomy_manager=taxonomy_manager)
+        llm_enricher = LLMEnricher(model=llm_client, taxonomy_manager=taxonomy_manager)
         corpus_enricher = CorpusEnricher(
             model_name=self._config.EMBEDDINGS_MODEL, phrase_extractor="yake"
         )

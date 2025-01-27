@@ -1,35 +1,33 @@
-from .config import FrostConfig
-from typing import Optional
-from pathlib import Path
-import yaml
-from datetime import datetime, timezone
-from typing import Callable, TypeVar
-import requests
 import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Callable, Optional, TypeVar
 
+import requests
+import yaml
 
-from autoreg_metadata.log import logger
-from autoreg_metadata.common.models import Coordinate, CommonMetadata, TimeFrame
+from autoreg_metadata.common.models import CommonMetadata, Coordinate, TimeFrame
 from autoreg_metadata.harvester.base import BaseHarvester
+from autoreg_metadata.log import logger
 
-from .models import FrostBase, GenericLocation, Location, Thing
-from .translator import FrostTranslationService
-
+from .config import SensorThingsConfig
+from .models import GenericLocation, Location, SensorThingsBase, Thing
+from .translator import LibreTranslateService
 
 # Type definitions
-T = TypeVar('T', bound=FrostBase)
+T = TypeVar('T', bound=SensorThingsBase)
 ProcessingFn = Callable[[list[T]], list[T]]
-HarvesterOption = Callable[['FrostHarvester'], None]
+HarvesterOption = Callable[['SensorThingsHarvester'], None]
 
 
-class FrostHarvester(BaseHarvester):
+class SensorThingsHarvester(BaseHarvester):
     """
-    A class to interact with the FROST server and retrieve SensorThings API Entities.
+    A class to interact with the SensorThings server and retrieve SensorThings API Entities.
     """
 
     def __init__(
         self,
-        config: FrostConfig | str | Path,
+        config: SensorThingsConfig | str | Path,
         *options: HarvesterOption,
         location_model: type[GenericLocation] = Location,
     ):
@@ -37,14 +35,14 @@ class FrostHarvester(BaseHarvester):
         if isinstance(config, (str, Path)):
             with open(config, 'r') as f:
                 config_dict = yaml.safe_load(f)
-                config = FrostConfig.model_validate(config_dict)
+                config = SensorThingsConfig.model_validate(config_dict)
 
         self.config = config
         self.logger = logger.getChild(self.__class__.__name__)
 
         # Set up translator if configured
         translator_config = self.config.translator
-        self.translator = FrostTranslationService(
+        self.translator = LibreTranslateService(
             translator_config.url, translator_config.source_lang) if translator_config else None
 
         self.location_model = location_model
@@ -79,7 +77,7 @@ class FrostHarvester(BaseHarvester):
                 description=self.config.description,
                 spatial_extent=geographic_extent,
                 temporal_extent=timeframe,
-                source_type='frost',
+                source_type='sensorthings',
                 last_updated=timeframe.latest_time,
             ),
             things
@@ -87,6 +85,7 @@ class FrostHarvester(BaseHarvester):
 
     def fetch_things(self, limit: int = -1) -> list[Thing]:
         """Fetch Things with their associated Datastreams and Sensors"""
+        self.logger.debug("Fetching %d things", limit if limit != -1 else 0)
         things = self._fetch_paginated(
             "Things?$expand=Datastreams($expand=Sensor)",
             Thing,
@@ -97,6 +96,7 @@ class FrostHarvester(BaseHarvester):
             return things
 
         # Do translation if translator exists
+        self.logger.info("Translator was configured, starting translation")
         translated_things = []
         for thing in things:
             try:
@@ -111,6 +111,7 @@ class FrostHarvester(BaseHarvester):
 
     def fetch_locations(self, limit: int = -1) -> list[GenericLocation]:
         """Fetch Locations for further processing"""
+        self.logger.debug("Fetching %d locations", limit if limit != -1 else 0)
         return self._fetch_paginated(
             "Locations",
             self.location_model,
@@ -136,22 +137,25 @@ class FrostHarvester(BaseHarvester):
 
                 for value in data["value"]:
                     if limit != -1 and len(items) >= limit:
+                        self.logger.info("Finished fetching data")
                         return items
 
                     item = model_class.model_validate(value)
                     items.append(item)
 
-                page_count += 1
                 self.logger.info("Added %d items from page %d",
                                  len(data["value"]), page_count)
 
+                page_count += 1
                 url = data.get("@iot.nextLink")
                 if url:
                     time.sleep(self.config.pagination.page_delay)
 
             except requests.RequestException as e:
-                logger.error("Error fetching data: %s", e)
+                self.logger.error("Error fetching data: %s", e)
                 break
+
+        self.logger.info("Finished fetching data")
 
         return items
 

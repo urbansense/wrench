@@ -8,25 +8,24 @@ class PaginationConfig(BaseModel):
         default=0.1, description="Delay between pagination requests in seconds"
     )
     timeout: int = Field(default=60, description="Request timeout in seconds")
-    batch_size: int = Field(
-        default=100, description="Number of items per page")
+    batch_size: int = Field(default=100, description="Number of items per page")
 
 
 class TranslatorConfig(BaseModel):
     """Configuration for translation service"""
 
     url: str = Field(description="Base URL for the translation service")
-    source_lang: str | None = Field(
-        default=None, description="Source language code")
+    source_lang: str | None = Field(default=None, description="Source language code")
 
 
-class FrostConfig(BaseModel):
-    """Main configuration for FROST harvester"""
+class SensorThingsConfig(BaseModel):
+    """Main configuration for SensorThings harvester"""
 
-    base_url: str = Field(description="Base URL for the FROST server")
+    base_url: str = Field(description="Base URL for the SensorThings server")
 
     identifier: str = Field(
-        description="Identifier for registering into backend, must be lowercase and separated by underscores")
+        description="Identifier for registering into backend, must be lowercase and separated by underscores"
+    )
 
     title: str = Field(
         description="The title which should be used for entry in the catalog"

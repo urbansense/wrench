@@ -5,7 +5,8 @@ from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import 
     EnrichedClass,
 )
 from autoreg_metadata.classifier.teleclass.core.taxonomy_manager import TaxonomyManager
-from autoreg_metadata.harvester.frost import Thing
+from autoreg_metadata.harvester.sensorthings import Thing
+from autoreg_metadata.log import logger
 
 
 class SimilarityClassifier:
@@ -27,8 +28,21 @@ class SimilarityClassifier:
         # Create class prototype embeddings from enriched classes
         self.class_embeddings = self._create_class_embeddings()
 
+        self.logger = logger.getChild(self.__class__.__name__)
+
     def _create_class_embeddings(self) -> dict[str, np.ndarray]:
-        """Create prototype embeddings for each class using enriched terms"""
+        """
+        Create prototype embeddings for each class using enriched terms.
+
+        This method generates embeddings for each class by either using pre-computed
+        embeddings if available, or by creating new embeddings from the terms associated
+        with each class. If no terms are available, it falls back to using the class name
+        for generating the embedding.
+
+        Returns:
+            dict[str, np.ndarray]: A dictionary where the keys are class names and the values
+            are the corresponding embeddings as numpy arrays.
+        """
         class_embeddings = {}
 
         for class_name, enriched_class in self.enriched_classes.items():
@@ -53,7 +67,16 @@ class SimilarityClassifier:
     def _compute_similarity(
         self, embedding1: np.ndarray, embedding2: np.ndarray
     ) -> float:
-        """Compute cosine similarity between two embeddings"""
+        """
+        Compute cosine similarity between two embeddings.
+
+        Args:
+            embedding1 (np.ndarray): The first embedding vector.
+            embedding2 (np.ndarray): The second embedding vector.
+
+        Returns:
+            float: The cosine similarity between the two embeddings.
+        """
         return np.dot(embedding1, embedding2) / (
             np.linalg.norm(embedding1) * np.linalg.norm(embedding2)
         )
@@ -62,8 +85,21 @@ class SimilarityClassifier:
         self, doc_embedding: np.ndarray, candidate_nodes: set[str], level: int = 0
     ) -> list[str]:
         """
-        Assign document to nodes at current level using similarity gap detection.
-        Returns the most relevant nodes based on the largest similarity gap.
+        Assign document to nodes at the current level using similarity gap detection.
+
+        This method calculates the similarity between the document embedding and the
+        embeddings of candidate nodes. It then selects the most relevant nodes based
+        on the largest similarity gap.
+
+        Args:
+            doc_embedding (np.ndarray): The embedding of the document to be classified.
+            candidate_nodes (set[str]): A set of candidate node identifiers to which
+                                        the document could be assigned.
+            level (int, optional): The current level in the hierarchy. Defaults to 0.
+
+        Returns:
+            list[str]: A list containing the most relevant node identifier(s) based
+                       on the similarity gap detection.
         """
         # Calculate similarities with candidate nodes
         similarities = []
@@ -81,23 +117,26 @@ class SimilarityClassifier:
             return [similarities[0][0]] if similarities else []
 
         # Log similarities for this level
-        print(f"\nLevel {level} similarities:")
-        print("-" * 40)
+        self.logger.info("\nLevel %s similarities:", level)
+        self.logger.info("-" * 40)
         for node, sim in similarities:
-            print(f"{node:<30} {sim:.4f}")
-        print("-" * 40)
+            self.logger.info("%-30s %.4f", node, sim)
+        self.logger.info("-" * 40)
 
         if len(similarities) <= 1:
             selected = [similarities[0][0]] if similarities else []
             if selected:
-                print(f"Only one candidate at level {level}, selecting: {selected[0]}")
+                self.logger.info(
+                    "Only one candidate at level %d, selecting: %s", level, selected[0]
+                )
             return selected
 
         # Return only the top match
         top_node = similarities[0][0]
-        print(f"Selected top node: {top_node}")
-        print(
-            f"Class terms: {[term_score.term for term_score in self.enriched_classes[top_node].terms]}\n"
+        self.logger.info("Selected top node: %s", top_node)
+        self.logger.info(
+            "Class terms: %s\n",
+            [term_score.term for term_score in self.enriched_classes[top_node].terms],
         )
 
         return [top_node]

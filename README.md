@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An automated metadata registration system for IoT devices and sensors. Extract, process, and enrich metadata from various sensor data sources.
+
 ## Features
 
 - 🔄 Automated metadata harvesting
@@ -51,7 +52,6 @@ autoreg-metadata/
 ## Usage
 
 ### Basic Example
-
 
 ### Translation Service
 

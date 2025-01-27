@@ -1,7 +1,7 @@
 import logging
 
 
-def setup_logging(level=logging.INFO):
+def setup_logging(level=logging.DEBUG):
     """Configure package-wide logging"""
     logger = logging.getLogger("autoreg_metadata")
     # Clear any existing handlers
@@ -10,7 +10,7 @@ def setup_logging(level=logging.INFO):
     # Enhanced formatter with file, line number, and function name
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(funcName)s() - %(message)s'
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
     handler.setFormatter(formatter)

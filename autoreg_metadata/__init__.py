@@ -1,17 +1,17 @@
-from .catalogger.ckan import CKANCatalogger
+from .catalogger.sddi import SDDICatalogger
 from .classifier.teleclass.core.teleclass import TELEClass
 from .common import Pipeline
 from .exceptions import AutoregError, ClassifierError, HarvesterError
-from .harvester.frost import FrostHarvester
+from .harvester.sensorthings import SensorThingsHarvester
 from .types import DocumentType, LocationType
 
 __version__ = "0.1.0"
 
 __all__ = [
     "Pipeline",
-    "FrostHarvester",
+    "SensorThingsHarvester",
     "TELEClass",
-    "CKANCatalogger",
+    "SDDICatalogger",
     "AutoregError",
     "HarvesterError",
     "ClassifierError",
