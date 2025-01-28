@@ -5,8 +5,9 @@ import numpy as np
 import yake
 from keybert import KeyBERT
 from rank_bm25 import BM25Okapi
-from sentence_transformers import SentenceTransformer
 
+from autoreg_metadata.classifier.teleclass.core.config import CorpusConfig
+from autoreg_metadata.classifier.teleclass.core.embeddings import EmbeddingService
 from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import (
     CorpusEnrichmentResult,
     EnrichedClass,
@@ -42,11 +43,13 @@ class MultiWordPhraseExtractor:
 
 class CorpusEnricher:
     def __init__(
-        self, model_name: str = "all-mpnet-base-v2", phrase_extractor: str = "yake"
+        self,
+        config: CorpusConfig,
+        embedding: EmbeddingService,
     ):
-        self.model = SentenceTransformer(model_name)
+        self.embedder = embedding
         self.keyword_model = MultiWordPhraseExtractor(
-            model=phrase_extractor, keybert_model=model_name
+            model=config.phrase_extractor, keybert_model=self.embedder.model_name
         )
         self.class_terms: Dict[str, EnrichedClass] = {}
         self.logger = logger.getChild(self.__class__.__name__)
@@ -119,12 +122,6 @@ class CorpusEnricher:
 
         return sibling_docs
 
-    def get_embedding(self, text: str) -> np.ndarray:
-        """Get embedding for text"""
-        embedding = self.model.encode(text, convert_to_tensor=False)
-
-        return embedding
-
     def calculate_popularity(self, term: str, documents: List[str]) -> float:
         """
         Calculate popularity for multi-word terms with more precise matching
@@ -190,10 +187,12 @@ class CorpusEnricher:
         """
         Calculate semantic similarity using sentence transformer embeddings
         """
-        term_embedding = self.get_embedding(term)
-        class_embedding = self.get_embedding(class_name)
+        term_embedding = self.embedder.get_embeddings(term)
+        class_embedding = self.embedder.get_embeddings(class_name)
 
-        similarity = self.model.similarity(term_embedding, class_embedding).item()
+        similarity = self.embedder.encoder.similarity(
+            term_embedding, class_embedding
+        ).item()
 
         return similarity
 

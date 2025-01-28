@@ -2,6 +2,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Union
 
+import yaml
+from ollama import Client
 from pydantic import BaseModel
 
 from autoreg_metadata.classifier.base import BaseClassifier, ClassificationResult
@@ -9,6 +11,7 @@ from autoreg_metadata.classifier.teleclass.classifier.similarity import (
     SimilarityClassifier,
 )
 from autoreg_metadata.classifier.teleclass.core.cache import TELEClassCache
+from autoreg_metadata.classifier.teleclass.core.config import TELEClassConfig
 from autoreg_metadata.classifier.teleclass.core.document_loader import (
     DocumentLoader,
     JSONDocumentLoader,
@@ -30,20 +33,25 @@ from autoreg_metadata.log import logger
 class TELEClass(BaseClassifier):
     """Main class for taxonomy-enhanced text classification"""
 
-    def __init__(
-        self,
-        taxonomy_manager: TaxonomyManager,
-        embedding_service: EmbeddingService,
-        llm_enricher: LLMEnricher,
-        corpus_enricher: CorpusEnricher,
-        use_cache: bool = True,
-    ):
+    def __init__(self, config: TELEClassConfig | str | Path):
+
+        # Load config if path is provided
+        if isinstance(config, (str, Path)):
+            with open(config, "r") as f:
+                config_dict = yaml.safe_load(f)
+                config = TELEClassConfig.model_validate(config_dict)
+
+        self.config = config
         # Initialize components
-        self.taxonomy_manager = taxonomy_manager
-        self.embedding_service = embedding_service
+        self.taxonomy_manager = TaxonomyManager(config.build_taxonomy_graph())
+        self.embedding_service = EmbeddingService(config.embedding.model_name)
         # Initialize enrichers
-        self.llm_enricher = llm_enricher
-        self.corpus_enricher = corpus_enricher
+        self.llm_enricher = LLMEnricher(
+            config=config.llm, taxonomy_manager=self.taxonomy_manager
+        )
+        self.corpus_enricher = CorpusEnricher(
+            config=config.corpus, embedding=self.embedding_service
+        )
 
         # initialize empty set of terms for all classes
         self.enriched_classes = {
@@ -51,9 +59,8 @@ class TELEClass(BaseClassifier):
             for class_name in self.taxonomy_manager.get_all_classes()
         }
         # Initialize cache
-        self.use_cache = use_cache
-        if use_cache:
-            self.cache = TELEClassCache()
+        if config.cache.enabled:
+            self.cache = TELEClassCache(config.cache.directory)
 
     def _load_documents(
         self, source: Union[str, Path, list[BaseModel]]
@@ -119,7 +126,7 @@ class TELEClass(BaseClassifier):
     ) -> LLMEnrichmentResult:
         """Perform LLM-based taxonomy enrichment"""
         logger.info("Performing LLM enrichment")
-        if not self.use_cache:
+        if not self.config.cache.enabled:
             return self.llm_enricher.process(collection=collection)
 
         # try loading from cache
@@ -161,7 +168,7 @@ class TELEClass(BaseClassifier):
         """Perform corpus-based enrichment"""
         logger.info("Performing corpus-based enrichment")
         corpus_enrichment_result = self.corpus_enricher.enrich(collection=collection)
-        if self.use_cache:
+        if self.config.cache.enabled:
             self.cache.save_class_terms(corpus_enrichment_result.ClassEnrichment)
         return self.corpus_enricher.enrich(collection=collection)
 
@@ -184,7 +191,7 @@ class TELEClass(BaseClassifier):
                     corpus_enriched_classes[class_name].terms
                 )
 
-        if self.use_cache:
+        if self.config.cache.enabled:
             self.cache.save_class_terms(self.enriched_classes)
         return self.enriched_classes
 
@@ -253,7 +260,7 @@ class TELEClass(BaseClassifier):
             }
 
             return ClassificationResult[DocumentMeta](
-                attribute="placeholder"
+                attribute=self.config.taxonomy_metadata.name,
                 classification_result=final_classifications,
                 parent_classes=parent_mappings,
             )

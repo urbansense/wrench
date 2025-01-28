@@ -82,7 +82,7 @@ class TELEClassBuilder:
         llm_client = self._custom_llm_client or Client(host=self._config.LLM_HOST)
 
         # Initialize enrichers
-        llm_enricher = LLMEnricher(model=llm_client, taxonomy_manager=taxonomy_manager)
+        llm_enricher = LLMEnricher(host=llm_client, taxonomy_manager=taxonomy_manager)
         corpus_enricher = CorpusEnricher(
             model_name=self._config.EMBEDDINGS_MODEL, phrase_extractor="yake"
         )
