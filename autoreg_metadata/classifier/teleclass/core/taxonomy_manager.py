@@ -11,12 +11,21 @@ class TaxonomyManager:
 
     def _find_root_nodes(self) -> list[str]:
         """Find all root nodes in the taxonomy"""
-        return [node for node in self.taxonomy.nodes()
-                if self.taxonomy.in_degree(node) == 0]
+        return [
+            node for node in self.taxonomy.nodes() if self.taxonomy.in_degree(node) == 0
+        ]
 
     def get_all_classes(self) -> list[str]:
         """Get all classes in the taxonomy"""
         return list(self.taxonomy.nodes())
+
+    def get_all_classes_with_description(self) -> dict[str, str]:
+        """Get all classes including their descriptions in the taxonomy"""
+        node_w_desc = {}
+        for node in list(self.taxonomy.nodes()):
+            node_w_desc[node] = self.taxonomy.nodes[node]["description"]
+
+        return node_w_desc
 
     def _calculate_max_depth(self) -> int:
         """Calculate the maximum depth of the taxonomy"""
@@ -44,7 +53,8 @@ class TaxonomyManager:
         Returns a set of node names that are leaves.
         """
         return {
-            node for node in self.taxonomy.nodes()
+            node
+            for node in self.taxonomy.nodes()
             if self.taxonomy.out_degree(node) == 0
         }
 

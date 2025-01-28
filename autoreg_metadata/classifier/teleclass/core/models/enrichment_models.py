@@ -1,4 +1,3 @@
-
 import numpy as np
 from pydantic import BaseModel, ConfigDict, computed_field
 
@@ -22,8 +21,7 @@ class TermScore(BaseModel):
             or self.distinctiveness is None
             or self.semantic_similarity is None
         ):
-            raise ValueError(
-                "Values are not available before corpus enrichment")
+            raise ValueError("Values are not available before corpus enrichment")
 
         return np.cbrt(
             self.popularity * self.distinctiveness * self.semantic_similarity
@@ -46,6 +44,7 @@ class EnrichedClass(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     class_name: str
+    class_description: str = ""
     terms: set[TermScore]
     embeddings: np.ndarray | None = None
 
