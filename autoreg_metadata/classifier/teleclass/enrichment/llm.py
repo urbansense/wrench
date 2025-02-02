@@ -1,7 +1,7 @@
+from collections import defaultdict
 from typing import Dict, List, Set
 
 import numpy as np
-from networkx import DiGraph
 from ollama import Client
 from sentence_transformers import SentenceTransformer
 
@@ -13,6 +13,7 @@ from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import 
 )
 from autoreg_metadata.classifier.teleclass.core.models.models import DocumentMeta
 from autoreg_metadata.classifier.teleclass.core.taxonomy_manager import TaxonomyManager
+from autoreg_metadata.classifier.teleclass.core.utils import max_cosine_similarity
 from autoreg_metadata.log import logger
 
 
@@ -67,7 +68,7 @@ class LLMEnricher:
                         class_term.terms.update(terms)
             else:
                 # Root node or node without parents
-                terms = self.enrich_class(node_name, "", set())
+                terms = self.enrich_class(node_name, "", "", set())
                 if terms:
                     class_term.terms.update(terms)
 
@@ -141,7 +142,7 @@ class LLMEnricher:
             )
 
             self.logger.info("Candidates for document %s: %s", doc.id, candidates)
-            core_classes = self._select_core_classes(doc.content, list(candidates))
+            core_classes = self._select_core_classes(doc.content, candidates)
             doc.initial_core_classes = set(core_classes)
             self.logger.info(
                 "Assigned classes for document %s: %s", doc.id, core_classes
@@ -149,23 +150,32 @@ class LLMEnricher:
 
         return collection
 
-    def _select_core_classes(self, doc: str, candidates: List[str]) -> List[str]:
+    def _select_core_classes(
+        self, doc: str, candidates: dict[int, set[str]]
+    ) -> List[str]:
         """
         Select core classes from a list of candidates using LLM
         """
         try:
+            candidates_text = []
+            for level in sorted(candidates.keys()):
+                classes = sorted(candidates[level])
+                candidates_text.append(f"Level {level}: {', '.join(classes)}")
+            formatted_candidates = "\n".join(candidates_text)
+
             prompt = f"""Given this document:
 "{doc}"
 
-And these possible classes:
-{', '.join(candidates)}
+And these possible classes by level:
+{formatted_candidates}
+
 
 Select ONLY the most specific and directly relevant classes that best describe the main topics of this document.
 Important guidelines:
 - Choose classes that are most specific to the document's content
 - Exclude broad/general classes unless they are directly discussed
 - Do not include parent classes unless they are explicitly relevant
-- Focus on 2-3 most relevant classes maximum
+- Only select ONE class maximum per level
 - If uncertain about a class, exclude it
 
 Return only the selected class names separated by commas, nothing else."""
@@ -200,9 +210,9 @@ Return only the selected class names separated by commas, nothing else."""
         doc_embedding: np.ndarray,
         taxonomy_manager: TaxonomyManager,
         enriched_classes: Dict[str, EnrichedClass],
-    ) -> Set[str]:
+    ) -> dict[int, set[str]]:
         """Select candidate classes for a document using level-wise traversal"""
-        candidates = set()
+        candidates = defaultdict(set)
         current_level = set(taxonomy_manager.root_nodes)
 
         self.logger.info("Taxonomy max depth is %d", taxonomy_manager.max_depth + 1)
@@ -219,7 +229,7 @@ Return only the selected class names separated by commas, nothing else."""
             # Select top candidates
             similarities.sort(key=lambda x: x[1], reverse=True)
             selected = {node for node, _ in similarities[: level + 2]}
-            candidates.update(selected)
+            candidates[level].update(selected)
 
             # Prepare next level
             current_level = {
@@ -253,41 +263,4 @@ Return only the selected class names separated by commas, nothing else."""
             self.logger.error("Document embedding is None")
             return 0.0
 
-        return np.max(
-            np.dot(enriched_class.embeddings, embedding)
-            / (
-                np.linalg.norm(enriched_class.embeddings, axis=1)
-                * np.linalg.norm(embedding)
-            )
-        )
-
-
-if __name__ == "__main__":
-    llm = Client("http://192.168.1.91:11434")
-    G = DiGraph()
-    G.add_edges_from(
-        [
-            ("domain", "mobility"),
-            ("domain", "health"),
-            # ("domain", "information technology"),
-            ("domain", "energy"),
-            ("domain", "environment"),
-            # ("domain", "trade"),
-            ("domain", "construction"),
-            ("domain", "culture"),
-            ("domain", "administration"),
-            ("domain", "urban planning"),
-            ("domain", "education"),
-            ("mobility", "environmental monitoring"),
-            ("mobility", "public transport"),
-            ("mobility", "shared mobility"),
-            ("mobility", "traffic management"),
-            ("mobility", "vehicle infrastructure"),
-            ("environment", "weather monitoring"),
-            ("environment", "air quality monitoring"),
-        ]
-    )
-
-    enricher = LLMEnricher(llm, G)
-    enricher.enrich_classes_with_terms()
-    enricher.get_class_terms()
+        return max_cosine_similarity(embedding, enriched_class.embeddings)

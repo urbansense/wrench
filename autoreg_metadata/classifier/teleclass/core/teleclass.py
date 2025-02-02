@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Union
 
 import yaml
-from ollama import Client
 from pydantic import BaseModel
 
 from autoreg_metadata.classifier.base import BaseClassifier, ClassificationResult

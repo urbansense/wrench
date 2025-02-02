@@ -82,6 +82,7 @@ class CorpusEnricher:
 
         for class_name in class_set:
             # Get documents assigned to this class
+            self.logger.info("Enriching class: %s", class_name)
             class_docs = [
                 doc_dict[str(doc.id)]
                 for doc in collection
@@ -91,7 +92,6 @@ class CorpusEnricher:
             # Get sibling data
             sibling_docs = self.get_sibling_data(class_name, doc_dict, collection)
 
-            # Use your existing enrich_class method
             term_scores = self.enrich_class(class_name, class_docs, sibling_docs)
 
             enriched_class = EnrichedClass(class_name=class_name, terms=term_scores)
@@ -245,17 +245,27 @@ class CorpusEnricher:
         }
 
         # Extract candidate terms
+        self.logger.info("Extracting candidate terms")
         candidate_terms = self.extract_candidate_terms(input_class)
+        self.logger.debug("Candidate terms: %s", candidate_terms)
 
         # Score terms
         scores = []
         for term in candidate_terms:
             # Calculate component scores
+            self.logger.info("Calculating component scores for term: %s", term)
             popularity = self.calculate_popularity(term, class_docs)
             distinctiveness = self.calculate_distinctiveness(
                 term, class_docs, sibling_docs
             )
             semantic_similarity = self.calculate_semantic_similarity(term, class_name)
+
+            self.logger.debug(
+                "\nPopularity: %10.3f\nDistinctiveness: %10.3f\nSemantic Similarity: %10.3f",
+                popularity,
+                distinctiveness,
+                semantic_similarity,
+            )
 
             scores.append(
                 TermScore(

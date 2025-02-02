@@ -53,13 +53,6 @@ class TaxonomyMetadata(BaseModel):
     )
 
 
-class TaxonomyNode(BaseModel):
-    """Represents a node in the taxonomy"""
-
-    name: str
-    children: list["TaxonomyNode"] = Field(default_factory=list)
-
-
 class TELEClassConfig(BaseModel):
     """Main configuration for TELEClass"""
 
