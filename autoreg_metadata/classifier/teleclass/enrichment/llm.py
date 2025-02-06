@@ -172,11 +172,10 @@ And these possible classes by level:
 {formatted_candidates}
 
 
-Select ONLY the most specific and directly relevant classes that best describe the main topics of this document.
+Select ONLY the most specific and directly relevant class that best describe the main topics of this document.
 Important guidelines:
-- Choose classes that are most specific to the document's content
+- Choose the class that is most specific to the document's content at each level
 - Exclude broad/general classes unless they are directly discussed
-- Do not include parent classes unless they are explicitly relevant
 - Only select ONE class maximum per level
 - If uncertain about a class, exclude it
 
