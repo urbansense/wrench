@@ -96,6 +96,10 @@ class CorpusEnricher:
 
             enriched_classes[class_name].terms.update(term_scores)
 
+            enriched_classes[class_name].embeddings = self.embedder.encoder.encode(
+                [term_score.term for term_score in enriched_classes[class_name].terms]
+            )
+
         return CorpusEnrichmentResult(ClassEnrichment=enriched_classes)
 
     def get_sibling_data(
@@ -259,20 +263,22 @@ class CorpusEnricher:
             semantic_similarity = self.calculate_semantic_similarity(term, class_name)
 
             self.logger.debug(
-                "\nPopularity: %10.3f\nDistinctiveness: %10.3f\nSemantic Similarity: %10.3f",
+                "\nPopularity: %10.3f\nDistinctiveness: %10.3f\nSemantic Similarity: %10.3f\n",
                 popularity,
                 distinctiveness,
                 semantic_similarity,
             )
 
-            scores.append(
-                TermScore(
-                    term=term,
-                    popularity=popularity,
-                    distinctiveness=distinctiveness,
-                    semantic_similarity=semantic_similarity,
-                )
+            term_score = TermScore(
+                term=term,
+                popularity=popularity,
+                distinctiveness=distinctiveness,
+                semantic_similarity=semantic_similarity,
             )
+
+            self.logger.debug("\nAffinity Score: %s", term_score.affinity_score)
+
+            scores.append(term_score)
 
         # Sort by affinity score and return top-k
         scores.sort(key=lambda x: x.affinity_score, reverse=True)
