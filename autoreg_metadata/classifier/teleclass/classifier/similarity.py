@@ -5,7 +5,7 @@ from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import 
     EnrichedClass,
 )
 from autoreg_metadata.classifier.teleclass.core.taxonomy_manager import TaxonomyManager
-from autoreg_metadata.harvester.sensorthings import Thing
+from autoreg_metadata.classifier.teleclass.core.utils import cosine_similarity
 from autoreg_metadata.log import logger
 
 
@@ -24,11 +24,10 @@ class SimilarityClassifier:
         self.taxonomy_manager = taxonomy_manager
         self.embedding_service = embedding_service
         self.enriched_classes = enriched_classes
+        self.logger = logger.getChild(self.__class__.__name__)
 
         # Create class prototype embeddings from enriched classes
         self.class_embeddings = self._create_class_embeddings()
-
-        self.logger = logger.getChild(self.__class__.__name__)
 
     def _create_class_embeddings(self) -> dict[str, np.ndarray]:
         """
@@ -48,7 +47,13 @@ class SimilarityClassifier:
         for class_name, enriched_class in self.enriched_classes.items():
             if enriched_class.embeddings is not None:
                 # Use pre-computed embeddings if available
-                class_embeddings[class_name] = enriched_class.embeddings
+                class_embeddings[class_name] = np.mean(
+                    enriched_class.embeddings, axis=0
+                )
+                self.logger.info(
+                    "Using existing class embeddings with dimension: %s",
+                    class_embeddings[class_name].shape,
+                )
             else:
                 # Create embedding from class terms
                 terms = [term.term for term in enriched_class.terms]
@@ -56,30 +61,21 @@ class SimilarityClassifier:
                     # Average the embeddings of all terms
                     term_embeddings = self.embedding_service.get_embeddings(terms)
                     class_embeddings[class_name] = np.mean(term_embeddings, axis=0)
+                    self.logger.info(
+                        "Create average class embeddings from terms through averaging with dimension: %s",
+                        class_embeddings[class_name].shape,
+                    )
                 else:
                     # Fallback to class name embedding
                     class_embeddings[class_name] = (
                         self.embedding_service.get_embeddings(class_name)
                     )
-
+                    self.logger.info(
+                        "Create average class embeddings from class name through averaging with dimension: %s",
+                        class_embeddings[class_name].shape,
+                    )
+        analyze_class_similarities(class_embeddings, top_k=5, threshold=0.5)
         return class_embeddings
-
-    def _compute_similarity(
-        self, embedding1: np.ndarray, embedding2: np.ndarray
-    ) -> float:
-        """
-        Compute cosine similarity between two embeddings.
-
-        Args:
-            embedding1 (np.ndarray): The first embedding vector.
-            embedding2 (np.ndarray): The second embedding vector.
-
-        Returns:
-            float: The cosine similarity between the two embeddings.
-        """
-        return np.dot(embedding1, embedding2) / (
-            np.linalg.norm(embedding1) * np.linalg.norm(embedding2)
-        )
 
     def _assign_to_level(
         self, doc_embedding: np.ndarray, candidate_nodes: set[str], level: int = 0
@@ -105,7 +101,7 @@ class SimilarityClassifier:
         similarities = []
         for node in candidate_nodes:
             if node in self.class_embeddings:
-                sim = self._compute_similarity(
+                sim = self.embedding_service.encoder.similarity(
                     doc_embedding, self.class_embeddings[node]
                 )
                 similarities.append((node, sim))
@@ -117,7 +113,7 @@ class SimilarityClassifier:
             return [similarities[0][0]] if similarities else []
 
         # Log similarities for this level
-        self.logger.info("\nLevel %s similarities:", level)
+        self.logger.info("Level %s similarities:", level)
         self.logger.info("-" * 40)
         for node, sim in similarities:
             self.logger.info("%-30s %.4f", node, sim)
@@ -158,7 +154,7 @@ class SimilarityClassifier:
         assigned_classes = set()
         current_level = 0
         # Start from root
-        current_nodes = {self.taxonomy_manager.root_nodes[0]}
+        current_nodes = set(self.taxonomy_manager.root_nodes)
 
         # Traverse hierarchy level by level
         while current_nodes and current_level <= self.taxonomy_manager.max_depth:
@@ -183,7 +179,7 @@ class SimilarityClassifier:
         return assigned_classes
 
     def evaluate(
-        self, test_docs: list[dict[str, str]], true_labels: list[set[str]]
+        self, test_docs: list[dict[str, any]], true_labels: list[set[str]]
     ) -> dict[str, float]:
         """
         Evaluate classifier performance on test documents.
@@ -195,9 +191,11 @@ class SimilarityClassifier:
         Returns:
             dictionary with evaluation metrics
         """
+        self.logger.info("Evaluating model")
         predictions = []
         for doc in test_docs:
-            pred = self.predict(str(doc), model_class=Thing)
+            pred = self.predict(doc.content)
+            self.logger.debug("Predictions for document %s: %s", doc.id, pred)
             predictions.append(pred)
 
         # Calculate metrics
@@ -216,3 +214,93 @@ class SimilarityClassifier:
         )
 
         return {"precision": precision, "recall": recall, "f1": f1}
+
+
+def analyze_class_similarities(
+    class_embeddings: dict[str, np.ndarray], top_k: int = 5, threshold: float = 0.5
+) -> None:
+    """
+    Analyze and log similarities between class embeddings.
+
+    Args:
+        class_embeddings: Dictionary mapping class names to their embeddings
+        top_k: Number of most similar classes to show for each class
+        threshold: Minimum similarity threshold to consider
+    """
+    # Create similarity matrix
+    class_names = list(class_embeddings.keys())
+    similarities = {}
+
+    # Compute similarities between all pairs of classes
+    for class1 in class_names:
+        similarities[class1] = {}
+        embed1 = class_embeddings[class1]
+
+        for class2 in class_names:
+            if class1 != class2:
+                embed2 = class_embeddings[class2]
+                # Compute cosine similarity
+                similarity = np.dot(embed1, embed2) / (
+                    np.linalg.norm(embed1) * np.linalg.norm(embed2)
+                )
+                similarities[class1][class2] = similarity
+
+    # Log the results
+    print("\nClass Similarity Analysis:")
+    print("-" * 50)
+
+    for class_name in class_names:
+        # Sort similar classes by similarity score
+        similar_classes = sorted(
+            similarities[class_name].items(), key=lambda x: x[1], reverse=True
+        )
+
+        # Filter by threshold and get top-k
+        filtered_classes = [(c, s) for c, s in similar_classes if s >= threshold][
+            :top_k
+        ]
+
+        if filtered_classes:
+            print(f"\nMost similar classes to '{class_name}':")
+            for similar_class, similarity in filtered_classes:
+                print(f"  - {similar_class}: {similarity:.3f}")
+        else:
+            print(
+                f"\nNo similar classes found for '{class_name}' above threshold {threshold}"
+            )
+
+    # Additional statistics
+    print("\nSimilarity Statistics:")
+    print("-" * 50)
+
+    # Calculate average similarities
+    all_sims = [
+        sim for class_sims in similarities.values() for sim in class_sims.values()
+    ]
+
+    print(f"Average similarity: {np.mean(all_sims):.3f}")
+    print(f"Max similarity: {np.max(all_sims):.3f}")
+    print(f"Min similarity: {np.min(all_sims):.3f}")
+
+    # Find most and least similar class pairs
+    max_sim = -1
+    min_sim = 2
+    max_pair = None
+    min_pair = None
+
+    for class1 in class_names:
+        for class2, sim in similarities[class1].items():
+            if sim > max_sim:
+                max_sim = sim
+                max_pair = (class1, class2)
+            if sim < min_sim:
+                min_sim = sim
+                min_pair = (class1, class2)
+
+    print(f"\nMost similar pair: {max_pair[0]} - {max_pair[1]} ({max_sim:.3f})")
+    print(f"Least similar pair: {min_pair[0]} - {min_pair[1]} ({min_sim:.3f})")
+
+
+# Example usage:
+# After creating class_embeddings, add:
+# analyze_class_similarities(class_embeddings, top_k=5, threshold=0.5)

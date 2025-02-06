@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Set
+from typing import List, Set
 
 import numpy as np
 from ollama import Client
@@ -32,16 +32,14 @@ class LLMEnricher:
             """
         )
         self.encoder = SentenceTransformer("all-mpnet-base-v2")
-        # Initialize empty sets for all nodes in the taxonomy
-        self.class_terms: Dict[str, EnrichedClass] = {
-            node: EnrichedClass(class_name=node, class_description=desc, terms=set())
-            for node, desc in self.taxonomy_manager.get_all_classes_with_description().items()
-        }
+
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def process(self, collection: List[DocumentMeta]) -> LLMEnrichmentResult:
+    def process(
+        self, enriched_classes: dict[str, EnrichedClass], collection: List[DocumentMeta]
+    ) -> LLMEnrichmentResult:
         """Process generates both terms for each classes, and runs the core class selection for documents"""
-        class_with_terms = self.enrich_classes_with_terms()
+        class_with_terms = self.enrich_classes_with_terms(enriched_classes)
         document_with_core_classes = self.assign_classes_to_docs(
             collection=collection, enriched_classes=class_with_terms
         )
@@ -51,8 +49,10 @@ class LLMEnricher:
             DocumentCoreClasses=document_with_core_classes,
         )
 
-    def enrich_classes_with_terms(self) -> Dict[str, EnrichedClass]:
-        for node_name, class_term in self.class_terms.items():
+    def enrich_classes_with_terms(
+        self, enriched_classes: dict[str, EnrichedClass]
+    ) -> dict[str, EnrichedClass]:
+        for node_name, class_term in enriched_classes.items():
             # Get all nodes that are parents of the current node
             parents = list(self.taxonomy_manager.get_parents(node_name))
             # Check if node is root (have no parents)
@@ -68,7 +68,9 @@ class LLMEnricher:
                         class_term.terms.update(terms)
             else:
                 # Root node or node without parents
-                terms = self.enrich_class(node_name, "", "", set())
+                terms = self.enrich_class(
+                    node_name, class_term.class_description, "", set()
+                )
                 if terms:
                     class_term.terms.update(terms)
 
@@ -81,7 +83,7 @@ class LLMEnricher:
 
             self.logger.info("Enriched terms for %s: %s", node_name, class_term.terms)
 
-        return self.class_terms
+        return enriched_classes
 
     def enrich_class(
         self,
@@ -129,7 +131,7 @@ class LLMEnricher:
             return set()
 
     def assign_classes_to_docs(
-        self, collection: List[DocumentMeta], enriched_classes: Dict[str, EnrichedClass]
+        self, collection: List[DocumentMeta], enriched_classes: dict[str, EnrichedClass]
     ) -> List[DocumentMeta]:
         """Assign initial classes to documents"""
         self.logger.info("Assigning initial classes")
@@ -201,15 +203,11 @@ Return only the selected class names separated by commas, nothing else."""
             self.logger.error("Error selecting core classes: %s", str(e))
             return []
 
-    def get_class_terms(self) -> Dict[str, EnrichedClass]:
-        """Return the enriched terms and their embeddings"""
-        return self.class_terms
-
     def _select_candidates_for_document(
         self,
         doc_embedding: np.ndarray,
         taxonomy_manager: TaxonomyManager,
-        enriched_classes: Dict[str, EnrichedClass],
+        enriched_classes: dict[str, EnrichedClass],
     ) -> dict[int, set[str]]:
         """Select candidate classes for a document using level-wise traversal"""
         candidates = defaultdict(set)

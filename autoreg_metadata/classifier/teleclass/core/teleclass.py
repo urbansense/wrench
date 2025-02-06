@@ -1,8 +1,8 @@
+import json
 from collections import defaultdict
 from pathlib import Path
 from typing import Union
 
-import yaml
 from pydantic import BaseModel
 
 from autoreg_metadata.classifier.base import BaseClassifier, ClassificationResult
@@ -36,13 +36,11 @@ class TELEClass(BaseClassifier):
 
         # Load config if path is provided
         if isinstance(config, (str, Path)):
-            with open(config, "r") as f:
-                config_dict = yaml.safe_load(f)
-                config = TELEClassConfig.model_validate(config_dict)
+            config = TELEClassConfig.from_yaml(config)
 
         self.config = config
         # Initialize components
-        self.taxonomy_manager = TaxonomyManager(config.build_taxonomy_graph())
+        self.taxonomy_manager = TaxonomyManager.from_config(config)
         self.embedding_service = EmbeddingService(config.embedding.model_name)
         # Initialize enrichers
         self.llm_enricher = LLMEnricher(
@@ -52,14 +50,18 @@ class TELEClass(BaseClassifier):
             config=config.corpus, embedding=self.embedding_service
         )
 
-        # initialize empty set of terms for all classes
+        # initialize empty set of terms for all classes, embeddings are not yet set here
         self.enriched_classes = {
-            class_name: EnrichedClass(class_name=class_name, terms=set())
-            for class_name in self.taxonomy_manager.get_all_classes()
+            class_name: EnrichedClass(
+                class_name=class_name, class_description=class_description, terms=set()
+            )
+            for class_name, class_description in self.taxonomy_manager.get_all_classes_with_description().items()
         }
         # Initialize cache
         if config.cache.enabled:
             self.cache = TELEClassCache(config.cache.directory)
+
+        self.logger = logger.getChild(self.__class__.__name__)
 
     def _load_documents(
         self, source: Union[str, Path, list[BaseModel]]
@@ -72,6 +74,23 @@ class TELEClass(BaseClassifier):
         )
         return loader.load(self.embedding_service)
 
+    # for testing and evaluation
+    def _load_labels(
+        self,
+        source: Union[str, Path, list[any]],
+    ) -> list[set[str]]:
+        file_path = Path(source)
+        if not file_path.exists():
+            raise FileNotFoundError(f"JSON file not found: {self.file_path}")
+
+        with open(source, "r") as f:
+            data = json.load(f)
+
+        if not isinstance(data, list):
+            raise ValueError("JSON file must contain a list of documents")
+
+        return [set(d["label"]) for d in data]
+
     def run(self, documents: list[DocumentMeta], sample_size: int = 20) -> None:
         """
         Main training process with clear stages
@@ -79,35 +98,27 @@ class TELEClass(BaseClassifier):
         Args:
             sample_size: Number of documents to use for initial training
         """
-        logger.info("Starting training process")
+        self.logger.info("Starting training process")
         documents = documents[: min(len(documents), sample_size)]
 
-        logger.info("Training with %d documents", len(documents))
+        self.logger.info("Training with %d documents", len(documents))
 
         try:
             # Stage 1: LLM-Enhanced Core Class Annotation
-            llm_enriched_classes = None
+            self.enriched_classes, documents = self._perform_llm_enrichment(
+                collection=documents
+            ).result
 
-            llm_enrichment_result = self._perform_llm_enrichment(collection=documents)
-
-            llm_enriched_classes, documents = llm_enrichment_result.result
-
-            logger.info("Finished assignments with LLM enrichment step")
+            self.logger.info("Finished assignments with LLM enrichment step")
 
             # Stage 2: Corpus-Based Enrichment
 
-            corpus_enrichment_result = self._perform_corpus_enrichment(documents)
+            self.enriched_classes = self._perform_corpus_enrichment(documents).result
 
-            corpus_enriched_classes = corpus_enrichment_result.result
-
-            logger.info("Finished corpus-based enrichment step")
-
-            self.enriched_classes = self._combine_enriched_classes(
-                llm_enriched_classes, corpus_enriched_classes
-            )
+            self.logger.info("Finished corpus-based enrichment step")
 
             # Add new step: Classifier Training
-            logger.info("Step 4: Initialize Classifier")
+            self.logger.info("Step 4: Initialize Classifier")
 
             # Initialize classifier manager
             self.classifier_manager = SimilarityClassifier(
@@ -117,16 +128,18 @@ class TELEClass(BaseClassifier):
             )
 
         except Exception as e:
-            logger.error("Training failed: %s", e)
+            self.logger.error("Training failed: %s", e)
             raise
 
     def _perform_llm_enrichment(
         self, collection: list[DocumentMeta]
     ) -> LLMEnrichmentResult:
         """Perform LLM-based taxonomy enrichment"""
-        logger.info("Performing LLM enrichment")
+        self.logger.info("Performing LLM enrichment")
         if not self.config.cache.enabled:
-            return self.llm_enricher.process(collection=collection)
+            return self.llm_enricher.process(
+                enriched_classes=self.enriched_classes, collection=collection
+            )
 
         # try loading from cache
         llm_class_terms = self.cache.load_class_terms()
@@ -147,7 +160,10 @@ class TELEClass(BaseClassifier):
             )
 
         # nothing in cache, run full process
-        llm_class_terms = self.llm_enricher.enrich_classes_with_terms()
+        # when you move cache responsibility to LLMEnricher, this will be simpler
+        llm_class_terms = self.llm_enricher.enrich_classes_with_terms(
+            enriched_classes=self.enriched_classes
+        )
         if llm_class_terms is not None:
             self.cache.save_class_terms(llm_class_terms)
 
@@ -165,34 +181,20 @@ class TELEClass(BaseClassifier):
         collection: list[DocumentMeta],
     ) -> CorpusEnrichmentResult:
         """Perform corpus-based enrichment"""
-        logger.info("Performing corpus-based enrichment")
-        corpus_enrichment_result = self.corpus_enricher.enrich(collection=collection)
+        self.logger.info("Performing corpus-based enrichment")
+        corpus_enrichment_result = self.corpus_enricher.enrich(
+            enriched_classes=self.enriched_classes, collection=collection
+        )
+
+        # Cache results if enabled
         if self.config.cache.enabled:
-            self.cache.save_class_terms(corpus_enrichment_result.ClassEnrichment)
-        return self.corpus_enricher.enrich(collection=collection)
+            try:
+                self.cache.save_class_terms(corpus_enrichment_result.ClassEnrichment)
+                self.logger.debug("Successfully cached corpus enrichment results")
+            except Exception as e:
+                self.logger.warning("Failed to cache enrichment results: %s", str(e))
 
-    def _combine_enriched_classes(
-        self,
-        llm_enriched_classes: dict[str, EnrichedClass],
-        corpus_enriched_classes: dict[str, EnrichedClass],
-    ) -> dict[str, EnrichedClass]:
-        """Combine enriched classes from LLM and corpus enrichers"""
-        for class_name in self.taxonomy_manager.get_all_classes():
-            # Add LLM terms if they exist
-            if class_name in llm_enriched_classes:
-                self.enriched_classes[class_name].terms.update(
-                    llm_enriched_classes[class_name].terms
-                )
-
-            # Add corpus terms if they exist
-            if class_name in corpus_enriched_classes:
-                self.enriched_classes[class_name].terms.update(
-                    corpus_enriched_classes[class_name].terms
-                )
-
-        if self.config.cache.enabled:
-            self.cache.save_class_terms(self.enriched_classes)
-        return self.enriched_classes
+        return corpus_enrichment_result
 
     def predict(self, text: str) -> set[str]:
         """
@@ -228,13 +230,13 @@ class TELEClass(BaseClassifier):
                                         that belong to each class. Only classes with documents are included in the dictionary.
         """
 
-        logger.debug(
+        self.logger.debug(
             "Starting document classification with input type: %s", type(documents)
         )
 
         try:
             docs = self._load_documents(documents)
-            logger.debug("Loaded %d documents", len(docs))
+            self.logger.debug("Loaded %d documents", len(docs))
             if not hasattr(self, "classifier_manager"):
                 self.run(docs)
 
@@ -242,11 +244,11 @@ class TELEClass(BaseClassifier):
             leaf_nodes = self.taxonomy_manager.get_leaf_nodes()
 
             for d in docs:
-                logger.debug("Processing document %s with type: %s", d.id, type(d))
-                logger.debug("Document content type: %s", type(d.content))
-                logger.debug("Document embeddings type: %s", type(d.embeddings))
+                self.logger.debug("Processing document %s with type: %s", d.id, type(d))
+                self.logger.debug("Document content type: %s", type(d.content))
+                self.logger.debug("Document embeddings type: %s", type(d.embeddings))
                 classes = self.predict(text=d.content)
-                logger.debug("Predicted classes: %s", classes)
+                self.logger.debug("Predicted classes: %s", classes)
                 leaf_predictions = classes & leaf_nodes
                 for leaf_class in leaf_predictions:
                     leaf_classifications[leaf_class].append(d)
@@ -264,5 +266,23 @@ class TELEClass(BaseClassifier):
                 parent_classes=parent_mappings,
             )
         except Exception as e:
-            logger.exception("Classification failed with error: %s", str(e))
+            self.logger.exception("Classification failed with error: %s", str(e))
+            raise
+
+    def evaluate_classifier(
+        self, documents: Union[str, Path, list[BaseModel]]
+    ) -> ClassificationResult:
+        """ """
+        try:
+            docs = self._load_documents(documents)
+            labels = self._load_labels("./test_script/labels.json")
+            if not hasattr(self, "classifier_manager"):
+                self.run(docs)
+            result = self.classifier_manager.evaluate(
+                test_docs=docs, true_labels=labels
+            )
+            self.logger.info(result)
+
+        except Exception as e:
+            self.logger.exception("Evaluation failed with error: %s", str(e))
             raise
