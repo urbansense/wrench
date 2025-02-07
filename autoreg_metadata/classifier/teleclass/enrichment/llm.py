@@ -13,7 +13,6 @@ from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import 
 )
 from autoreg_metadata.classifier.teleclass.core.models.models import DocumentMeta
 from autoreg_metadata.classifier.teleclass.core.taxonomy_manager import TaxonomyManager
-from autoreg_metadata.classifier.teleclass.core.utils import max_cosine_similarity
 from autoreg_metadata.log import logger
 
 
@@ -260,4 +259,9 @@ Return only the selected class names separated by commas, nothing else."""
             self.logger.error("Document embedding is None")
             return 0.0
 
-        return max_cosine_similarity(embedding, enriched_class.embeddings)
+        return np.max(
+            [
+                self.encoder.similarity(embedding, term_embedding)
+                for term_embedding in enriched_class.embeddings
+            ]
+        )

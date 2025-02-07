@@ -5,7 +5,6 @@ from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import 
     EnrichedClass,
 )
 from autoreg_metadata.classifier.teleclass.core.taxonomy_manager import TaxonomyManager
-from autoreg_metadata.classifier.teleclass.core.utils import cosine_similarity
 from autoreg_metadata.log import logger
 
 
