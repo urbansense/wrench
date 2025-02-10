@@ -73,7 +73,6 @@ class SimilarityClassifier:
                         "Create average class embeddings from class name through averaging with dimension: %s",
                         class_embeddings[class_name].shape,
                     )
-        analyze_class_similarities(class_embeddings, top_k=5, threshold=0.5)
         return class_embeddings
 
     def _assign_to_level(
@@ -213,93 +212,3 @@ class SimilarityClassifier:
         )
 
         return {"precision": precision, "recall": recall, "f1": f1}
-
-
-def analyze_class_similarities(
-    class_embeddings: dict[str, np.ndarray], top_k: int = 5, threshold: float = 0.5
-) -> None:
-    """
-    Analyze and log similarities between class embeddings.
-
-    Args:
-        class_embeddings: Dictionary mapping class names to their embeddings
-        top_k: Number of most similar classes to show for each class
-        threshold: Minimum similarity threshold to consider
-    """
-    # Create similarity matrix
-    class_names = list(class_embeddings.keys())
-    similarities = {}
-
-    # Compute similarities between all pairs of classes
-    for class1 in class_names:
-        similarities[class1] = {}
-        embed1 = class_embeddings[class1]
-
-        for class2 in class_names:
-            if class1 != class2:
-                embed2 = class_embeddings[class2]
-                # Compute cosine similarity
-                similarity = np.dot(embed1, embed2) / (
-                    np.linalg.norm(embed1) * np.linalg.norm(embed2)
-                )
-                similarities[class1][class2] = similarity
-
-    # Log the results
-    print("\nClass Similarity Analysis:")
-    print("-" * 50)
-
-    for class_name in class_names:
-        # Sort similar classes by similarity score
-        similar_classes = sorted(
-            similarities[class_name].items(), key=lambda x: x[1], reverse=True
-        )
-
-        # Filter by threshold and get top-k
-        filtered_classes = [(c, s) for c, s in similar_classes if s >= threshold][
-            :top_k
-        ]
-
-        if filtered_classes:
-            print(f"\nMost similar classes to '{class_name}':")
-            for similar_class, similarity in filtered_classes:
-                print(f"  - {similar_class}: {similarity:.3f}")
-        else:
-            print(
-                f"\nNo similar classes found for '{class_name}' above threshold {threshold}"
-            )
-
-    # Additional statistics
-    print("\nSimilarity Statistics:")
-    print("-" * 50)
-
-    # Calculate average similarities
-    all_sims = [
-        sim for class_sims in similarities.values() for sim in class_sims.values()
-    ]
-
-    print(f"Average similarity: {np.mean(all_sims):.3f}")
-    print(f"Max similarity: {np.max(all_sims):.3f}")
-    print(f"Min similarity: {np.min(all_sims):.3f}")
-
-    # Find most and least similar class pairs
-    max_sim = -1
-    min_sim = 2
-    max_pair = None
-    min_pair = None
-
-    for class1 in class_names:
-        for class2, sim in similarities[class1].items():
-            if sim > max_sim:
-                max_sim = sim
-                max_pair = (class1, class2)
-            if sim < min_sim:
-                min_sim = sim
-                min_pair = (class1, class2)
-
-    print(f"\nMost similar pair: {max_pair[0]} - {max_pair[1]} ({max_sim:.3f})")
-    print(f"Least similar pair: {min_pair[0]} - {min_pair[1]} ({min_sim:.3f})")
-
-
-# Example usage:
-# After creating class_embeddings, add:
-# analyze_class_similarities(class_embeddings, top_k=5, threshold=0.5)
