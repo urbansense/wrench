@@ -3,8 +3,6 @@ from typing import TypeVar
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from autoreg_metadata.classifier.base import ClassificationResult
-
 T = TypeVar("T", bound=BaseModel)
 
 

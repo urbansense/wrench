@@ -1,5 +1,4 @@
 import math
-from typing import Dict, List, Set
 
 import numpy as np
 import yake
@@ -51,12 +50,13 @@ class CorpusEnricher:
         self.keyword_model = MultiWordPhraseExtractor(
             model=config.phrase_extractor, keybert_model=self.embedder.model_name
         )
-        self.class_terms: Dict[str, EnrichedClass] = {}
+        self.class_terms: dict[str, EnrichedClass] = {}
         self.logger = logger.getChild(self.__class__.__name__)
 
     def enrich(
         self,
-        collection: List[DocumentMeta],
+        enriched_classes: dict[str, EnrichedClass],
+        collection: list[DocumentMeta],
     ) -> CorpusEnrichmentResult:
         """
         Enrich taxonomy using documents
@@ -70,7 +70,7 @@ class CorpusEnricher:
         # Convert documents to dictionary format with IoT structure
         doc_dict = {}
 
-        class_set: Set[str] = set()
+        class_set: set[str] = set()
 
         for doc in collection:
             if not doc.initial_core_classes:
@@ -82,6 +82,7 @@ class CorpusEnricher:
 
         for class_name in class_set:
             # Get documents assigned to this class
+            self.logger.info("Enriching class: %s", class_name)
             class_docs = [
                 doc_dict[str(doc.id)]
                 for doc in collection
@@ -91,25 +92,26 @@ class CorpusEnricher:
             # Get sibling data
             sibling_docs = self.get_sibling_data(class_name, doc_dict, collection)
 
-            # Use your existing enrich_class method
             term_scores = self.enrich_class(class_name, class_docs, sibling_docs)
 
-            enriched_class = EnrichedClass(class_name=class_name, terms=term_scores)
+            enriched_classes[class_name].terms.update(term_scores)
 
-            self.class_terms[class_name] = enriched_class
+            enriched_classes[class_name].embeddings = self.embedder.encoder.encode(
+                [term_score.term for term_score in enriched_classes[class_name].terms]
+            )
 
-        return CorpusEnrichmentResult(ClassEnrichment=self.class_terms)
+        return CorpusEnrichmentResult(ClassEnrichment=enriched_classes)
 
     def get_sibling_data(
         self,
         class_name: str,
-        documents: Dict[str, DocumentMeta],
-        collection: List[DocumentMeta],
-    ) -> Dict[str, List[DocumentMeta]]:
+        documents: dict[str, DocumentMeta],
+        collection: list[DocumentMeta],
+    ) -> dict[str, list[DocumentMeta]]:
         """
         Get documents assigned to sibling classes, preserving IoT format
         """
-        sibling_docs: Dict[str, List[DocumentMeta]] = {}
+        sibling_docs: dict[str, list[DocumentMeta]] = {}
         # Group documents by their assigned classes
         for doc in collection:
             if doc.initial_core_classes:
@@ -122,7 +124,7 @@ class CorpusEnricher:
 
         return sibling_docs
 
-    def calculate_popularity(self, term: str, documents: List[str]) -> float:
+    def calculate_popularity(self, term: str, documents: list[str]) -> float:
         """
         Calculate popularity for multi-word terms with more precise matching
         """
@@ -144,7 +146,7 @@ class CorpusEnricher:
         return math.log(1 + df)
 
     def calculate_distinctiveness(
-        self, term: str, class_docs: List[str], sibling_docs: Dict[str, List[str]]
+        self, term: str, class_docs: list[str], sibling_docs: dict[str, list[str]]
     ) -> float:
         """
         Calculate distinctiveness using BM25 scores with phrase preservation
@@ -152,7 +154,7 @@ class CorpusEnricher:
         term = term.lower().strip()
 
         # Prepare documents with phrase preservation
-        def prepare_doc(doc: str) -> List[str]:
+        def prepare_doc(doc: str) -> list[str]:
             # Keep the phrase together in tokenization
             doc = doc.lower()
             # Replace term with a single token if it appears
@@ -196,7 +198,7 @@ class CorpusEnricher:
 
         return similarity
 
-    def extract_key_phrases(self, text: str, top_n: int = 5) -> List[str]:
+    def extract_key_phrases(self, text: str, top_n: int = 5) -> list[str]:
         if self.keyword_model.model == "keybert":
             keywords = self.keyword_model.bert_extractor.extract_keywords(
                 docs=text,
@@ -213,7 +215,7 @@ class CorpusEnricher:
 
         return [keyword for keyword, _ in keywords]
 
-    def extract_candidate_terms(self, iot_data_list: List[DocumentMeta]) -> Set[str]:
+    def extract_candidate_terms(self, iot_data_list: list[DocumentMeta]) -> set[str]:
         """
         Extract candidate terms from IoT data
         """
@@ -230,10 +232,10 @@ class CorpusEnricher:
     def enrich_class(
         self,
         class_name: str,
-        input_class: List[DocumentMeta],
-        class_siblings: Dict[str, List[DocumentMeta]],
+        input_class: list[DocumentMeta],
+        class_siblings: dict[str, list[DocumentMeta]],
         top_k: int = 3,
-    ) -> Set[TermScore]:
+    ) -> set[TermScore]:
         """
         Enrich a class with terms from IoT data
         """
@@ -245,26 +247,38 @@ class CorpusEnricher:
         }
 
         # Extract candidate terms
+        self.logger.info("Extracting candidate terms")
         candidate_terms = self.extract_candidate_terms(input_class)
+        self.logger.debug("Candidate terms: %s", candidate_terms)
 
         # Score terms
         scores = []
         for term in candidate_terms:
             # Calculate component scores
+            self.logger.info("Calculating component scores for term: %s", term)
             popularity = self.calculate_popularity(term, class_docs)
             distinctiveness = self.calculate_distinctiveness(
                 term, class_docs, sibling_docs
             )
             semantic_similarity = self.calculate_semantic_similarity(term, class_name)
 
-            scores.append(
-                TermScore(
-                    term=term,
-                    popularity=popularity,
-                    distinctiveness=distinctiveness,
-                    semantic_similarity=semantic_similarity,
-                )
+            self.logger.debug(
+                "\nPopularity: %10.3f\nDistinctiveness: %10.3f\nSemantic Similarity: %10.3f\n",
+                popularity,
+                distinctiveness,
+                semantic_similarity,
             )
+
+            term_score = TermScore(
+                term=term,
+                popularity=popularity,
+                distinctiveness=distinctiveness,
+                semantic_similarity=semantic_similarity,
+            )
+
+            self.logger.debug("\nAffinity Score: %s", term_score.affinity_score)
+
+            scores.append(term_score)
 
         # Sort by affinity score and return top-k
         scores.sort(key=lambda x: x.affinity_score, reverse=True)

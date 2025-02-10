@@ -15,7 +15,7 @@ class DocumentLoader(Protocol):
 
 class JSONDocumentLoader(DocumentLoader):
     """
-    A document loader for JSOxN files that loads and processes documents into a list of DocumentMeta objects.
+    A document loader for JSON files that loads and processes documents into a list of DocumentMeta objects.
 
     Attributes:
         file_path (Union[str, Path]): The path to the JSON file to be loaded.

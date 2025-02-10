@@ -1,7 +1,7 @@
-from typing import Dict, List, Set
+from collections import defaultdict
+from typing import List, Set
 
 import numpy as np
-from networkx import DiGraph
 from ollama import Client
 from sentence_transformers import SentenceTransformer
 
@@ -31,16 +31,14 @@ class LLMEnricher:
             """
         )
         self.encoder = SentenceTransformer("all-mpnet-base-v2")
-        # Initialize empty sets for all nodes in the taxonomy
-        self.class_terms: Dict[str, EnrichedClass] = {
-            node: EnrichedClass(class_name=node, class_description=desc, terms=set())
-            for node, desc in self.taxonomy_manager.get_all_classes_with_description().items()
-        }
+
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def process(self, collection: List[DocumentMeta]) -> LLMEnrichmentResult:
+    def process(
+        self, enriched_classes: dict[str, EnrichedClass], collection: List[DocumentMeta]
+    ) -> LLMEnrichmentResult:
         """Process generates both terms for each classes, and runs the core class selection for documents"""
-        class_with_terms = self.enrich_classes_with_terms()
+        class_with_terms = self.enrich_classes_with_terms(enriched_classes)
         document_with_core_classes = self.assign_classes_to_docs(
             collection=collection, enriched_classes=class_with_terms
         )
@@ -50,8 +48,10 @@ class LLMEnricher:
             DocumentCoreClasses=document_with_core_classes,
         )
 
-    def enrich_classes_with_terms(self) -> Dict[str, EnrichedClass]:
-        for node_name, class_term in self.class_terms.items():
+    def enrich_classes_with_terms(
+        self, enriched_classes: dict[str, EnrichedClass]
+    ) -> dict[str, EnrichedClass]:
+        for node_name, class_term in enriched_classes.items():
             # Get all nodes that are parents of the current node
             parents = list(self.taxonomy_manager.get_parents(node_name))
             # Check if node is root (have no parents)
@@ -67,7 +67,9 @@ class LLMEnricher:
                         class_term.terms.update(terms)
             else:
                 # Root node or node without parents
-                terms = self.enrich_class(node_name, "", set())
+                terms = self.enrich_class(
+                    node_name, class_term.class_description, "", set()
+                )
                 if terms:
                     class_term.terms.update(terms)
 
@@ -80,7 +82,7 @@ class LLMEnricher:
 
             self.logger.info("Enriched terms for %s: %s", node_name, class_term.terms)
 
-        return self.class_terms
+        return enriched_classes
 
     def enrich_class(
         self,
@@ -128,7 +130,7 @@ class LLMEnricher:
             return set()
 
     def assign_classes_to_docs(
-        self, collection: List[DocumentMeta], enriched_classes: Dict[str, EnrichedClass]
+        self, collection: List[DocumentMeta], enriched_classes: dict[str, EnrichedClass]
     ) -> List[DocumentMeta]:
         """Assign initial classes to documents"""
         self.logger.info("Assigning initial classes")
@@ -141,7 +143,7 @@ class LLMEnricher:
             )
 
             self.logger.info("Candidates for document %s: %s", doc.id, candidates)
-            core_classes = self._select_core_classes(doc.content, list(candidates))
+            core_classes = self._select_core_classes(doc.content, candidates)
             doc.initial_core_classes = set(core_classes)
             self.logger.info(
                 "Assigned classes for document %s: %s", doc.id, core_classes
@@ -149,23 +151,31 @@ class LLMEnricher:
 
         return collection
 
-    def _select_core_classes(self, doc: str, candidates: List[str]) -> List[str]:
+    def _select_core_classes(
+        self, doc: str, candidates: dict[int, set[str]]
+    ) -> List[str]:
         """
         Select core classes from a list of candidates using LLM
         """
         try:
+            candidates_text = []
+            for level in sorted(candidates.keys()):
+                classes = sorted(candidates[level])
+                candidates_text.append(f"Level {level}: {', '.join(classes)}")
+            formatted_candidates = "\n".join(candidates_text)
+
             prompt = f"""Given this document:
 "{doc}"
 
-And these possible classes:
-{', '.join(candidates)}
+And these possible classes by level:
+{formatted_candidates}
 
-Select ONLY the most specific and directly relevant classes that best describe the main topics of this document.
+
+Select ONLY the most specific and directly relevant class that best describe the main topics of this document.
 Important guidelines:
-- Choose classes that are most specific to the document's content
+- Choose the class that is most specific to the document's content at each level
 - Exclude broad/general classes unless they are directly discussed
-- Do not include parent classes unless they are explicitly relevant
-- Focus on 2-3 most relevant classes maximum
+- Only select ONE class maximum per level
 - If uncertain about a class, exclude it
 
 Return only the selected class names separated by commas, nothing else."""
@@ -191,18 +201,14 @@ Return only the selected class names separated by commas, nothing else."""
             self.logger.error("Error selecting core classes: %s", str(e))
             return []
 
-    def get_class_terms(self) -> Dict[str, EnrichedClass]:
-        """Return the enriched terms and their embeddings"""
-        return self.class_terms
-
     def _select_candidates_for_document(
         self,
         doc_embedding: np.ndarray,
         taxonomy_manager: TaxonomyManager,
-        enriched_classes: Dict[str, EnrichedClass],
-    ) -> Set[str]:
+        enriched_classes: dict[str, EnrichedClass],
+    ) -> dict[int, set[str]]:
         """Select candidate classes for a document using level-wise traversal"""
-        candidates = set()
+        candidates = defaultdict(set)
         current_level = set(taxonomy_manager.root_nodes)
 
         self.logger.info("Taxonomy max depth is %d", taxonomy_manager.max_depth + 1)
@@ -219,7 +225,7 @@ Return only the selected class names separated by commas, nothing else."""
             # Select top candidates
             similarities.sort(key=lambda x: x[1], reverse=True)
             selected = {node for node, _ in similarities[: level + 2]}
-            candidates.update(selected)
+            candidates[level].update(selected)
 
             # Prepare next level
             current_level = {
@@ -254,40 +260,8 @@ Return only the selected class names separated by commas, nothing else."""
             return 0.0
 
         return np.max(
-            np.dot(enriched_class.embeddings, embedding)
-            / (
-                np.linalg.norm(enriched_class.embeddings, axis=1)
-                * np.linalg.norm(embedding)
-            )
+            [
+                self.encoder.similarity(embedding, term_embedding)
+                for term_embedding in enriched_class.embeddings
+            ]
         )
-
-
-if __name__ == "__main__":
-    llm = Client("http://192.168.1.91:11434")
-    G = DiGraph()
-    G.add_edges_from(
-        [
-            ("domain", "mobility"),
-            ("domain", "health"),
-            # ("domain", "information technology"),
-            ("domain", "energy"),
-            ("domain", "environment"),
-            # ("domain", "trade"),
-            ("domain", "construction"),
-            ("domain", "culture"),
-            ("domain", "administration"),
-            ("domain", "urban planning"),
-            ("domain", "education"),
-            ("mobility", "environmental monitoring"),
-            ("mobility", "public transport"),
-            ("mobility", "shared mobility"),
-            ("mobility", "traffic management"),
-            ("mobility", "vehicle infrastructure"),
-            ("environment", "weather monitoring"),
-            ("environment", "air quality monitoring"),
-        ]
-    )
-
-    enricher = LLMEnricher(llm, G)
-    enricher.enrich_classes_with_terms()
-    enricher.get_class_terms()

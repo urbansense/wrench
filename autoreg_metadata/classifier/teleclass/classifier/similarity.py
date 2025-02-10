@@ -5,7 +5,6 @@ from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import 
     EnrichedClass,
 )
 from autoreg_metadata.classifier.teleclass.core.taxonomy_manager import TaxonomyManager
-from autoreg_metadata.harvester.sensorthings import Thing
 from autoreg_metadata.log import logger
 
 
@@ -24,11 +23,10 @@ class SimilarityClassifier:
         self.taxonomy_manager = taxonomy_manager
         self.embedding_service = embedding_service
         self.enriched_classes = enriched_classes
+        self.logger = logger.getChild(self.__class__.__name__)
 
         # Create class prototype embeddings from enriched classes
         self.class_embeddings = self._create_class_embeddings()
-
-        self.logger = logger.getChild(self.__class__.__name__)
 
     def _create_class_embeddings(self) -> dict[str, np.ndarray]:
         """
@@ -48,7 +46,13 @@ class SimilarityClassifier:
         for class_name, enriched_class in self.enriched_classes.items():
             if enriched_class.embeddings is not None:
                 # Use pre-computed embeddings if available
-                class_embeddings[class_name] = enriched_class.embeddings
+                class_embeddings[class_name] = np.mean(
+                    enriched_class.embeddings, axis=0
+                )
+                self.logger.info(
+                    "Using existing class embeddings with dimension: %s",
+                    class_embeddings[class_name].shape,
+                )
             else:
                 # Create embedding from class terms
                 terms = [term.term for term in enriched_class.terms]
@@ -56,30 +60,20 @@ class SimilarityClassifier:
                     # Average the embeddings of all terms
                     term_embeddings = self.embedding_service.get_embeddings(terms)
                     class_embeddings[class_name] = np.mean(term_embeddings, axis=0)
+                    self.logger.info(
+                        "Create average class embeddings from terms through averaging with dimension: %s",
+                        class_embeddings[class_name].shape,
+                    )
                 else:
                     # Fallback to class name embedding
                     class_embeddings[class_name] = (
                         self.embedding_service.get_embeddings(class_name)
                     )
-
+                    self.logger.info(
+                        "Create average class embeddings from class name through averaging with dimension: %s",
+                        class_embeddings[class_name].shape,
+                    )
         return class_embeddings
-
-    def _compute_similarity(
-        self, embedding1: np.ndarray, embedding2: np.ndarray
-    ) -> float:
-        """
-        Compute cosine similarity between two embeddings.
-
-        Args:
-            embedding1 (np.ndarray): The first embedding vector.
-            embedding2 (np.ndarray): The second embedding vector.
-
-        Returns:
-            float: The cosine similarity between the two embeddings.
-        """
-        return np.dot(embedding1, embedding2) / (
-            np.linalg.norm(embedding1) * np.linalg.norm(embedding2)
-        )
 
     def _assign_to_level(
         self, doc_embedding: np.ndarray, candidate_nodes: set[str], level: int = 0
@@ -105,7 +99,7 @@ class SimilarityClassifier:
         similarities = []
         for node in candidate_nodes:
             if node in self.class_embeddings:
-                sim = self._compute_similarity(
+                sim = self.embedding_service.encoder.similarity(
                     doc_embedding, self.class_embeddings[node]
                 )
                 similarities.append((node, sim))
@@ -117,7 +111,7 @@ class SimilarityClassifier:
             return [similarities[0][0]] if similarities else []
 
         # Log similarities for this level
-        self.logger.info("\nLevel %s similarities:", level)
+        self.logger.info("Level %s similarities:", level)
         self.logger.info("-" * 40)
         for node, sim in similarities:
             self.logger.info("%-30s %.4f", node, sim)
@@ -158,7 +152,7 @@ class SimilarityClassifier:
         assigned_classes = set()
         current_level = 0
         # Start from root
-        current_nodes = {self.taxonomy_manager.root_nodes[0]}
+        current_nodes = set(self.taxonomy_manager.root_nodes)
 
         # Traverse hierarchy level by level
         while current_nodes and current_level <= self.taxonomy_manager.max_depth:
@@ -183,7 +177,7 @@ class SimilarityClassifier:
         return assigned_classes
 
     def evaluate(
-        self, test_docs: list[dict[str, str]], true_labels: list[set[str]]
+        self, test_docs: list[dict[str, any]], true_labels: list[set[str]]
     ) -> dict[str, float]:
         """
         Evaluate classifier performance on test documents.
@@ -195,9 +189,11 @@ class SimilarityClassifier:
         Returns:
             dictionary with evaluation metrics
         """
+        self.logger.info("Evaluating model")
         predictions = []
         for doc in test_docs:
-            pred = self.predict(str(doc), model_class=Thing)
+            pred = self.predict(doc.content)
+            self.logger.debug("Predictions for document %s: %s", doc.id, pred)
             predictions.append(pred)
 
         # Calculate metrics
