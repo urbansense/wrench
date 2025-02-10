@@ -14,3 +14,5 @@ poetry.lock
 /*.py
 
 test_script/
+
+*.log
