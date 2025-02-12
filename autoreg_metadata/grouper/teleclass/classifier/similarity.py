@@ -1,10 +1,10 @@
 import numpy as np
 
-from autoreg_metadata.classifier.teleclass.core.embeddings import EmbeddingService
-from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import (
+from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
+from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
     EnrichedClass,
 )
-from autoreg_metadata.classifier.teleclass.core.taxonomy_manager import TaxonomyManager
+from autoreg_metadata.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from autoreg_metadata.log import logger
 
 

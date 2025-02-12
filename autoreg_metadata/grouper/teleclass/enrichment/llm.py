@@ -5,14 +5,14 @@ import numpy as np
 from ollama import Client
 from sentence_transformers import SentenceTransformer
 
-from autoreg_metadata.classifier.teleclass.core.config import LLMConfig
-from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import (
+from autoreg_metadata.grouper.teleclass.core.config import LLMConfig
+from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
     EnrichedClass,
     LLMEnrichmentResult,
     TermScore,
 )
-from autoreg_metadata.classifier.teleclass.core.models.models import DocumentMeta
-from autoreg_metadata.classifier.teleclass.core.taxonomy_manager import TaxonomyManager
+from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
+from autoreg_metadata.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from autoreg_metadata.log import logger
 
 

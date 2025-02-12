@@ -5,8 +5,8 @@ from ollama import Client
 
 from autoreg_metadata.catalogger.base import BaseCatalogger
 from autoreg_metadata.catalogger.sddi.utils import CatalogGenerator
-from autoreg_metadata.classifier.base import ClassificationResult
 from autoreg_metadata.common.models import CommonMetadata
+from autoreg_metadata.grouper.base import Group
 from autoreg_metadata.log import logger
 
 from .config import SDDIConfig
@@ -38,7 +38,7 @@ class SDDICatalogger(BaseCatalogger):
 
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def register(self, metadata: CommonMetadata, data: ClassificationResult):
+    def register(self, metadata: CommonMetadata, data: Group):
         try:
             api_service = self.generator.create_api_service(metadata)
             self._register_api_service(api_service)

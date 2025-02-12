@@ -5,31 +5,31 @@ from typing import Union
 
 from pydantic import BaseModel
 
-from autoreg_metadata.classifier.base import BaseClassifier, ClassificationResult
-from autoreg_metadata.classifier.teleclass.classifier.similarity import (
+from autoreg_metadata.grouper.base import BaseGrouper, Group
+from autoreg_metadata.grouper.teleclass.classifier.similarity import (
     SimilarityClassifier,
 )
-from autoreg_metadata.classifier.teleclass.core.cache import TELEClassCache
-from autoreg_metadata.classifier.teleclass.core.config import TELEClassConfig
-from autoreg_metadata.classifier.teleclass.core.document_loader import (
+from autoreg_metadata.grouper.teleclass.core.cache import TELEClassCache
+from autoreg_metadata.grouper.teleclass.core.config import TELEClassConfig
+from autoreg_metadata.grouper.teleclass.core.document_loader import (
     DocumentLoader,
     JSONDocumentLoader,
     ModelDocumentLoader,
 )
-from autoreg_metadata.classifier.teleclass.core.embeddings import EmbeddingService
-from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import (
+from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
+from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
     CorpusEnrichmentResult,
     EnrichedClass,
     LLMEnrichmentResult,
 )
-from autoreg_metadata.classifier.teleclass.core.models.models import DocumentMeta
-from autoreg_metadata.classifier.teleclass.core.taxonomy_manager import TaxonomyManager
-from autoreg_metadata.classifier.teleclass.enrichment.corpus import CorpusEnricher
-from autoreg_metadata.classifier.teleclass.enrichment.llm import LLMEnricher
+from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
+from autoreg_metadata.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
+from autoreg_metadata.grouper.teleclass.enrichment.corpus import CorpusEnricher
+from autoreg_metadata.grouper.teleclass.enrichment.llm import LLMEnricher
 from autoreg_metadata.log import logger
 
 
-class TELEClass(BaseClassifier):
+class TELEClass(BaseGrouper):
     """Main class for taxonomy-enhanced text classification"""
 
     def __init__(self, config: TELEClassConfig | str | Path):
@@ -215,9 +215,7 @@ class TELEClass(BaseClassifier):
 
         return self.classifier_manager.predict(text)
 
-    def classify_documents(
-        self, documents: Union[str, Path, list[BaseModel]]
-    ) -> ClassificationResult:
+    def group_documents(self, documents: Union[str, Path, list[BaseModel]]) -> Group:
         """
         Classifies a collection of documents into predefined categories.
 
@@ -260,7 +258,7 @@ class TELEClass(BaseClassifier):
                 for leaf_class in final_classifications.keys()
             }
 
-            return ClassificationResult[DocumentMeta](
+            return Group[DocumentMeta](
                 attribute=self.config.taxonomy_metadata.name,
                 classification_result=final_classifications,
                 parent_classes=parent_mappings,
@@ -271,7 +269,7 @@ class TELEClass(BaseClassifier):
 
     def evaluate_classifier(
         self, documents: Union[str, Path, list[BaseModel]]
-    ) -> ClassificationResult:
+    ) -> Group:
         """ """
         try:
             docs = self._load_documents(documents)

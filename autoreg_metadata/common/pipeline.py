@@ -5,7 +5,7 @@ from autoreg_metadata.log import logger
 # Use TYPE_CHECKING for imports needed only for type hints
 if TYPE_CHECKING:
     from autoreg_metadata.catalogger.base import BaseCatalogger
-    from autoreg_metadata.classifier.base import BaseClassifier
+    from autoreg_metadata.grouper.base import BaseGrouper
     from autoreg_metadata.harvester.base import BaseHarvester
 
 
@@ -19,7 +19,7 @@ class Pipeline:
         self,
         harvester: "BaseHarvester",
         catalogger: "BaseCatalogger",
-        classifier: list["BaseClassifier"] | None = None,
+        classifier: list["BaseGrouper"] | None = None,
     ):
         """
         Initialize pipeline with required and optional components.

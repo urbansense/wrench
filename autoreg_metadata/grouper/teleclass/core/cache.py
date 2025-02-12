@@ -1,10 +1,10 @@
 import pickle
 from pathlib import Path
 
-from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import (
+from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
     EnrichedClass,
 )
-from autoreg_metadata.classifier.teleclass.core.models.models import DocumentMeta
+from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
 
 
 class TELEClassCache:

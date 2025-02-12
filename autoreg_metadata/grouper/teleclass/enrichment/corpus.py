@@ -5,14 +5,14 @@ import yake
 from keybert import KeyBERT
 from rank_bm25 import BM25Okapi
 
-from autoreg_metadata.classifier.teleclass.core.config import CorpusConfig
-from autoreg_metadata.classifier.teleclass.core.embeddings import EmbeddingService
-from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import (
+from autoreg_metadata.grouper.teleclass.core.config import CorpusConfig
+from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
+from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
     CorpusEnrichmentResult,
     EnrichedClass,
     TermScore,
 )
-from autoreg_metadata.classifier.teleclass.core.models.models import DocumentMeta
+from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
 from autoreg_metadata.log import logger
 
 

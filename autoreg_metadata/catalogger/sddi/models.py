@@ -29,7 +29,7 @@ class BaseDataset(BaseModel):
     url: str | None = None
     author: str = ""
     author_email: str = ""
-    end_collection_date: str = ""
+    end_collection_date: str = ""  # necessary to properly register entries
     groups: list[dict] = []
     language: str = ""
     licence_agreement: list[str] = ["licence_agreement_check"]
@@ -87,9 +87,3 @@ class DeviceGroup(BaseDataset):
             }
         )
         return cls(**data)
-
-
-class Relationship(BaseModel):
-    subject: str
-    object: str
-    type: str
