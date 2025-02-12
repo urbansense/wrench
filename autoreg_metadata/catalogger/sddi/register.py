@@ -47,7 +47,6 @@ class SDDICatalogger(BaseCatalogger):
 
             if groups:
                 device_groups = self.generator.create_device_groups(api_service, groups)
-                print(device_groups)
                 self._register_device_groups(device_groups)
                 for d in device_groups:
                     self.logger.info(
@@ -92,7 +91,7 @@ class SDDICatalogger(BaseCatalogger):
         self.ckan_server.call_action(
             action="dataset_purge", data_dict={"id": dataset_name}
         )
-        print("successfully deleted resource")
+        self.logger.info("successfully deleted resource")
 
     def get_owner_orgs(self) -> list[str]:
         return self.ckan_server.call_action(

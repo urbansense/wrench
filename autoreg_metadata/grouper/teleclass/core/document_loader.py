@@ -78,7 +78,6 @@ class ModelDocumentLoader:
         self.documents = documents
 
     def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:
-        print("Loading from model document loader")
         return [
             DocumentMeta(
                 id=doc.id,
