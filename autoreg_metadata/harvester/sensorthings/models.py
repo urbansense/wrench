@@ -4,18 +4,21 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from autoreg_metadata.common.models import Item
+
 model_config = ConfigDict(
     alias_generator=to_camel,
     populate_by_name=True,
     from_attributes=True,
+    coerce_numbers_to_str=True,
 )
 
 
-class SensorThingsBase(BaseModel):
+class SensorThingsBase(Item):
     """Base mixin for common fields for relevant SensorThings API Entities"""
 
     model_config = model_config
-    id: int = Field(alias="@iot.id")
+    id: str = Field(alias="@iot.id")
     name: str
     description: str
     properties: dict[str, Any] | None = None

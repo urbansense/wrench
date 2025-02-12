@@ -4,9 +4,6 @@ from pydantic import BaseModel
 
 from autoreg_metadata.common.models import CommonMetadata
 from autoreg_metadata.grouper.base import Group
-from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
-    DocumentMeta,
-)
 from autoreg_metadata.harvester.sensorthings.models import Thing
 from autoreg_metadata.log import logger
 
@@ -40,7 +37,7 @@ class CatalogGenerator:
         )
 
     def create_device_groups(
-        self, api_service: APIService, groups: list[Group[DocumentMeta]]
+        self, api_service: APIService, groups: list[Group]
     ) -> list[DeviceGroup]:
 
         self.logger.info("Creating device groups")

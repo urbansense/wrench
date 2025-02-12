@@ -3,17 +3,18 @@ from pathlib import Path
 from typing import Protocol, Union
 
 from pydantic import BaseModel
+from sentence_transformers import SentenceTransformer
 
-from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
-from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
+from autoreg_metadata.common.models import Item
+from autoreg_metadata.grouper.teleclass.core.models import DocumentMeta
 
 
 class DocumentLoader(Protocol):
-    def load(self, encoder: EmbeddingService) -> list[DocumentMeta]:
+    def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:
         pass
 
 
-class JSONDocumentLoader(DocumentLoader):
+class JSONDocumentLoader:
     """
     A document loader for JSON files that loads and processes documents into a list of DocumentMeta objects.
 
@@ -33,7 +34,7 @@ class JSONDocumentLoader(DocumentLoader):
     def __init__(self, file_path: Union[str, Path]):
         self.file_path = Path(file_path)
 
-    def load(self, encoder: EmbeddingService) -> list[DocumentMeta]:
+    def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:
         if not self.file_path.exists():
             raise FileNotFoundError(f"JSON file not found: {self.file_path}")
 
@@ -47,13 +48,13 @@ class JSONDocumentLoader(DocumentLoader):
             DocumentMeta(
                 id=str(idx),
                 content=json.dumps(doc),
-                embeddings=encoder.get_embeddings(json.dumps(doc)),
+                embeddings=encoder.encode(json.dumps(doc)),
             )
             for idx, doc in enumerate(data)
         ]
 
 
-class ModelDocumentLoader(DocumentLoader):
+class ModelDocumentLoader:
     """
     A class to load and process documents that are instances of Pydantic BaseModel.
 
@@ -69,20 +70,19 @@ class ModelDocumentLoader(DocumentLoader):
             and returns a list of DocumentMeta instances.
     """
 
-    def __init__(self, documents: list[BaseModel]):
+    def __init__(self, documents: list[Item]):
         if not isinstance(documents, list) or not all(
             isinstance(doc, BaseModel) for doc in documents
         ):
             raise TypeError("documents must be a list of pydantic BaseModel instances")
         self.documents = documents
 
-    def load(self, encoder: EmbeddingService) -> list[DocumentMeta]:
-        print("Loading from model document loader")
+    def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:
         return [
             DocumentMeta(
-                id=str(i),
+                id=doc.id,
                 content=doc.model_dump_json(),
-                embeddings=encoder.get_embeddings(doc.model_dump_json()),
+                embeddings=encoder.encode(doc.model_dump_json()),
             )
-            for i, doc in enumerate(self.documents)
+            for doc in self.documents
         ]

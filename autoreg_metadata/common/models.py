@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 # Define a generic type for source-specific data
 T = TypeVar("T")
@@ -10,6 +10,10 @@ T = TypeVar("T")
 class TimeFrame(BaseModel):
     start_time: datetime
     latest_time: datetime
+
+
+class Item(BaseModel):
+    id: str
 
 
 class CommonMetadata(BaseModel, Generic[T]):

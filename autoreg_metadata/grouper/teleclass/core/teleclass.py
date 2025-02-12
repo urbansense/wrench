@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Union
 
 from pydantic import BaseModel
+from sentence_transformers import SentenceTransformer
 
 from autoreg_metadata.grouper.base import BaseGrouper, Group
 from autoreg_metadata.grouper.teleclass.classifier.similarity import (
@@ -16,13 +17,12 @@ from autoreg_metadata.grouper.teleclass.core.document_loader import (
     JSONDocumentLoader,
     ModelDocumentLoader,
 )
-from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
-from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
+from autoreg_metadata.grouper.teleclass.core.models import (
     CorpusEnrichmentResult,
+    DocumentMeta,
     EnrichedClass,
     LLMEnrichmentResult,
 )
-from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
 from autoreg_metadata.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from autoreg_metadata.grouper.teleclass.enrichment.corpus import CorpusEnricher
 from autoreg_metadata.grouper.teleclass.enrichment.llm import LLMEnricher
@@ -41,22 +41,22 @@ class TELEClass(BaseGrouper):
         self.config = config
         # Initialize components
         self.taxonomy_manager = TaxonomyManager.from_config(config)
-        self.embedding_service = EmbeddingService(config.embedding.model_name)
+        self.encoder = SentenceTransformer(config.embedding.model_name)
         # Initialize enrichers
         self.llm_enricher = LLMEnricher(
             config=config.llm, taxonomy_manager=self.taxonomy_manager
         )
         self.corpus_enricher = CorpusEnricher(
-            config=config.corpus, embedding=self.embedding_service
+            config=config.corpus, encoder_model=config.embedding.model_name
         )
 
         # initialize empty set of terms for all classes, embeddings are not yet set here
-        self.enriched_classes = {
-            class_name: EnrichedClass(
+        self.enriched_classes = [
+            EnrichedClass(
                 class_name=class_name, class_description=class_description, terms=set()
             )
             for class_name, class_description in self.taxonomy_manager.get_all_classes_with_description().items()
-        }
+        ]
         # Initialize cache
         if config.cache.enabled:
             self.cache = TELEClassCache(config.cache.directory)
@@ -72,7 +72,7 @@ class TELEClass(BaseGrouper):
             if isinstance(source, (str, Path))
             else ModelDocumentLoader(source)
         )
-        return loader.load(self.embedding_service)
+        return loader.load(self.encoder)
 
     # for testing and evaluation
     def _load_labels(
@@ -123,7 +123,7 @@ class TELEClass(BaseGrouper):
             # Initialize classifier manager
             self.classifier_manager = SimilarityClassifier(
                 taxonomy_manager=self.taxonomy_manager,
-                embedding_service=self.embedding_service,
+                encoder=self.encoder,
                 enriched_classes=self.enriched_classes,
             )
 

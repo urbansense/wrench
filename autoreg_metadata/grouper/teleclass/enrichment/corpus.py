@@ -2,60 +2,41 @@ import math
 
 import numpy as np
 import yake
-from keybert import KeyBERT
 from rank_bm25 import BM25Okapi
+from sentence_transformers import SentenceTransformer
 
 from autoreg_metadata.grouper.teleclass.core.config import CorpusConfig
-from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
-from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
+from autoreg_metadata.grouper.teleclass.core.models import (
     CorpusEnrichmentResult,
+    DocumentMeta,
     EnrichedClass,
     TermScore,
 )
-from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
 from autoreg_metadata.log import logger
-
-
-class MultiWordPhraseExtractor:
-    """Extract multi-word phrases from text using YAKE or KeyBERT"""
-
-    def __init__(
-        self, model: str, keybert_model: str = "all-mpnet-base-v2", top_n: int = 5
-    ):
-        if model == "yake":
-            self.yake_extractor = yake.KeywordExtractor(
-                lan="en",
-                n=3,
-                dedupLim=0.9,
-                dedupFunc="seqm",
-                windowsSize=1,
-                top=top_n,
-                features=None,
-            )
-            self.model = "yake"
-        elif model == "keybert":
-            self.bert_extractor = KeyBERT(model=keybert_model)
-            self.model = "keybert"
-        else:
-            raise ValueError("Invalid model type. Choose 'yake' or 'keybert'")
 
 
 class CorpusEnricher:
     def __init__(
         self,
         config: CorpusConfig,
-        embedding: EmbeddingService,
+        encoder_model: str,
     ):
-        self.embedder = embedding
-        self.keyword_model = MultiWordPhraseExtractor(
-            model=config.phrase_extractor, keybert_model=self.embedder.model_name
+        self.encoder = SentenceTransformer(encoder_model)
+        self.keyword_model = yake.KeywordExtractor(
+            lan="en",
+            n=3,
+            dedupLim=0.9,
+            dedupFunc="seqm",
+            windowsSize=1,
+            top=5,
+            features=None,
         )
-        self.class_terms: dict[str, EnrichedClass] = {}
+        self.class_terms: list[EnrichedClass] = []
         self.logger = logger.getChild(self.__class__.__name__)
 
     def enrich(
         self,
-        enriched_classes: dict[str, EnrichedClass],
+        enriched_classes: list[EnrichedClass],
         collection: list[DocumentMeta],
     ) -> CorpusEnrichmentResult:
         """
@@ -68,36 +49,25 @@ class CorpusEnricher:
             Dictionary mapping class names to their enriched terms with scores
         """
         # Convert documents to dictionary format with IoT structure
-        doc_dict = {}
 
-        class_set: set[str] = set()
-
-        for doc in collection:
-            if not doc.initial_core_classes:
-                raise ValueError(
-                    f"Initial core classes for document {str(doc.id)} not defined"
-                )
-            doc_dict[str(doc.id)] = doc
-            class_set.update(doc.initial_core_classes)
-
-        for class_name in class_set:
-            # Get documents assigned to this class
-            self.logger.info("Enriching class: %s", class_name)
-            class_docs = [
-                doc_dict[str(doc.id)]
-                for doc in collection
-                if doc.initial_core_classes and class_name in doc.initial_core_classes
-            ]
-
+        for ec in enriched_classes:
+            self.logger.info("Enriching class %s", ec.class_name)
+            class_docs = []
+            for doc in collection:
+                if not doc.core_classes:
+                    raise ValueError(
+                        f"Core classes for document {str(doc.id)} not defined"
+                    )
+                if ec.class_name in doc.core_classes:
+                    class_docs.append(doc)
             # Get sibling data
-            sibling_docs = self.get_sibling_data(class_name, doc_dict, collection)
+            sibling_docs = self.get_sibling_data(ec.class_name, collection)
 
-            term_scores = self.enrich_class(class_name, class_docs, sibling_docs)
+            term_scores = self.enrich_class(ec.class_name, class_docs, sibling_docs)
 
-            enriched_classes[class_name].terms.update(term_scores)
-
-            enriched_classes[class_name].embeddings = self.embedder.encoder.encode(
-                [term_score.term for term_score in enriched_classes[class_name].terms]
+            ec.terms.update(term_scores)
+            ec.embeddings = self.encoder.encode(
+                [term_score.term for term_score in ec.terms]
             )
 
         return CorpusEnrichmentResult(ClassEnrichment=enriched_classes)
@@ -105,7 +75,6 @@ class CorpusEnricher:
     def get_sibling_data(
         self,
         class_name: str,
-        documents: dict[str, DocumentMeta],
         collection: list[DocumentMeta],
     ) -> dict[str, list[DocumentMeta]]:
         """
@@ -114,13 +83,12 @@ class CorpusEnricher:
         sibling_docs: dict[str, list[DocumentMeta]] = {}
         # Group documents by their assigned classes
         for doc in collection:
-            if doc.initial_core_classes:
-                for cls in doc.initial_core_classes:
+            if doc.core_classes:
+                for cls in doc.core_classes:
                     if cls != class_name:
                         if cls not in sibling_docs:
-                            sibling_docs[cls] = []
-                        if str(doc.id) in documents:  # Make sure document exists
-                            sibling_docs[cls].append(documents[str(doc.id)])
+                            sibling_docs[cls] = []  # Make sure document exists
+                        sibling_docs[cls].append(doc)
 
         return sibling_docs
 
@@ -189,29 +157,16 @@ class CorpusEnricher:
         """
         Calculate semantic similarity using sentence transformer embeddings
         """
-        term_embedding = self.embedder.get_embeddings(term)
-        class_embedding = self.embedder.get_embeddings(class_name)
+        term_embedding = self.encoder.encode(term)
+        class_embedding = self.encoder.encode(class_name)
 
-        similarity = self.embedder.encoder.similarity(
-            term_embedding, class_embedding
-        ).item()
+        similarity = self.encoder.similarity(term_embedding, class_embedding).item()
 
         return similarity
 
-    def extract_key_phrases(self, text: str, top_n: int = 5) -> list[str]:
-        if self.keyword_model.model == "keybert":
-            keywords = self.keyword_model.bert_extractor.extract_keywords(
-                docs=text,
-                keyphrase_ngram_range=(1, 3),  # Extract phrases of 1-3 words
-                stop_words="english",
-                use_maxsum=True,
-                nr_candidates=10,
-                top_n=top_n,
-            )
-        elif self.keyword_model.model == "yake":
-            keywords = self.keyword_model.yake_extractor.extract_keywords(text)
-        else:
-            raise ValueError("Invalid model type. Choose 'yake' or 'keybert'")
+    def extract_key_phrases(self, text: str) -> list[str]:
+
+        keywords = self.keyword_model.extract_keywords(text)
 
         return [keyword for keyword, _ in keywords]
 
@@ -222,7 +177,7 @@ class CorpusEnricher:
         terms = set()
         # Extract terms from descriptions
         text = " ".join(data.content for data in iot_data_list)
-        words = self.extract_key_phrases(text, top_n=5)
+        words = self.extract_key_phrases(text)
 
         # Add single words
         terms.update(words)
