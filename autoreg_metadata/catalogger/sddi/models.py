@@ -3,17 +3,6 @@ from enum import Enum
 from pydantic import BaseModel, computed_field
 
 
-class GeometryType(Enum):
-    point = "Point"
-    line_string = "LineString"
-    linear_ring = "LinearRing"
-    polygon = "Polygon"
-    multi_point = "MultiPoint"
-    multi_linestring = "MultiLineString"
-    multi_polygon = "MultiPolygon"
-    multi_geometry = "MultiGeometry"
-
-
 class SDDICategory(Enum):
     online_service = "online-service"
     device = "device"

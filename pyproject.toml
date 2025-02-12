@@ -12,7 +12,8 @@ dependencies = [
     "pydantic (>=2.10.4,<3.0.0)",
     "requests (>=2.32.3,<3.0.0)",
     "ckanapi (>=4.8,<5.0)",
-    "python-dotenv (>=1.0.1)"
+    "python-dotenv (>=1.0.1)",
+    "geojson (>=3.2.0)"
 ]
 
 [tool.poetry]

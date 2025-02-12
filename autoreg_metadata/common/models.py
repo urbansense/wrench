@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # Define a generic type for source-specific data
 T = TypeVar("T")
@@ -10,14 +10,6 @@ T = TypeVar("T")
 class TimeFrame(BaseModel):
     start_time: datetime
     latest_time: datetime
-
-
-class Coordinate(BaseModel):
-    longitude: float
-    latitude: float
-
-    def to_list(self):
-        return [self.longitude, self.latitude]
 
 
 class CommonMetadata(BaseModel, Generic[T]):
@@ -33,7 +25,7 @@ class CommonMetadata(BaseModel, Generic[T]):
     endpoint_url: str
 
     # standard, but optional fields
-    spatial_extent: list[Coordinate] | None = None
+    spatial_extent: str | None = ""
     temporal_extent: TimeFrame | None = None
     tags: list[str] = []
     keywords: list[str] = []

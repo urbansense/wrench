@@ -2,7 +2,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from .common.models import Coordinate, TimeFrame
+from .common.models import TimeFrame
 
 # Define common types used across the package
 DocumentType = TypeVar("DocumentType", bound=BaseModel)
@@ -13,5 +13,4 @@ __all__ = [
     "DocumentType",
     "LocationType",
     "TimeFrame",
-    "Coordinate",
 ]
