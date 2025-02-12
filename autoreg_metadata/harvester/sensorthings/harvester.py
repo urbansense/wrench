@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Optional, TypeVar
 
 import requests
+from geojson import Polygon
 
-from autoreg_metadata.common.models import CommonMetadata, Coordinate, TimeFrame
+from autoreg_metadata.common.models import CommonMetadata, TimeFrame
 from autoreg_metadata.harvester.base import BaseHarvester
 from autoreg_metadata.log import logger
 
@@ -65,7 +66,7 @@ class SensorThingsHarvester(BaseHarvester):
                 title=self.config.title,
                 identifier=self.config.identifier,
                 description=self.config.description,
-                spatial_extent=geographic_extent,
+                spatial_extent=str(geographic_extent),
                 temporal_extent=timeframe,
                 source_type='sensorthings',
                 last_updated=timeframe.latest_time,
@@ -149,7 +150,7 @@ class SensorThingsHarvester(BaseHarvester):
 
         return items
 
-    def _calculate_geographic_extent(self, locations: list[GenericLocation]) -> list[Coordinate]:
+    def _calculate_geographic_extent(self, locations: list[GenericLocation]) -> Polygon:
         """Calculate the geographic bounding box from locations"""
         min_lat = float('inf')
         max_lat = float('-inf')
@@ -163,13 +164,7 @@ class SensorThingsHarvester(BaseHarvester):
             min_lng = min(min_lng, lng)
             max_lng = max(max_lng, lng)
 
-        return [
-            Coordinate(longitude=min_lng, latitude=min_lat),
-            Coordinate(longitude=min_lng, latitude=max_lat),
-            Coordinate(longitude=max_lng, latitude=max_lat),
-            Coordinate(longitude=max_lng, latitude=min_lat),
-            Coordinate(longitude=min_lng, latitude=min_lat)
-        ]
+        return Polygon([[(min_lat, min_lng), (min_lat, max_lng), (max_lat, max_lng), (max_lat, min_lng), (min_lat, min_lng)]])
 
     def _calculate_timeframe(self, things: list[Thing]) -> TimeFrame:
         """Calculate the overall timeframe from thing data"""

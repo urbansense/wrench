@@ -1,9 +1,8 @@
-import json
-
+from geojson import MultiPoint
 from ollama import Client
 from pydantic import BaseModel
 
-from autoreg_metadata.common.models import CommonMetadata, Coordinate
+from autoreg_metadata.common.models import CommonMetadata
 from autoreg_metadata.grouper.base import Group
 from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
     DocumentMeta,
@@ -11,7 +10,7 @@ from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
 from autoreg_metadata.harvester.sensorthings.models import Thing
 from autoreg_metadata.log import logger
 
-from .models import APIService, DeviceGroup, GeometryType
+from .models import APIService, DeviceGroup
 
 
 class CatalogDetails(BaseModel):
@@ -25,38 +24,7 @@ class CatalogGenerator:
         self.model = model
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def create_spatial_description(
-        self, geometry_type: GeometryType, coor: list[Coordinate]
-    ) -> str:
-        """
-        Creates a spatial description in GeoJSON format.
-
-        Args:
-            geometry_type (GeometryType): The type of geometry (e.g., Point, LineString, Polygon).
-            coor (list[Coordinate]): A list of Coordinate objects representing the geometry.
-
-        Returns:
-            str: A JSON string representing the spatial description in GeoJSON format.
-        """
-        if geometry_type.value == "Polygon":
-            coordinates = [[c.to_list() for c in coor]]
-        if geometry_type.value == "MultiPoint":
-            coordinates = [c.to_list() for c in coor]
-
-        return json.dumps(
-            {
-                "type": geometry_type.value,
-                # transform each coordinate into a list of linear ring [[lon, lat],...]]
-                "coordinates": coordinates,
-            },
-            indent=3,
-        )
-
     def create_api_service(self, metadata: CommonMetadata) -> APIService:
-
-        spatial_desc = self.create_spatial_description(
-            GeometryType.polygon, list(metadata.spatial_extent)
-        )
 
         # set a default owner for now HANDLE THIS LATER
         owner = metadata.owner or "lehrstuhl-fur-geoinformatik"
@@ -68,7 +36,7 @@ class CatalogGenerator:
             owner_org=owner,
             title=metadata.title,
             tags=[{"name": tag} for tag in metadata.tags],
-            spatial=spatial_desc,
+            spatial=metadata.spatial_extent,
         )
 
     def create_device_groups(
@@ -165,7 +133,7 @@ class CatalogGenerator:
                     continue
                 for loc in thing_with_location.location:
                     lon, lat = loc.get_coordinates()
-                    coord.append(Coordinate(longitude=lon, latitude=lat))
+                    coord.append((lon, lat))
 
             self.logger.info("Finished getting things with locations")
 
@@ -189,9 +157,7 @@ class CatalogGenerator:
                 [{"name": dom} for dom in group.parent_classes if dom in domain_groups]
             )
 
-            device_group.spatial = self.create_spatial_description(
-                geometry_type=GeometryType.multi_point, coor=coord
-            )
+            device_group.spatial = str(MultiPoint(coord))
 
             device_groups.append(device_group)
 
