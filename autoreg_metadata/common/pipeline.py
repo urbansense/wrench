@@ -5,7 +5,7 @@ from autoreg_metadata.log import logger
 # Use TYPE_CHECKING for imports needed only for type hints
 if TYPE_CHECKING:
     from autoreg_metadata.catalogger.base import BaseCatalogger
-    from autoreg_metadata.classifier.base import BaseClassifier
+    from autoreg_metadata.grouper.base import BaseGrouper
     from autoreg_metadata.harvester.base import BaseHarvester
 
 
@@ -19,7 +19,7 @@ class Pipeline:
         self,
         harvester: "BaseHarvester",
         catalogger: "BaseCatalogger",
-        classifier: list["BaseClassifier"] | None = None,
+        grouper: Optional["BaseGrouper"] = None,
     ):
         """
         Initialize pipeline with required and optional components.
@@ -31,7 +31,7 @@ class Pipeline:
         """
         self.harvester = harvester
         self.catalogger = catalogger
-        self.classifier = classifier
+        self.grouper = grouper
         self.logger = logger.getChild(self.__class__.__name__)
 
     def run(self):
@@ -42,7 +42,7 @@ class Pipeline:
         self.logger.info(
             "Running pipeline with %s harvester, %s classifier, and %s catalogger...",
             self.harvester.__class__.__name__,
-            self.classifier.__class__.__name__,
+            self.grouper.__class__.__name__,
             self.catalogger.__class__.__name__,
         )
         try:
@@ -54,11 +54,11 @@ class Pipeline:
                 return None
 
             # Step 2: Optional classification
-            classified_docs = None
-            if self.classifier is not None:
+            grouped_docs = None
+            if self.grouper is not None:
                 self.logger.debug("Starting classification")
                 try:
-                    classified_docs = self.classifier.classify_documents(documents)
+                    grouped_docs = self.grouper.group_documents(documents)
                 except Exception as e:
                     self.logger.error("Classification failed: %s", e)
                     # Continue pipeline even if classification fails
@@ -67,7 +67,7 @@ class Pipeline:
             try:
                 # If classification was performed and successful, use classified documents
                 # Otherwise, use raw documents in a default structure
-                docs_to_catalog = classified_docs if classified_docs is not None else {}
+                docs_to_catalog = grouped_docs if grouped_docs is not None else {}
 
                 self.logger.debug("Registering data into catalog")
                 self.catalogger.register(metadata, docs_to_catalog)

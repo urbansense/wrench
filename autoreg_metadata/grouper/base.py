@@ -6,16 +6,16 @@ from pydantic import BaseModel, Field
 T = TypeVar("T", bound=BaseModel)
 
 
-class ClassificationResult(BaseModel, Generic[T]):
-    attribute: str = Field(
-        description="Attribute by which the input is classified, examples may be 'size', 'color', 'type' "
-    )
-    classification_result: dict[str, list[T]]
+class Group(BaseModel, Generic[T]):
+    name: str = Field(description="Name of the group")
+    items: list[T] = Field(description="List of items belonging to this group")
     # optional only for hierarchical classification
-    parent_classes: dict[str, set[str]] = {}
+    parent_classes: set[str] = Field(
+        default=set(), description="Set of parent classes of this group"
+    )
 
 
-class BaseClassifier(ABC):
+class BaseGrouper(ABC):
 
     @abstractmethod
     def predict(self, text: str, **kwargs) -> set[str]:
@@ -32,7 +32,7 @@ class BaseClassifier(ABC):
         pass
 
     @abstractmethod
-    def classify_documents(self, documents: Any) -> ClassificationResult:
+    def group_documents(self, documents: Any) -> list[Group]:
         """
         Return a dictionary where the keys are strings representing categories
         and the values are lists of items belonging to those categories.

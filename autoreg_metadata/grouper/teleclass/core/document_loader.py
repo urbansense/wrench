@@ -4,8 +4,8 @@ from typing import Protocol, Union
 
 from pydantic import BaseModel
 
-from autoreg_metadata.classifier.teleclass.core.embeddings import EmbeddingService
-from autoreg_metadata.classifier.teleclass.core.models.models import DocumentMeta
+from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
+from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
 
 
 class DocumentLoader(Protocol):

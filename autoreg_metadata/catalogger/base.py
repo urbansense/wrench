@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from autoreg_metadata.classifier.base import ClassificationResult
 from autoreg_metadata.common.models import CommonMetadata
+from autoreg_metadata.grouper.base import Group
 
 
 class BaseCatalogger(ABC):
@@ -10,5 +10,5 @@ class BaseCatalogger(ABC):
         self.api_key = api_key
 
     @abstractmethod
-    def register(self, metadata: CommonMetadata, data: ClassificationResult):
+    def register(self, metadata: CommonMetadata, data: list[Group]):
         pass

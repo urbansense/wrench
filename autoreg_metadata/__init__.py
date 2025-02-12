@@ -1,7 +1,7 @@
 from .catalogger.sddi import SDDICatalogger
-from .classifier.teleclass.core.teleclass import TELEClass
 from .common import Pipeline
 from .exceptions import AutoregError, ClassifierError, HarvesterError
+from .grouper.teleclass.core.teleclass import TELEClass
 from .harvester.sensorthings import SensorThingsHarvester
 from .types import DocumentType, LocationType
 

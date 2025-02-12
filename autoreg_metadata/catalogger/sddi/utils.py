@@ -3,8 +3,13 @@ import json
 from ollama import Client
 from pydantic import BaseModel
 
-from autoreg_metadata.classifier.base import ClassificationResult
 from autoreg_metadata.common.models import CommonMetadata, Coordinate
+from autoreg_metadata.grouper.base import Group
+from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
+    DocumentMeta,
+)
+from autoreg_metadata.harvester.sensorthings.models import Thing
+from autoreg_metadata.log import logger
 
 from .models import APIService, DeviceGroup, GeometryType
 
@@ -18,15 +23,31 @@ class CatalogGenerator:
     def __init__(self, llm_client: Client, model: str):
         self.llm = llm_client
         self.model = model
+        self.logger = logger.getChild(self.__class__.__name__)
 
     def create_spatial_description(
         self, geometry_type: GeometryType, coor: list[Coordinate]
     ) -> str:
+        """
+        Creates a spatial description in GeoJSON format.
+
+        Args:
+            geometry_type (GeometryType): The type of geometry (e.g., Point, LineString, Polygon).
+            coor (list[Coordinate]): A list of Coordinate objects representing the geometry.
+
+        Returns:
+            str: A JSON string representing the spatial description in GeoJSON format.
+        """
+        if geometry_type.value == "Polygon":
+            coordinates = [[c.to_list() for c in coor]]
+        if geometry_type.value == "MultiPoint":
+            coordinates = [c.to_list() for c in coor]
+
         return json.dumps(
             {
                 "type": geometry_type.value,
                 # transform each coordinate into a list of linear ring [[lon, lat],...]]
-                "coordinates": [[c.to_list() for c in coor]],
+                "coordinates": coordinates,
             },
             indent=3,
         )
@@ -51,9 +72,31 @@ class CatalogGenerator:
         )
 
     def create_device_groups(
-        self, api_service: APIService, data: ClassificationResult
+        self, api_service: APIService, groups: list[Group[DocumentMeta]]
     ) -> list[DeviceGroup]:
+
+        self.logger.info("Creating device groups")
+
         device_groups = []
+
+        domain_groups = [
+            "administration",
+            "mobility",
+            "environment",
+            "agriculture",
+            "urban-planning",
+            "health",
+            "energy",
+            "information-technology",
+            "tourism",
+            "living",
+            "education",
+            "construction",
+            "culture",
+            "trade",
+            "craft",
+            "work",
+        ]
 
         system_prompt = """You are an agent generating name and description for a urban sensor metadata catalog entry
               based on solely the information given by the user, do not add extra information which is not given by the user.
@@ -90,8 +133,7 @@ class CatalogGenerator:
                 Sample Data: {data}
             """
 
-        for category, records in data.classification_result.items():
-            print(category)
+        for group in groups:
             messages = [
                 {
                     "role": "system",
@@ -100,9 +142,9 @@ class CatalogGenerator:
                 {
                     "role": "user",
                     "content": prompt.format(
-                        measured_param=category,
+                        measured_param=group.name,
                         title=api_service.title,
-                        data=[records[0].content],
+                        data=[group.items[0].content],
                     ),
                 },
             ]
@@ -111,25 +153,44 @@ class CatalogGenerator:
                 messages=messages,
                 format=CatalogDetails.model_json_schema(),
             )
-            print(response.message.content)
             catalog_details = CatalogDetails.model_validate_json(
                 response.message.content
             )
+
+            coord = []
+
+            for r in group.items:
+                thing_with_location = Thing.model_validate_json(r.content)
+                if not thing_with_location.location:
+                    continue
+                for loc in thing_with_location.location:
+                    lon, lat = loc.get_coordinates()
+                    coord.append(Coordinate(longitude=lon, latitude=lat))
+
+            self.logger.info("Finished getting things with locations")
 
             device_group = DeviceGroup.from_api_service(
                 api_service=api_service,
                 # convert to lower and replace space with underscores
                 name=catalog_details.name,
-                tags=[{"name": tag} for tag in data.parent_classes[category]],
+                tags=[{"name": tag} for tag in group.parent_classes],
                 description=catalog_details.description,
                 resources=[
                     {
                         "name": f"URL for {catalog_details.name}",
-                        "description": f"URL provides a list of all data associated with the category {category}",
+                        "description": f"URL provides a list of all data associated with the category {group.name}",
                         "format": "JSON",
                         "url": "mock-url.com",
                     }
                 ],
+            )
+            # extend group with any of the domain names from classifier (e.g. mobility)
+            device_group.groups.extend(
+                [{"name": dom} for dom in group.parent_classes if dom in domain_groups]
+            )
+
+            device_group.spatial = self.create_spatial_description(
+                geometry_type=GeometryType.multi_point, coor=coord
             )
 
             device_groups.append(device_group)

@@ -5,31 +5,31 @@ from typing import Union
 
 from pydantic import BaseModel
 
-from autoreg_metadata.classifier.base import BaseClassifier, ClassificationResult
-from autoreg_metadata.classifier.teleclass.classifier.similarity import (
+from autoreg_metadata.grouper.base import BaseGrouper, Group
+from autoreg_metadata.grouper.teleclass.classifier.similarity import (
     SimilarityClassifier,
 )
-from autoreg_metadata.classifier.teleclass.core.cache import TELEClassCache
-from autoreg_metadata.classifier.teleclass.core.config import TELEClassConfig
-from autoreg_metadata.classifier.teleclass.core.document_loader import (
+from autoreg_metadata.grouper.teleclass.core.cache import TELEClassCache
+from autoreg_metadata.grouper.teleclass.core.config import TELEClassConfig
+from autoreg_metadata.grouper.teleclass.core.document_loader import (
     DocumentLoader,
     JSONDocumentLoader,
     ModelDocumentLoader,
 )
-from autoreg_metadata.classifier.teleclass.core.embeddings import EmbeddingService
-from autoreg_metadata.classifier.teleclass.core.models.enrichment_models import (
+from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
+from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
     CorpusEnrichmentResult,
     EnrichedClass,
     LLMEnrichmentResult,
 )
-from autoreg_metadata.classifier.teleclass.core.models.models import DocumentMeta
-from autoreg_metadata.classifier.teleclass.core.taxonomy_manager import TaxonomyManager
-from autoreg_metadata.classifier.teleclass.enrichment.corpus import CorpusEnricher
-from autoreg_metadata.classifier.teleclass.enrichment.llm import LLMEnricher
+from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
+from autoreg_metadata.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
+from autoreg_metadata.grouper.teleclass.enrichment.corpus import CorpusEnricher
+from autoreg_metadata.grouper.teleclass.enrichment.llm import LLMEnricher
 from autoreg_metadata.log import logger
 
 
-class TELEClass(BaseClassifier):
+class TELEClass(BaseGrouper):
     """Main class for taxonomy-enhanced text classification"""
 
     def __init__(self, config: TELEClassConfig | str | Path):
@@ -215,19 +215,18 @@ class TELEClass(BaseClassifier):
 
         return self.classifier_manager.predict(text)
 
-    def classify_documents(
+    def group_documents(
         self, documents: Union[str, Path, list[BaseModel]]
-    ) -> ClassificationResult:
+    ) -> list[Group]:
         """
-        Classifies a collection of documents into predefined categories.
+        Groups a collection of documents into predefined categories.
 
         Args:
             documents (Union[str, Path, list[BaseModel]]): The documents to classify. This can be a path to a file or directory,
                                                            a string containing document content, or a list of BaseModel instances.
 
         Returns:
-            dict[str, list[BaseModel]]: A dictionary where the keys are class names and the values are lists of BaseModel instances
-                                        that belong to each class. Only classes with documents are included in the dictionary.
+            list[Group]: A list of Groups containing information about documents classified and group parent classes
         """
 
         self.logger.debug(
@@ -240,38 +239,36 @@ class TELEClass(BaseClassifier):
             if not hasattr(self, "classifier_manager"):
                 self.run(docs)
 
-            leaf_classifications = defaultdict(list)
             leaf_nodes = self.taxonomy_manager.get_leaf_nodes()
+            leaf_classifications = defaultdict(list)
 
             for d in docs:
-                self.logger.debug("Processing document %s with type: %s", d.id, type(d))
-                self.logger.debug("Document content type: %s", type(d.content))
-                self.logger.debug("Document embeddings type: %s", type(d.embeddings))
+                self.logger.debug("Processing document %s", d.id)
                 classes = self.predict(text=d.content)
                 self.logger.debug("Predicted classes: %s", classes)
                 leaf_predictions = classes & leaf_nodes
                 for leaf_class in leaf_predictions:
                     leaf_classifications[leaf_class].append(d)
 
-            final_classifications = {k: v for k, v in leaf_classifications.items() if v}
+            groups = []
+            for leaf_class, class_docs in leaf_classifications.items():
+                groups.append(
+                    Group[DocumentMeta](
+                        name=leaf_class,
+                        items=class_docs,
+                        parent_classes=self.taxonomy_manager.get_ancestors(leaf_class),
+                    )
+                )
 
-            parent_mappings = {
-                leaf_class: self.taxonomy_manager.get_ancestors(leaf_class)
-                for leaf_class in final_classifications.keys()
-            }
+            return groups
 
-            return ClassificationResult[DocumentMeta](
-                attribute=self.config.taxonomy_metadata.name,
-                classification_result=final_classifications,
-                parent_classes=parent_mappings,
-            )
         except Exception as e:
             self.logger.exception("Classification failed with error: %s", str(e))
             raise
 
     def evaluate_classifier(
         self, documents: Union[str, Path, list[BaseModel]]
-    ) -> ClassificationResult:
+    ) -> Group:
         """ """
         try:
             docs = self._load_documents(documents)
