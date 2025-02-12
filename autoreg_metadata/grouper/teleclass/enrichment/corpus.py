@@ -2,7 +2,6 @@ import math
 
 import numpy as np
 import yake
-from keybert import KeyBERT
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 
@@ -16,30 +15,6 @@ from autoreg_metadata.grouper.teleclass.core.models import (
 from autoreg_metadata.log import logger
 
 
-class MultiWordPhraseExtractor:
-    """Extract multi-word phrases from text using YAKE or KeyBERT"""
-
-    def __init__(
-        self, model: str, keybert_model: str = "all-mpnet-base-v2", top_n: int = 5
-    ):
-        if model == "yake":
-            self.yake_extractor = yake.KeywordExtractor(
-                lan="en",
-                n=3,
-                dedupLim=0.9,
-                dedupFunc="seqm",
-                windowsSize=1,
-                top=top_n,
-                features=None,
-            )
-            self.model = "yake"
-        elif model == "keybert":
-            self.bert_extractor = KeyBERT(model=keybert_model)
-            self.model = "keybert"
-        else:
-            raise ValueError("Invalid model type. Choose 'yake' or 'keybert'")
-
-
 class CorpusEnricher:
     def __init__(
         self,
@@ -47,8 +22,14 @@ class CorpusEnricher:
         encoder_model: str,
     ):
         self.encoder = SentenceTransformer(encoder_model)
-        self.keyword_model = MultiWordPhraseExtractor(
-            model=config.phrase_extractor, keybert_model=encoder_model
+        self.keyword_model = yake.KeywordExtractor(
+            lan="en",
+            n=3,
+            dedupLim=0.9,
+            dedupFunc="seqm",
+            windowsSize=1,
+            top=5,
+            features=None,
         )
         self.class_terms: list[EnrichedClass] = []
         self.logger = logger.getChild(self.__class__.__name__)
@@ -183,20 +164,9 @@ class CorpusEnricher:
 
         return similarity
 
-    def extract_key_phrases(self, text: str, top_n: int = 5) -> list[str]:
-        if self.keyword_model.model == "keybert":
-            keywords = self.keyword_model.bert_extractor.extract_keywords(
-                docs=text,
-                keyphrase_ngram_range=(1, 3),  # Extract phrases of 1-3 words
-                stop_words="english",
-                use_maxsum=True,
-                nr_candidates=10,
-                top_n=top_n,
-            )
-        elif self.keyword_model.model == "yake":
-            keywords = self.keyword_model.yake_extractor.extract_keywords(text)
-        else:
-            raise ValueError("Invalid model type. Choose 'yake' or 'keybert'")
+    def extract_key_phrases(self, text: str) -> list[str]:
+
+        keywords = self.keyword_model.extract_keywords(text)
 
         return [keyword for keyword, _ in keywords]
 
@@ -207,7 +177,7 @@ class CorpusEnricher:
         terms = set()
         # Extract terms from descriptions
         text = " ".join(data.content for data in iot_data_list)
-        words = self.extract_key_phrases(text, top_n=5)
+        words = self.extract_key_phrases(text)
 
         # Add single words
         terms.update(words)
