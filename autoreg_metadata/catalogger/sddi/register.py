@@ -1,7 +1,5 @@
-import os
 from pathlib import Path
 
-import yaml
 from ckanapi import RemoteCKAN
 from ollama import Client
 
@@ -26,10 +24,7 @@ class SDDICatalogger(BaseCatalogger):
     def __init__(self, config: SDDIConfig | str | Path):
         # Load config if path is provided
         if isinstance(config, (str, Path)):
-            with open(config, "r") as f:
-                config_str = os.path.expandvars(f.read())  # load environment variables
-                config_dict = yaml.safe_load(config_str)
-                config = SDDIConfig.model_validate(config_dict)
+            config = SDDIConfig.from_yaml(config)
 
         self.config = config
 
@@ -46,7 +41,6 @@ class SDDICatalogger(BaseCatalogger):
     def register(self, metadata: CommonMetadata, data: ClassificationResult):
         try:
             api_service = self.generator.create_api_service(metadata)
-            print(api_service)
             self._register_api_service(api_service)
 
             if data.classification_result:

@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import yaml
 from pydantic import BaseModel, Field
 
 
@@ -20,6 +23,12 @@ class TranslatorConfig(BaseModel):
 
 class SensorThingsConfig(BaseModel):
     """Main configuration for SensorThings harvester"""
+
+    @classmethod
+    def from_yaml(cls, config: str | Path) -> "SensorThingsConfig":
+        with open(config, "r") as f:
+            config_dict = yaml.safe_load(f)
+        return cls.model_validate(config_dict)
 
     base_url: str = Field(description="Base URL for the SensorThings server")
 

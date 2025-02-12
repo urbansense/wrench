@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Callable, Optional, TypeVar
 
 import requests
-import yaml
 
 from autoreg_metadata.common.models import CommonMetadata, Coordinate, TimeFrame
 from autoreg_metadata.harvester.base import BaseHarvester
@@ -16,8 +15,6 @@ from .translator import LibreTranslateService
 
 # Type definitions
 T = TypeVar('T', bound=SensorThingsBase)
-ProcessingFn = Callable[[list[T]], list[T]]
-HarvesterOption = Callable[['SensorThingsHarvester'], None]
 
 
 class SensorThingsHarvester(BaseHarvester):
@@ -28,14 +25,11 @@ class SensorThingsHarvester(BaseHarvester):
     def __init__(
         self,
         config: SensorThingsConfig | str | Path,
-        *options: HarvesterOption,
         location_model: type[GenericLocation] = Location,
     ):
         # Load config if path is provided
         if isinstance(config, (str, Path)):
-            with open(config, 'r') as f:
-                config_dict = yaml.safe_load(f)
-                config = SensorThingsConfig.model_validate(config_dict)
+           config = SensorThingsConfig.from_yaml(config)
 
         self.config = config
         self.logger = logger.getChild(self.__class__.__name__)
@@ -46,10 +40,6 @@ class SensorThingsHarvester(BaseHarvester):
             translator_config.url, translator_config.source_lang) if translator_config else None
 
         self.location_model = location_model
-
-        # Apply any runtime options that might override config
-        for option in options:
-            option(self)
 
     def enrich(self, limit: Optional[int] = None) -> tuple[CommonMetadata, list[Thing]]:
         """
@@ -87,7 +77,7 @@ class SensorThingsHarvester(BaseHarvester):
         """Fetch Things with their associated Datastreams and Sensors"""
         self.logger.debug("Fetching %d things", limit if limit != -1 else 0)
         things = self._fetch_paginated(
-            "Things?$expand=Datastreams($expand=Sensor)",
+            "Things?$expand=Locations,Datastreams($expand=Sensor)",
             Thing,
             limit=limit,
         )

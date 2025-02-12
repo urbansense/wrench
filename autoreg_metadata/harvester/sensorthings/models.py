@@ -40,13 +40,6 @@ class Datastream(SensorThingsBase):
     )
 
 
-class Thing(SensorThingsBase):
-    datastreams: list[Datastream] = Field(alias="Datastreams")
-
-    def __str__(self):
-        return self.model_dump_json(by_alias=True, exclude_none=True)
-
-
 class GeoPoint(BaseModel):
     """Represents a GeoJSON Point Geometry"""
 
@@ -67,3 +60,11 @@ class Location(GenericLocation):
 
     def get_coordinates(self) -> tuple[float, float]:
         return self.location.coordinates
+
+
+class Thing(SensorThingsBase):
+    datastreams: list[Datastream] = Field(default=None, alias="Datastreams")
+    location: list[Location] = Field(default=None, alias="Locations")
+
+    def __str__(self):
+        return self.model_dump_json(by_alias=True, exclude_none=True)
