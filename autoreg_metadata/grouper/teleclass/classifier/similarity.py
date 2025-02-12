@@ -1,6 +1,6 @@
 import numpy as np
+from sentence_transformers import SentenceTransformer
 
-from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
 from autoreg_metadata.grouper.teleclass.core.models import EnrichedClass
 from autoreg_metadata.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from autoreg_metadata.log import logger
@@ -15,11 +15,11 @@ class SimilarityClassifier:
     def __init__(
         self,
         taxonomy_manager: TaxonomyManager,
-        embedding_service: EmbeddingService,
+        encoder: SentenceTransformer,
         enriched_classes: dict[str, EnrichedClass],
     ):
         self.taxonomy_manager = taxonomy_manager
-        self.embedding_service = embedding_service
+        self.encoder = encoder
         self.enriched_classes = enriched_classes
         self.logger = logger.getChild(self.__class__.__name__)
 
@@ -56,7 +56,7 @@ class SimilarityClassifier:
                 terms = [term.term for term in enriched_class.terms]
                 if terms:
                     # Average the embeddings of all terms
-                    term_embeddings = self.embedding_service.get_embeddings(terms)
+                    term_embeddings = self.encoder.encode(terms)
                     class_embeddings[class_name] = np.mean(term_embeddings, axis=0)
                     self.logger.info(
                         "Create average class embeddings from terms through averaging with dimension: %s",
@@ -64,9 +64,7 @@ class SimilarityClassifier:
                     )
                 else:
                     # Fallback to class name embedding
-                    class_embeddings[class_name] = (
-                        self.embedding_service.get_embeddings(class_name)
-                    )
+                    class_embeddings[class_name] = self.encoder.encode(class_name)
                     self.logger.info(
                         "Create average class embeddings from class name through averaging with dimension: %s",
                         class_embeddings[class_name].shape,
@@ -97,7 +95,7 @@ class SimilarityClassifier:
         similarities = []
         for node in candidate_nodes:
             if node in self.class_embeddings:
-                sim = self.embedding_service.encoder.similarity(
+                sim = self.encoder.similarity(
                     doc_embedding, self.class_embeddings[node]
                 )
                 similarities.append((node, sim))
@@ -145,7 +143,7 @@ class SimilarityClassifier:
         """
 
         # Get document embedding
-        doc_embedding = self.embedding_service.get_embeddings(text)
+        doc_embedding = self.encoder.encode(text)
 
         assigned_classes = set()
         current_level = 0

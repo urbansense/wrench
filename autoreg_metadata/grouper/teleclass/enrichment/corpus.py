@@ -4,9 +4,9 @@ import numpy as np
 import yake
 from keybert import KeyBERT
 from rank_bm25 import BM25Okapi
+from sentence_transformers import SentenceTransformer
 
 from autoreg_metadata.grouper.teleclass.core.config import CorpusConfig
-from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
 from autoreg_metadata.grouper.teleclass.core.models import (
     CorpusEnrichmentResult,
     DocumentMeta,
@@ -44,11 +44,11 @@ class CorpusEnricher:
     def __init__(
         self,
         config: CorpusConfig,
-        embedding: EmbeddingService,
+        encoder_model: str,
     ):
-        self.embedder = embedding
+        self.encoder = SentenceTransformer(encoder_model)
         self.keyword_model = MultiWordPhraseExtractor(
-            model=config.phrase_extractor, keybert_model=self.embedder.model_name
+            model=config.phrase_extractor, keybert_model=encoder_model
         )
         self.class_terms: dict[str, EnrichedClass] = {}
         self.logger = logger.getChild(self.__class__.__name__)
@@ -74,9 +74,7 @@ class CorpusEnricher:
 
         for doc in collection:
             if not doc.core_classes:
-                raise ValueError(
-                    f"Initial core classes for document {str(doc.id)} not defined"
-                )
+                raise ValueError(f"Core classes for document {str(doc.id)} not defined")
             doc_dict[str(doc.id)] = doc
             class_set.update(doc.core_classes)
 
@@ -96,7 +94,7 @@ class CorpusEnricher:
 
             enriched_classes[class_name].terms.update(term_scores)
 
-            enriched_classes[class_name].embeddings = self.embedder.encoder.encode(
+            enriched_classes[class_name].embeddings = self.encoder.encode(
                 [term_score.term for term_score in enriched_classes[class_name].terms]
             )
 
@@ -189,12 +187,10 @@ class CorpusEnricher:
         """
         Calculate semantic similarity using sentence transformer embeddings
         """
-        term_embedding = self.embedder.get_embeddings(term)
-        class_embedding = self.embedder.get_embeddings(class_name)
+        term_embedding = self.encoder.encode(term)
+        class_embedding = self.encoder.encode(class_name)
 
-        similarity = self.embedder.encoder.similarity(
-            term_embedding, class_embedding
-        ).item()
+        similarity = self.encoder.similarity(term_embedding, class_embedding).item()
 
         return similarity
 

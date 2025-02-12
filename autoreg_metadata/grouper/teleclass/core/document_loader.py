@@ -3,13 +3,13 @@ from pathlib import Path
 from typing import Protocol, Union
 
 from pydantic import BaseModel
+from sentence_transformers import SentenceTransformer
 
-from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
 from autoreg_metadata.grouper.teleclass.core.models import DocumentMeta
 
 
 class DocumentLoader(Protocol):
-    def load(self, encoder: EmbeddingService) -> list[DocumentMeta]:
+    def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:
         pass
 
 
@@ -33,7 +33,7 @@ class JSONDocumentLoader:
     def __init__(self, file_path: Union[str, Path]):
         self.file_path = Path(file_path)
 
-    def load(self, encoder: EmbeddingService) -> list[DocumentMeta]:
+    def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:
         if not self.file_path.exists():
             raise FileNotFoundError(f"JSON file not found: {self.file_path}")
 
@@ -46,7 +46,7 @@ class JSONDocumentLoader:
         return [
             DocumentMeta(
                 content=json.dumps(doc),
-                embeddings=encoder.get_embeddings(json.dumps(doc)),
+                embeddings=encoder.encode(json.dumps(doc)),
             )
             for idx, doc in enumerate(data)
         ]
@@ -75,13 +75,13 @@ class ModelDocumentLoader:
             raise TypeError("documents must be a list of pydantic BaseModel instances")
         self.documents = documents
 
-    def load(self, encoder: EmbeddingService) -> list[DocumentMeta]:
+    def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:
         print("Loading from model document loader")
         return [
             DocumentMeta(
                 id=str(i),
                 content=doc.model_dump_json(),
-                embeddings=encoder.get_embeddings(doc.model_dump_json()),
+                embeddings=encoder.encode(doc.model_dump_json()),
             )
             for i, doc in enumerate(self.documents)
         ]
