@@ -51,12 +51,12 @@ class TELEClass(BaseGrouper):
         )
 
         # initialize empty set of terms for all classes, embeddings are not yet set here
-        self.enriched_classes = {
-            class_name: EnrichedClass(
+        self.enriched_classes = [
+            EnrichedClass(
                 class_name=class_name, class_description=class_description, terms=set()
             )
             for class_name, class_description in self.taxonomy_manager.get_all_classes_with_description().items()
-        }
+        ]
         # Initialize cache
         if config.cache.enabled:
             self.cache = TELEClassCache(config.cache.directory)

@@ -16,7 +16,7 @@ class SimilarityClassifier:
         self,
         taxonomy_manager: TaxonomyManager,
         encoder: SentenceTransformer,
-        enriched_classes: dict[str, EnrichedClass],
+        enriched_classes: list[EnrichedClass],
     ):
         self.taxonomy_manager = taxonomy_manager
         self.encoder = encoder
@@ -41,33 +41,31 @@ class SimilarityClassifier:
         """
         class_embeddings = {}
 
-        for class_name, enriched_class in self.enriched_classes.items():
-            if enriched_class.embeddings is not None:
+        for ec in self.enriched_classes:
+            if ec.embeddings is not None:
                 # Use pre-computed embeddings if available
-                class_embeddings[class_name] = np.mean(
-                    enriched_class.embeddings, axis=0
-                )
+                class_embeddings[ec.class_name] = np.mean(ec.embeddings, axis=0)
                 self.logger.info(
                     "Using existing class embeddings with dimension: %s",
-                    class_embeddings[class_name].shape,
+                    class_embeddings[ec.class_name].shape,
                 )
             else:
                 # Create embedding from class terms
-                terms = [term.term for term in enriched_class.terms]
+                terms = [term.term for term in ec.terms]
                 if terms:
                     # Average the embeddings of all terms
                     term_embeddings = self.encoder.encode(terms)
-                    class_embeddings[class_name] = np.mean(term_embeddings, axis=0)
+                    class_embeddings[ec.class_name] = np.mean(term_embeddings, axis=0)
                     self.logger.info(
                         "Create average class embeddings from terms through averaging with dimension: %s",
-                        class_embeddings[class_name].shape,
+                        class_embeddings[ec.class_name].shape,
                     )
                 else:
                     # Fallback to class name embedding
-                    class_embeddings[class_name] = self.encoder.encode(class_name)
+                    class_embeddings[ec.class_name] = self.encoder.encode(ec.class_name)
                     self.logger.info(
                         "Create average class embeddings from class name through averaging with dimension: %s",
-                        class_embeddings[class_name].shape,
+                        class_embeddings[ec.class_name].shape,
                     )
         return class_embeddings
 
@@ -124,10 +122,6 @@ class SimilarityClassifier:
         # Return only the top match
         top_node = similarities[0][0]
         self.logger.info("Selected top node: %s", top_node)
-        self.logger.info(
-            "Class terms: %s\n",
-            [term_score.term for term_score in self.enriched_classes[top_node].terms],
-        )
 
         return [top_node]
 

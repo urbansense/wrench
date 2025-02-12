@@ -35,7 +35,7 @@ class LLMEnricher:
         self.logger = logger.getChild(self.__class__.__name__)
 
     def process(
-        self, enriched_classes: dict[str, EnrichedClass], collection: List[DocumentMeta]
+        self, enriched_classes: list[EnrichedClass], collection: List[DocumentMeta]
     ) -> LLMEnrichmentResult:
         """Process generates both terms for each classes, and runs the core class selection for documents"""
         class_with_terms = self.enrich_classes_with_terms(enriched_classes)
@@ -49,38 +49,44 @@ class LLMEnricher:
         )
 
     def enrich_classes_with_terms(
-        self, enriched_classes: dict[str, EnrichedClass]
-    ) -> dict[str, EnrichedClass]:
-        for node_name, class_term in enriched_classes.items():
+        self, enriched_classes: list[EnrichedClass]
+    ) -> list[EnrichedClass]:
+        for ec in enriched_classes:
             # Get all nodes that are parents of the current node
-            parents = list(self.taxonomy_manager.get_parents(node_name))
+            parents = list(self.taxonomy_manager.get_parents(ec.class_name))
             # Check if node is root (have no parents)
             if parents:
                 for parent in parents:
                     # Get all siblings of the node
-                    siblings = self.taxonomy_manager.get_siblings(node_name)
+                    siblings = self.taxonomy_manager.get_siblings(ec.class_name)
 
                     terms = self.enrich_class(
-                        node_name, class_term.class_description, parent, siblings
+                        class_name=ec.class_name,
+                        class_description=ec.class_description,
+                        parent_class=parent,
+                        siblings=siblings,
                     )
                     if terms:  # Only update if we got valid terms
-                        class_term.terms.update(terms)
+                        ec.terms.update(terms)
             else:
                 # Root node or node without parents
                 terms = self.enrich_class(
-                    node_name, class_term.class_description, "", set()
+                    class_name=ec.class_name,
+                    class_description=ec.class_description,
+                    parent_class="",
+                    siblings=set(),
                 )
                 if terms:
-                    class_term.terms.update(terms)
+                    ec.terms.update(terms)
 
             # Compute embeddings for the terms
-            if class_term.terms:
+            if ec.terms:
                 embeddings = self.encoder.encode(
-                    [term_score.term for term_score in class_term.terms]
+                    [term_score.term for term_score in ec.terms]
                 )
-                class_term.embeddings = embeddings
+                ec.embeddings = embeddings
 
-            self.logger.info("Enriched terms for %s: %s", node_name, class_term.terms)
+            self.logger.info("Enriched terms for %s: %s", ec.class_name, ec.terms)
 
         return enriched_classes
 
@@ -92,7 +98,19 @@ class LLMEnricher:
         siblings: Set[str],
     ) -> Set[TermScore]:
         """
-        Use LLM to generate class-specific terms with parent and sibling as context
+        Enrich a class by generating class-specific terms using a language model (LLM) with parent and sibling context.
+
+        Args:
+            class_name (str): The name of the class to enrich.
+            class_description (str): A description of the class.
+            parent_class (str): The name of the parent class.
+            siblings (Set[str]): A set of sibling class names.
+
+        Returns:
+            Set[TermScore]: A set of TermScore objects representing the generated terms.
+
+        Raises:
+            Exception: If there is an error during term generation, it logs the error and returns an empty set.
         """
         try:
             siblings_str = ", ".join(siblings) if siblings else "none"
@@ -130,7 +148,7 @@ class LLMEnricher:
             return set()
 
     def assign_classes_to_docs(
-        self, collection: List[DocumentMeta], enriched_classes: dict[str, EnrichedClass]
+        self, collection: List[DocumentMeta], enriched_classes: list[EnrichedClass]
     ) -> List[DocumentMeta]:
         """Assign initial classes to documents"""
         self.logger.info("Assigning initial classes")
@@ -205,7 +223,7 @@ Return only the selected class names separated by commas, nothing else."""
         self,
         doc_embedding: np.ndarray,
         taxonomy_manager: TaxonomyManager,
-        enriched_classes: dict[str, EnrichedClass],
+        enriched_classes: list[EnrichedClass],
     ) -> dict[int, set[str]]:
         """Select candidate classes for a document using level-wise traversal"""
         candidates = defaultdict(set)
@@ -217,10 +235,12 @@ Return only the selected class names separated by commas, nothing else."""
                 break
 
             # Calculate similarities for current level
-            similarities = [
-                (node, self._compute_similarity(doc_embedding, enriched_classes[node]))
-                for node in current_level
-            ]
+            similarities = []
+            for ec in enriched_classes:
+                if ec.class_name in current_level:
+                    similarities.append(
+                        (ec.class_name, self._compute_similarity(doc_embedding, ec))
+                    )
 
             # Select top candidates
             similarities.sort(key=lambda x: x[1], reverse=True)

@@ -50,12 +50,12 @@ class CorpusEnricher:
         self.keyword_model = MultiWordPhraseExtractor(
             model=config.phrase_extractor, keybert_model=encoder_model
         )
-        self.class_terms: dict[str, EnrichedClass] = {}
+        self.class_terms: list[EnrichedClass] = []
         self.logger = logger.getChild(self.__class__.__name__)
 
     def enrich(
         self,
-        enriched_classes: dict[str, EnrichedClass],
+        enriched_classes: list[EnrichedClass],
         collection: list[DocumentMeta],
     ) -> CorpusEnrichmentResult:
         """
@@ -68,34 +68,25 @@ class CorpusEnricher:
             Dictionary mapping class names to their enriched terms with scores
         """
         # Convert documents to dictionary format with IoT structure
-        doc_dict = {}
 
-        class_set: set[str] = set()
-
-        for doc in collection:
-            if not doc.core_classes:
-                raise ValueError(f"Core classes for document {str(doc.id)} not defined")
-            doc_dict[str(doc.id)] = doc
-            class_set.update(doc.core_classes)
-
-        for class_name in class_set:
-            # Get documents assigned to this class
-            self.logger.info("Enriching class: %s", class_name)
-            class_docs = [
-                doc_dict[str(doc.id)]
-                for doc in collection
-                if doc.core_classes and class_name in doc.core_classes
-            ]
-
+        for ec in enriched_classes:
+            self.logger.info("Enriching class %s", ec.class_name)
+            class_docs = []
+            for doc in collection:
+                if not doc.core_classes:
+                    raise ValueError(
+                        f"Core classes for document {str(doc.id)} not defined"
+                    )
+                if ec.class_name in doc.core_classes:
+                    class_docs.append(doc)
             # Get sibling data
-            sibling_docs = self.get_sibling_data(class_name, doc_dict, collection)
+            sibling_docs = self.get_sibling_data(ec.class_name, collection)
 
-            term_scores = self.enrich_class(class_name, class_docs, sibling_docs)
+            term_scores = self.enrich_class(ec.class_name, class_docs, sibling_docs)
 
-            enriched_classes[class_name].terms.update(term_scores)
-
-            enriched_classes[class_name].embeddings = self.encoder.encode(
-                [term_score.term for term_score in enriched_classes[class_name].terms]
+            ec.terms.update(term_scores)
+            ec.embeddings = self.encoder.encode(
+                [term_score.term for term_score in ec.terms]
             )
 
         return CorpusEnrichmentResult(ClassEnrichment=enriched_classes)
@@ -103,7 +94,6 @@ class CorpusEnricher:
     def get_sibling_data(
         self,
         class_name: str,
-        documents: dict[str, DocumentMeta],
         collection: list[DocumentMeta],
     ) -> dict[str, list[DocumentMeta]]:
         """
@@ -116,9 +106,8 @@ class CorpusEnricher:
                 for cls in doc.core_classes:
                     if cls != class_name:
                         if cls not in sibling_docs:
-                            sibling_docs[cls] = []
-                        if str(doc.id) in documents:  # Make sure document exists
-                            sibling_docs[cls].append(documents[str(doc.id)])
+                            sibling_docs[cls] = []  # Make sure document exists
+                        sibling_docs[cls].append(doc)
 
         return sibling_docs
 

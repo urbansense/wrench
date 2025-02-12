@@ -65,7 +65,7 @@ class EnrichmentResult(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    ClassEnrichment: dict[str, EnrichedClass]
+    ClassEnrichment: list[EnrichedClass]
 
 
 class LLMEnrichmentResult(EnrichmentResult):
@@ -74,7 +74,7 @@ class LLMEnrichmentResult(EnrichmentResult):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def result(self) -> tuple[dict[str, EnrichedClass], list[DocumentMeta]]:
+    def result(self) -> tuple[list[EnrichedClass], list[DocumentMeta]]:
         return self.ClassEnrichment, self.DocumentCoreClasses
 
 
@@ -82,5 +82,5 @@ class CorpusEnrichmentResult(EnrichmentResult):
     # Stores Corpus enrichment results, such as enriched classes with relevant terms
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def result(self) -> dict[str, EnrichedClass]:
+    def result(self) -> list[EnrichedClass]:
         return self.ClassEnrichment
