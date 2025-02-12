@@ -17,12 +17,12 @@ from autoreg_metadata.grouper.teleclass.core.document_loader import (
     ModelDocumentLoader,
 )
 from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
-from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
+from autoreg_metadata.grouper.teleclass.core.models import (
     CorpusEnrichmentResult,
+    DocumentMeta,
     EnrichedClass,
     LLMEnrichmentResult,
 )
-from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
 from autoreg_metadata.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from autoreg_metadata.grouper.teleclass.enrichment.corpus import CorpusEnricher
 from autoreg_metadata.grouper.teleclass.enrichment.llm import LLMEnricher

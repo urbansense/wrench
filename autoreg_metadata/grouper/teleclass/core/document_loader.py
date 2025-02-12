@@ -5,7 +5,7 @@ from typing import Protocol, Union
 from pydantic import BaseModel
 
 from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
-from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
+from autoreg_metadata.grouper.teleclass.core.models import DocumentMeta
 
 
 class DocumentLoader(Protocol):
@@ -13,7 +13,7 @@ class DocumentLoader(Protocol):
         pass
 
 
-class JSONDocumentLoader(DocumentLoader):
+class JSONDocumentLoader:
     """
     A document loader for JSON files that loads and processes documents into a list of DocumentMeta objects.
 
@@ -45,7 +45,6 @@ class JSONDocumentLoader(DocumentLoader):
 
         return [
             DocumentMeta(
-                id=str(idx),
                 content=json.dumps(doc),
                 embeddings=encoder.get_embeddings(json.dumps(doc)),
             )
@@ -53,7 +52,7 @@ class JSONDocumentLoader(DocumentLoader):
         ]
 
 
-class ModelDocumentLoader(DocumentLoader):
+class ModelDocumentLoader:
     """
     A class to load and process documents that are instances of Pydantic BaseModel.
 

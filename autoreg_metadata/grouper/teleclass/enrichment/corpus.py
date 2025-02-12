@@ -7,12 +7,12 @@ from rank_bm25 import BM25Okapi
 
 from autoreg_metadata.grouper.teleclass.core.config import CorpusConfig
 from autoreg_metadata.grouper.teleclass.core.embeddings import EmbeddingService
-from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
+from autoreg_metadata.grouper.teleclass.core.models import (
     CorpusEnrichmentResult,
+    DocumentMeta,
     EnrichedClass,
     TermScore,
 )
-from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
 from autoreg_metadata.log import logger
 
 
@@ -73,12 +73,12 @@ class CorpusEnricher:
         class_set: set[str] = set()
 
         for doc in collection:
-            if not doc.initial_core_classes:
+            if not doc.core_classes:
                 raise ValueError(
                     f"Initial core classes for document {str(doc.id)} not defined"
                 )
             doc_dict[str(doc.id)] = doc
-            class_set.update(doc.initial_core_classes)
+            class_set.update(doc.core_classes)
 
         for class_name in class_set:
             # Get documents assigned to this class
@@ -86,7 +86,7 @@ class CorpusEnricher:
             class_docs = [
                 doc_dict[str(doc.id)]
                 for doc in collection
-                if doc.initial_core_classes and class_name in doc.initial_core_classes
+                if doc.core_classes and class_name in doc.core_classes
             ]
 
             # Get sibling data
@@ -114,8 +114,8 @@ class CorpusEnricher:
         sibling_docs: dict[str, list[DocumentMeta]] = {}
         # Group documents by their assigned classes
         for doc in collection:
-            if doc.initial_core_classes:
-                for cls in doc.initial_core_classes:
+            if doc.core_classes:
+                for cls in doc.core_classes:
                     if cls != class_name:
                         if cls not in sibling_docs:
                             sibling_docs[cls] = []

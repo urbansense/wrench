@@ -1,7 +1,17 @@
+from typing import TypeVar
+
 import numpy as np
 from pydantic import BaseModel, ConfigDict, computed_field
 
-from .models import DocumentMeta
+T = TypeVar("T", bound=BaseModel)
+
+
+class DocumentMeta(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    embeddings: np.ndarray | None = None
+    content: str
+    # Core classes set after LLM enrichment
+    core_classes: set[str] | None = None
 
 
 class TermScore(BaseModel):

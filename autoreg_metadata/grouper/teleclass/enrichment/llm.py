@@ -6,12 +6,12 @@ from ollama import Client
 from sentence_transformers import SentenceTransformer
 
 from autoreg_metadata.grouper.teleclass.core.config import LLMConfig
-from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
+from autoreg_metadata.grouper.teleclass.core.models import (
+    DocumentMeta,
     EnrichedClass,
     LLMEnrichmentResult,
     TermScore,
 )
-from autoreg_metadata.grouper.teleclass.core.models.models import DocumentMeta
 from autoreg_metadata.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from autoreg_metadata.log import logger
 
@@ -144,7 +144,7 @@ class LLMEnricher:
 
             self.logger.info("Candidates for document %s: %s", doc.id, candidates)
             core_classes = self._select_core_classes(doc.content, candidates)
-            doc.initial_core_classes = set(core_classes)
+            doc.core_classes = set(core_classes)
             self.logger.info(
                 "Assigned classes for document %s: %s", doc.id, core_classes
             )
