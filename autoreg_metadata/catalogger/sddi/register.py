@@ -38,13 +38,15 @@ class SDDICatalogger(BaseCatalogger):
 
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def register(self, metadata: CommonMetadata, data: Group):
+    def register(self, metadata: CommonMetadata, groups: list[Group]):
         try:
             api_service = self.generator.create_api_service(metadata)
             self._register_api_service(api_service)
 
-            if data.classification_result:
-                device_groups = self.generator.create_device_groups(api_service, data)
+            self.logger.info("Successfully registered API Service")
+
+            if groups:
+                device_groups = self.generator.create_device_groups(api_service, groups)
                 print(device_groups)
                 self._register_device_groups(device_groups)
                 for d in device_groups:

@@ -7,12 +7,12 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class Group(BaseModel, Generic[T]):
-    attribute: str = Field(
-        description="Attribute by which the input is classified, examples may be 'size', 'color', 'type' "
-    )
-    classification_result: dict[str, list[T]]
+    name: str = Field(description="Name of the group")
+    items: list[T] = Field(description="List of items belonging to this group")
     # optional only for hierarchical classification
-    parent_classes: dict[str, set[str]] = {}
+    parent_classes: set[str] = Field(
+        default=set(), description="Set of parent classes of this group"
+    )
 
 
 class BaseGrouper(ABC):

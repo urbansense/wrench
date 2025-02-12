@@ -10,5 +10,5 @@ class BaseCatalogger(ABC):
         self.api_key = api_key
 
     @abstractmethod
-    def register(self, metadata: CommonMetadata, data: Group):
+    def register(self, metadata: CommonMetadata, data: list[Group]):
         pass

@@ -1,7 +1,7 @@
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Optional, TypeVar
+from typing import Optional, TypeVar
 
 import requests
 

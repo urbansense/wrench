@@ -9,6 +9,7 @@ from autoreg_metadata.grouper.teleclass.core.models.enrichment_models import (
     DocumentMeta,
 )
 from autoreg_metadata.harvester.sensorthings.models import Thing
+from autoreg_metadata.log import logger
 
 from .models import APIService, DeviceGroup, GeometryType
 
@@ -22,6 +23,7 @@ class CatalogGenerator:
     def __init__(self, llm_client: Client, model: str):
         self.llm = llm_client
         self.model = model
+        self.logger = logger.getChild(self.__class__.__name__)
 
     def create_spatial_description(
         self, geometry_type: GeometryType, coor: list[Coordinate]
@@ -37,9 +39,9 @@ class CatalogGenerator:
             str: A JSON string representing the spatial description in GeoJSON format.
         """
         if geometry_type.value == "Polygon":
-            coordinates = [[c.to_list for c in coor]]
+            coordinates = [[c.to_list() for c in coor]]
         if geometry_type.value == "MultiPoint":
-            coordinates = [c.to_list for c in coor]
+            coordinates = [c.to_list() for c in coor]
 
         return json.dumps(
             {
@@ -70,8 +72,11 @@ class CatalogGenerator:
         )
 
     def create_device_groups(
-        self, api_service: APIService, data: Group[DocumentMeta]
+        self, api_service: APIService, groups: list[Group[DocumentMeta]]
     ) -> list[DeviceGroup]:
+
+        self.logger.info("Creating device groups")
+
         device_groups = []
 
         domain_groups = [
@@ -128,7 +133,7 @@ class CatalogGenerator:
                 Sample Data: {data}
             """
 
-        for category, records in data.classification_result.items():
+        for group in groups:
             messages = [
                 {
                     "role": "system",
@@ -137,9 +142,9 @@ class CatalogGenerator:
                 {
                     "role": "user",
                     "content": prompt.format(
-                        measured_param=category,
+                        measured_param=group.name,
                         title=api_service.title,
-                        data=[records[0].content],
+                        data=[group.items[0].content],
                     ),
                 },
             ]
@@ -148,29 +153,32 @@ class CatalogGenerator:
                 messages=messages,
                 format=CatalogDetails.model_json_schema(),
             )
-            print(response.message.content)
             catalog_details = CatalogDetails.model_validate_json(
                 response.message.content
             )
 
             coord = []
 
-            for r in records:
+            for r in group.items:
                 thing_with_location = Thing.model_validate_json(r.content)
+                if not thing_with_location.location:
+                    continue
                 for loc in thing_with_location.location:
                     lon, lat = loc.get_coordinates()
-                    coord.append(Coordinate(lon, lat))
+                    coord.append(Coordinate(longitude=lon, latitude=lat))
+
+            self.logger.info("Finished getting things with locations")
 
             device_group = DeviceGroup.from_api_service(
                 api_service=api_service,
                 # convert to lower and replace space with underscores
                 name=catalog_details.name,
-                tags=[{"name": tag} for tag in data.parent_classes[category]],
+                tags=[{"name": tag} for tag in group.parent_classes],
                 description=catalog_details.description,
                 resources=[
                     {
                         "name": f"URL for {catalog_details.name}",
-                        "description": f"URL provides a list of all data associated with the category {category}",
+                        "description": f"URL provides a list of all data associated with the category {group.name}",
                         "format": "JSON",
                         "url": "mock-url.com",
                     }
@@ -178,11 +186,7 @@ class CatalogGenerator:
             )
             # extend group with any of the domain names from classifier (e.g. mobility)
             device_group.groups.extend(
-                [
-                    {"name": dom}
-                    for dom in data.parent_classes[category]
-                    if dom in domain_groups
-                ]
+                [{"name": dom} for dom in group.parent_classes if dom in domain_groups]
             )
 
             device_group.spatial = self.create_spatial_description(
