@@ -41,7 +41,7 @@ class TELEClass(BaseGrouper):
         self.config = config
         # Initialize components
         self.taxonomy_manager = TaxonomyManager.from_config(config)
-        self.encoder = SentenceTransformer(model=config.embedding.model_name)
+        self.encoder = SentenceTransformer(config.embedding.model_name)
         # Initialize enrichers
         self.llm_enricher = LLMEnricher(
             config=config.llm, taxonomy_manager=self.taxonomy_manager
