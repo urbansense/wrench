@@ -12,6 +12,10 @@ class TimeFrame(BaseModel):
     latest_time: datetime
 
 
+class Item(BaseModel):
+    id: str
+
+
 class CommonMetadata(BaseModel, Generic[T]):
     """
     Extensible common metadata format that preserves source-specific information

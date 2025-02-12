@@ -8,6 +8,7 @@ T = TypeVar("T", bound=BaseModel)
 
 class DocumentMeta(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
+    id: str | None = ""
     embeddings: np.ndarray | None = None
     content: str
     # Core classes set after LLM enrichment
