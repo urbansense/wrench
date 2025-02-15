@@ -1,7 +1,6 @@
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, TypeVar
 
 import requests
 from geojson import Polygon
@@ -14,8 +13,11 @@ from .config import SensorThingsConfig
 from .models import GenericLocation, Location, SensorThingsBase, Thing
 from .translator import LibreTranslateService
 
-# Type definitions
-T = TypeVar('T', bound=SensorThingsBase)
+# SensorThingsHarvester capabilities:
+# - pagination
+# - authentication (potentially)
+# - mqtt streaming if applicable
+# - translation (if needed)
 
 
 class SensorThingsHarvester(BaseHarvester):
@@ -42,37 +44,27 @@ class SensorThingsHarvester(BaseHarvester):
 
         self.location_model = location_model
 
-    def enrich(self, limit: Optional[int] = None) -> tuple[CommonMetadata, list[Thing]]:
-        """
-        Enriches the metadata by fetching things and locations, and calculating the geographic extent and timeframe.
-        Args:
-            limit (Optional[int]): The maximum number of items to fetch. If None, the default limit from the config of -1 (no limit) is used.
-        Returns:
-            tuple[EndpointMetadata, list[Thing]]: A tuple containing the enriched endpoint metadata and a list of fetched things.
-        """
+        self.things = self.fetch_things(limit=self.config.default_limit)
+        self.locations = self.fetch_locations(limit=self.config.default_limit)
 
-        # Use provided limit or fall back to config default
-        fetch_limit = limit if limit is not None else self.config.default_limit
+    def get_metadata(self) -> CommonMetadata:
 
-        things = self.fetch_things(limit=fetch_limit)
-        locations = self.fetch_locations(limit=fetch_limit)
+        geographic_extent = self._calculate_geographic_extent(self.locations)
+        timeframe = self._calculate_timeframe(self.things)
 
-        geographic_extent = self._calculate_geographic_extent(locations)
-        timeframe = self._calculate_timeframe(things)
+        return CommonMetadata(
+            endpoint_url=self.config.base_url,
+            title=self.config.title,
+            identifier=self.config.identifier,
+            description=self.config.description,
+            spatial_extent=str(geographic_extent),
+            temporal_extent=timeframe,
+            source_type='sensorthings',
+            last_updated=timeframe.latest_time
+            )
 
-        return (
-            CommonMetadata(
-                endpoint_url=self.config.base_url,
-                title=self.config.title,
-                identifier=self.config.identifier,
-                description=self.config.description,
-                spatial_extent=str(geographic_extent),
-                temporal_extent=timeframe,
-                source_type='sensorthings',
-                last_updated=timeframe.latest_time,
-            ),
-            things
-        )
+    def get_items(self) -> list[Thing]:
+        return self.things
 
     def fetch_things(self, limit: int = -1) -> list[Thing]:
         """Fetch Things with their associated Datastreams and Sensors"""
@@ -87,7 +79,7 @@ class SensorThingsHarvester(BaseHarvester):
             return things
 
         # Do translation if translator exists
-        self.logger.info("Translator was configured, starting translation")
+        self.logger.debug("Translator was configured, starting translation")
         translated_things = []
         for thing in things:
             try:
@@ -109,7 +101,7 @@ class SensorThingsHarvester(BaseHarvester):
             limit=limit
         )
 
-    def _fetch_paginated[T](self, endpoint: str, model_class: type[T], limit: int = -1) -> list[T]:
+    def _fetch_paginated[T: SensorThingsBase](self, endpoint: str, model_class: type[T], limit: int = -1) -> list[T]:
         """Generic paginated data fetching"""
         url = f"{self.config.base_url}/{endpoint}"
         page_count = 1

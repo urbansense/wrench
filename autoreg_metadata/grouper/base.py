@@ -18,20 +18,6 @@ class Group(BaseModel, Generic[T]):
 class BaseGrouper(ABC):
 
     @abstractmethod
-    def predict(self, text: str, **kwargs) -> set[str]:
-        """
-        Predict classes for the given list of texts. Must be implemented by subclasses.
-
-        Args:
-            text (str): The text to classify
-            **kwargs: Additional optional arguments that may be needed by specific implementations
-
-        Returns:
-            Set[str]: A set of predicted class labels
-        """
-        pass
-
-    @abstractmethod
     def group_documents(self, documents: Any) -> list[Group]:
         """
         Return a dictionary where the keys are strings representing categories

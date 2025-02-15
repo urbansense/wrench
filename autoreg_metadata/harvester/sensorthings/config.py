@@ -44,6 +44,8 @@ class SensorThingsConfig(BaseModel):
         description="The description which should be used for entry in the catalog"
     )
 
+    # optional
+
     translator: TranslatorConfig | None = Field(
         default=None, description="Translation service configuration"
     )
