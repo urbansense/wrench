@@ -48,8 +48,9 @@ class Pipeline:
         try:
             # Step 1: Harvest data
             self.logger.debug("Retrieving data with harvester")
-            metadata, documents = self.harvester.enrich()
-            if not metadata or not documents:
+            service_metadata = self.harvester.get_metadata()
+            documents = self.harvester.get_items()
+            if not service_metadata or not documents:
                 self.logger.warning("No data retrieved from harvester")
                 return None
 
@@ -67,14 +68,14 @@ class Pipeline:
             try:
                 # If classification was performed and successful, use classified documents
                 # Otherwise, use raw documents in a default structure
-                docs_to_catalog = grouped_docs if grouped_docs is not None else {}
+                docs_to_catalog = grouped_docs or {}
 
                 self.logger.debug("Registering data into catalog")
-                self.catalogger.register(metadata, docs_to_catalog)
+                self.catalogger.register(service_metadata, docs_to_catalog)
             except Exception as e:
                 self.logger.error("Cataloging failed: %s", e)
                 # Still return results even if cataloging fails
 
         except Exception as e:
             self.logger.error("Pipeline execution failed: %s", e)
-            return None
+            raise

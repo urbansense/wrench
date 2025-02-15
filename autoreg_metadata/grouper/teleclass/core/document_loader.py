@@ -25,7 +25,7 @@ class JSONDocumentLoader:
         __init__(file_path: Union[str, Path]):
             Initializes the JSONDocumentLoader with the given file path.
 
-        load(encoder: EmbeddingService) -> list[DocumentMeta]:
+        load(encoder: SentenceTransformer) -> list[DocumentMeta]:
             Loads the JSON file, processes the documents, and returns a list of DocumentMeta objects.
             Raises FileNotFoundError if the JSON file does not exist.
             Raises ValueError if the JSON file does not contain a list of documents.
@@ -65,7 +65,7 @@ class ModelDocumentLoader:
         __init__(documents: list[BaseModel]):
             Initializes the ModelDocumentLoader with a list of BaseModel instances.
 
-        load(encoder: EmbeddingService) -> list[DocumentMeta]:
+        load(encoder: SentenceTransformer) -> list[DocumentMeta]:
             Loads the documents, encodes their content using the provided encoder,
             and returns a list of DocumentMeta instances.
     """
@@ -74,7 +74,7 @@ class ModelDocumentLoader:
         if not isinstance(documents, list) or not all(
             isinstance(doc, BaseModel) for doc in documents
         ):
-            raise TypeError("documents must be a list of pydantic BaseModel instances")
+            raise TypeError("documents must be a list of Item instances")
         self.documents = documents
 
     def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:

@@ -5,9 +5,10 @@ from pydantic import BaseModel
 from autoreg_metadata.common.models import CommonMetadata
 from autoreg_metadata.grouper.base import Group
 from autoreg_metadata.harvester.sensorthings.models import Thing
+from autoreg_metadata.harvester.sensorthings.querybuilder import ThingQuery
 from autoreg_metadata.log import logger
 
-from .models import APIService, DeviceGroup
+from .models import DeviceGroup, OnlineService
 
 
 class CatalogDetails(BaseModel):
@@ -21,12 +22,12 @@ class CatalogGenerator:
         self.model = model
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def create_api_service(self, metadata: CommonMetadata) -> APIService:
+    def create_api_service(self, metadata: CommonMetadata) -> OnlineService:
 
         # set a default owner for now HANDLE THIS LATER
         owner = metadata.owner or "lehrstuhl-fur-geoinformatik"
 
-        return APIService(
+        return OnlineService(
             url=metadata.endpoint_url,
             name=metadata.identifier,
             notes=metadata.description,
@@ -37,7 +38,7 @@ class CatalogGenerator:
         )
 
     def create_device_groups(
-        self, api_service: APIService, groups: list[Group]
+        self, api_service: OnlineService, groups: list[Group]
     ) -> list[DeviceGroup]:
 
         self.logger.info("Creating device groups")
@@ -135,8 +136,7 @@ class CatalogGenerator:
             self.logger.info("Finished getting things with locations")
 
             device_group = DeviceGroup.from_api_service(
-                api_service=api_service,
-                # convert to lower and replace space with underscores
+                online_service=api_service,
                 name=catalog_details.name,
                 tags=[{"name": tag} for tag in group.parent_classes],
                 description=catalog_details.description,

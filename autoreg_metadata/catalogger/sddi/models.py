@@ -8,7 +8,7 @@ class SDDICategory(Enum):
     device = "device"
 
 
-class BaseDataset(BaseModel):
+class SDDIDataset(BaseModel):
     # required
     name: str
     notes: str
@@ -34,7 +34,7 @@ class BaseDataset(BaseModel):
     type: str = "dataset"
 
 
-class APIService(BaseDataset):
+class OnlineService(SDDIDataset):
     groups: list[dict] = [{"name": SDDICategory.online_service.value}]
 
     @computed_field  # type: ignore[misc]
@@ -50,14 +50,14 @@ class APIService(BaseDataset):
         ]
 
 
-class DeviceGroup(BaseDataset):
+class DeviceGroup(SDDIDataset):
     groups: list[dict] = [{"name": SDDICategory.device.value}]
     resources: list[dict] = []
 
     @classmethod
     def from_api_service(
         cls,
-        api_service: APIService,
+        online_service: OnlineService,
         name: str,
         description: str,
         tags: list[dict[str, str]],
@@ -65,7 +65,7 @@ class DeviceGroup(BaseDataset):
     ) -> "DeviceGroup":
         # Get all fields from api_service except 'groups' and 'resources'
         ckan_name = name.lower().strip().replace(" ", "_")
-        data = api_service.model_dump(exclude={"groups", "resources"})
+        data = online_service.model_dump(exclude={"groups", "resources"})
         data.update(
             {
                 "name": ckan_name,

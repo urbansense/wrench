@@ -10,7 +10,7 @@ from autoreg_metadata.grouper.base import Group
 from autoreg_metadata.log import logger
 
 from .config import SDDIConfig
-from .models import APIService, DeviceGroup
+from .models import DeviceGroup, OnlineService
 
 
 class SDDICatalogger(BaseCatalogger):
@@ -61,7 +61,7 @@ class SDDICatalogger(BaseCatalogger):
             self.logger.error("Failed to register: %s", e)
             raise
 
-    def _register_api_service(self, api_service: APIService):
+    def _register_api_service(self, api_service: OnlineService):
         pkg = self.ckan_server.call_action(
             action="package_create", data_dict=api_service.model_dump()
         )

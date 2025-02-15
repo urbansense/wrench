@@ -66,8 +66,14 @@ class Location(GenericLocation):
 
 
 class Thing(SensorThingsBase):
-    datastreams: list[Datastream] = Field(default=None, alias="Datastreams")
-    location: list[Location] = Field(default=None, alias="Locations")
+    datastreams: list[Datastream] = Field(
+        default=None,
+        alias="Datastreams",
+    )
+    location: list[Location] = Field(
+        default=None,
+        alias="Locations",
+    )
 
     def __str__(self):
         return self.model_dump_json(by_alias=True, exclude_none=True)
