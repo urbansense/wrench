@@ -1,7 +1,14 @@
 from abc import ABC, abstractmethod
 
+from pydantic import BaseModel
+
 from autoreg_metadata.common.models import CommonMetadata
 from autoreg_metadata.grouper.base import Group
+
+
+class CatalogEntry(BaseModel):
+    name: str
+    description: str
 
 
 class BaseCatalogger(ABC):

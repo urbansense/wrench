@@ -9,6 +9,12 @@ if TYPE_CHECKING:
     from autoreg_metadata.harvester.base import BaseHarvester
 
 
+class StreamingPipeline:
+    """
+    A pipeline used for processing and receiving updates for sensor data.
+    """
+    def __init__(self):
+
 class Pipeline:
     """
     A composable pipeline for processing sensor data.
