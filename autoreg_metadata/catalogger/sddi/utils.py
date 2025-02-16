@@ -124,9 +124,11 @@ class CatalogGenerator:
             )
 
             coord = []
+            ids = []
 
             for r in group.items:
                 thing_with_location = Thing.model_validate_json(r.content)
+                ids.append(thing_with_location.id)
                 if not thing_with_location.location:
                     continue
                 for loc in thing_with_location.location:
@@ -134,6 +136,19 @@ class CatalogGenerator:
                     coord.append((lon, lat))
 
             self.logger.info("Finished getting things with locations")
+
+            query = ThingQuery()
+            filter_expression = None
+
+            for id in ids:
+                current_filter = ThingQuery.property("@iot.id").eq(id)
+
+                if filter_expression is None:
+                    filter_expression = current_filter
+                else:
+                    filter_expression = filter_expression | current_filter
+
+            param_url = query.filter(filter_expression).build()
 
             device_group = DeviceGroup.from_api_service(
                 online_service=api_service,
@@ -145,7 +160,7 @@ class CatalogGenerator:
                         "name": f"URL for {catalog_details.name}",
                         "description": f"URL provides a list of all data associated with the category {group.name}",
                         "format": "JSON",
-                        "url": "mock-url.com",
+                        "url": f"{api_service.url}/{param_url}",
                     }
                 ],
             )
