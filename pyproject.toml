@@ -1,5 +1,5 @@
 [project]
-name = "autoreg-metadata"
+name = "wrench"
 version = "0.1.0"
 description = "Automated registration package for urban sensor endpoints into metadata catalogs"
 authors = [
@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "autoreg_metadata"}]
+packages = [{include = "wrench"}]
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.0"

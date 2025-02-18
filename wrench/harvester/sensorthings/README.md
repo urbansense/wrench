@@ -50,7 +50,7 @@ default_limit: -1
 ### Basic Usage
 
 ```python
-from autoreg_metadata.harvester.sensorthings import SensorThingsHarvester
+from wrench.harvester.sensorthings import SensorThingsHarvester
 
 # Initialize with config file
 harvester = SensorThingsHarvester("config.yaml")
@@ -65,7 +65,7 @@ You can create custom location models by extending the GenericLocation class:
 
 ```python
 from pydantic import BaseModel
-from autoreg_metadata.harvester.sensorthings import GenericLocation
+from wrench.harvester.sensorthings import GenericLocation
 
 class CustomLocation(GenericLocation):
     location: dict  # Custom location structure
