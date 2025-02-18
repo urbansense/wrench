@@ -19,7 +19,7 @@ clean-cache: # remove test and coverage artifacts
 	find . -name '*cache*' -exec rm -rf {} +
 
 install: clean
-	poetry install --extras "teleclass-classifier sensorthings"
+	poetry install --extras "teleclass-classifier"
 	poetry lock
 
 test: ## run tests quickly with the default Python
