@@ -1,9 +1,9 @@
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from autoreg_metadata.grouper.teleclass.core.models import EnrichedClass
-from autoreg_metadata.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
-from autoreg_metadata.log import logger
+from wrench.grouper.teleclass.core.models import EnrichedClass
+from wrench.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
+from wrench.log import logger
 
 
 class SimilarityClassifier:

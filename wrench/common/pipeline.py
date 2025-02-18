@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING, Optional
 
-from autoreg_metadata.log import logger
+from wrench.log import logger
 
 # Use TYPE_CHECKING for imports needed only for type hints
 if TYPE_CHECKING:
-    from autoreg_metadata.catalogger.base import BaseCatalogger
-    from autoreg_metadata.grouper.base import BaseGrouper
-    from autoreg_metadata.harvester.base import BaseHarvester
+    from wrench.catalogger.base import BaseCatalogger
+    from wrench.grouper.base import BaseGrouper
+    from wrench.harvester.base import BaseHarvester
 
 
 class StreamingPipeline:

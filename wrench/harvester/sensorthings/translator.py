@@ -1,7 +1,7 @@
 import requests
 
-from autoreg_metadata.harvester.base import TranslationService
-from autoreg_metadata.log import logger
+from wrench.harvester.base import TranslationService
+from wrench.log import logger
 
 from .models import Thing
 

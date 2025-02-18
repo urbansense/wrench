@@ -3,7 +3,7 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-from autoreg_metadata.common.models import CommonMetadata, Item
+from wrench.common.models import CommonMetadata, Item
 
 T = TypeVar("T", bound=BaseModel)  # For input
 T_co = TypeVar("T_co", bound=BaseModel, covariant=True)  # For output

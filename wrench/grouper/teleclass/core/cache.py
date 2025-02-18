@@ -1,7 +1,7 @@
 import pickle
 from pathlib import Path
 
-from autoreg_metadata.grouper.teleclass.core.models import DocumentMeta, EnrichedClass
+from wrench.grouper.teleclass.core.models import DocumentMeta, EnrichedClass
 
 
 class TELEClassCache:

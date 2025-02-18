@@ -5,15 +5,15 @@ import numpy as np
 from ollama import Client
 from sentence_transformers import SentenceTransformer
 
-from autoreg_metadata.grouper.teleclass.core.config import LLMConfig
-from autoreg_metadata.grouper.teleclass.core.models import (
+from wrench.grouper.teleclass.core.config import LLMConfig
+from wrench.grouper.teleclass.core.models import (
     DocumentMeta,
     EnrichedClass,
     LLMEnrichmentResult,
     TermScore,
 )
-from autoreg_metadata.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
-from autoreg_metadata.log import logger
+from wrench.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
+from wrench.log import logger
 
 
 class LLMEnricher:
