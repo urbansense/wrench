@@ -3,13 +3,13 @@ import logging
 
 def setup_logging(level=logging.DEBUG):
     """Configure package-wide logging"""
-    logger = logging.getLogger("autoreg_metadata")
+    logger = logging.getLogger("wrench")
     # Clear any existing handlers
     logger.handlers.clear()
 
     # Enhanced formatter with file, line number, and function name
     handler = logging.StreamHandler()
-    fileHandler = logging.FileHandler("autoreg-metadata.log")
+    fileHandler = logging.FileHandler("wrench.log")
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )

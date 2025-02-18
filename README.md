@@ -1,18 +1,17 @@
-# AutoReg Metadata
+# Wrench
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-An automated metadata registration system for IoT devices and sensors. Extract, process, and enrich metadata from various sensor data sources.
+A workflow framework for automated registration and enrichment of sensor metadata for IoT devices and sensors into data catalogs. Extract, process, and enrich metadata from various sensor data sources.
 
 ## Features
 
 - 🔄 Automated metadata harvesting
-- 🌐 Multi-language support with translation services
 - 📊 Standardized data models using Pydantic
 - 🔍 Rich metadata extraction and enrichment
-- 🏗️ Modular pipeline architecture
+- 🏗️ Modular workflow architecture
 - 🔌 Extensible harvester interfaces
 
 ## Installation
@@ -20,8 +19,8 @@ An automated metadata registration system for IoT devices and sensors. Extract, 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/autoreg-metadata.git #to be changed
-cd autoreg-metadata
+git clone https://github.com/yourusername/wrench.git #to be changed
+cd wrench
 ```
 
 2. Create and activate a virtual environment:
@@ -45,7 +44,7 @@ pip install -r requirements.txt
 ## Project Structure
 
 ```bash
-autoreg-metadata/
+wrench/
 
 ```
 

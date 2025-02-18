@@ -1,18 +1,22 @@
-class AutoregError(Exception):
-    """Base exception for autoreg_metadata"""
+class WrenchError(Exception):
+    """Base exception for wrench"""
+
     pass
 
 
-class HarvesterError(AutoregError):
+class HarvesterError(WrenchError):
     """Raised when harvesting operations fail"""
+
     pass
 
 
-class ClassifierError(AutoregError):
+class ClassifierError(WrenchError):
     """Raised when classification operations fail"""
+
     pass
 
 
-class CataloggerError(AutoregError):
+class CataloggerError(WrenchError):
     """Raised when catalogging operations fail"""
+
     pass

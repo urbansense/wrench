@@ -3,10 +3,7 @@
 setup:
 	poetry install --extras "teleclass-classifier sensorthings"
 
-clean: clean-build clean-pyc clean-test clean-cache clean-docs ## remove all build, test, coverage, Python artifacts, cache and docs
-
-clean-docs: # remove docs for update
-	rm -fr "docs/$$PACKAGE_NAME.rst" "docs/modules.rst" "docs/conftest.rst" "docs/examples.rst" "docs/tests.rst" "docs/_build" 
+clean: clean-build clean-pyc clean-test
 
 clean-build: # remove build artifacts
 	rm -fr build/ dist/ .eggs/
@@ -22,7 +19,7 @@ clean-cache: # remove test and coverage artifacts
 	find . -name '*cache*' -exec rm -rf {} +
 
 install: clean
-	poetry install --extras "teleclass-classifier sensorthings"
+	poetry install --extras "teleclass-classifier"
 	poetry lock
 
 test: ## run tests quickly with the default Python
