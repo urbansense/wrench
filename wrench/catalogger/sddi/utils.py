@@ -2,11 +2,11 @@ from geojson import MultiPoint
 from ollama import Client
 from pydantic import BaseModel
 
-from autoreg_metadata.common.models import CommonMetadata
-from autoreg_metadata.grouper.base import Group
-from autoreg_metadata.harvester.sensorthings.models import Thing
-from autoreg_metadata.harvester.sensorthings.querybuilder import ThingQuery
-from autoreg_metadata.log import logger
+from wrench.common.models import CommonMetadata
+from wrench.grouper.base import Group
+from wrench.harvester.sensorthings.models import Thing
+from wrench.harvester.sensorthings.querybuilder import ThingQuery
+from wrench.log import logger
 
 from .models import DeviceGroup, OnlineService
 

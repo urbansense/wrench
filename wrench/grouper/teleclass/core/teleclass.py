@@ -6,27 +6,27 @@ from typing import Union
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
-from autoreg_metadata.grouper.base import BaseGrouper, Group
-from autoreg_metadata.grouper.teleclass.classifier.similarity import (
+from wrench.grouper.base import BaseGrouper, Group
+from wrench.grouper.teleclass.classifier.similarity import (
     SimilarityClassifier,
 )
-from autoreg_metadata.grouper.teleclass.core.cache import TELEClassCache
-from autoreg_metadata.grouper.teleclass.core.config import TELEClassConfig
-from autoreg_metadata.grouper.teleclass.core.document_loader import (
+from wrench.grouper.teleclass.core.cache import TELEClassCache
+from wrench.grouper.teleclass.core.config import TELEClassConfig
+from wrench.grouper.teleclass.core.document_loader import (
     DocumentLoader,
     JSONDocumentLoader,
     ModelDocumentLoader,
 )
-from autoreg_metadata.grouper.teleclass.core.models import (
+from wrench.grouper.teleclass.core.models import (
     CorpusEnrichmentResult,
     DocumentMeta,
     EnrichedClass,
     LLMEnrichmentResult,
 )
-from autoreg_metadata.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
-from autoreg_metadata.grouper.teleclass.enrichment.corpus import CorpusEnricher
-from autoreg_metadata.grouper.teleclass.enrichment.llm import LLMEnricher
-from autoreg_metadata.log import logger
+from wrench.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
+from wrench.grouper.teleclass.enrichment.corpus import CorpusEnricher
+from wrench.grouper.teleclass.enrichment.llm import LLMEnricher
+from wrench.log import logger
 
 
 class TELEClass(BaseGrouper):

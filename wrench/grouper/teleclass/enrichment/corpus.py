@@ -5,14 +5,14 @@ import yake
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 
-from autoreg_metadata.grouper.teleclass.core.config import CorpusConfig
-from autoreg_metadata.grouper.teleclass.core.models import (
+from wrench.grouper.teleclass.core.config import CorpusConfig
+from wrench.grouper.teleclass.core.models import (
     CorpusEnrichmentResult,
     DocumentMeta,
     EnrichedClass,
     TermScore,
 )
-from autoreg_metadata.log import logger
+from wrench.log import logger
 
 
 class CorpusEnricher:

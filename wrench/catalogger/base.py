@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 
 from pydantic import BaseModel
 
-from autoreg_metadata.common.models import CommonMetadata
-from autoreg_metadata.grouper.base import Group
+from wrench.common.models import CommonMetadata
+from wrench.grouper.base import Group
 
 
 class CatalogEntry(BaseModel):

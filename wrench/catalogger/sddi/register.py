@@ -3,11 +3,11 @@ from pathlib import Path
 from ckanapi import RemoteCKAN
 from ollama import Client
 
-from autoreg_metadata.catalogger.base import BaseCatalogger
-from autoreg_metadata.catalogger.sddi.utils import CatalogGenerator
-from autoreg_metadata.common.models import CommonMetadata
-from autoreg_metadata.grouper.base import Group
-from autoreg_metadata.log import logger
+from wrench.catalogger.base import BaseCatalogger
+from wrench.catalogger.sddi.utils import CatalogGenerator
+from wrench.common.models import CommonMetadata
+from wrench.grouper.base import Group
+from wrench.log import logger
 
 from .config import SDDIConfig
 from .models import DeviceGroup, OnlineService

@@ -4,7 +4,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-from autoreg_metadata.common.models import Item
+from wrench.common.models import Item
 
 model_config = ConfigDict(
     alias_generator=to_camel,
