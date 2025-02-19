@@ -5,11 +5,11 @@ __pycache__/
 *.egg-info
 dist/
 
-.pytest_cache/
-.trunk
+.venv/
+.trunk/
 
-.poetry
-poetry.lock
+.pytest_cache/
+
 .python-version
 
 /*.py
@@ -17,3 +17,5 @@ poetry.lock
 test_script/
 
 *.log
+
+uv.lock

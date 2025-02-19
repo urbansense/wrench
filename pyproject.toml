@@ -3,36 +3,21 @@ name = "wrench"
 version = "0.1.0"
 description = "Automated registration package for urban sensor endpoints into metadata catalogs"
 authors = [
-    {name = "Jeffrey Limnardy",email = "jeffreylimnardy@yahoo.com"}
+    {name = "Jeffrey Limnardy", email = "jeffreylimnardy@yahoo.com"}
 ]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    "pydantic (>=2.10.4,<3.0.0)",
-    "requests (>=2.32.3,<3.0.0)",
-    "ckanapi (>=4.8,<5.0)",
-    "python-dotenv (>=1.0.1)",
-    "geojson (>=3.2.0)"
+    "pydantic>=2.10.4,<3.0.0",
+    "requests>=2.32.3,<3.0.0",
+    "ckanapi>=4.8,<5.0",
+    "python-dotenv>=1.0.1",
+    "geojson>=3.2.0"
 ]
 
-[tool.poetry]
-packages = [{include = "wrench"}]
-
-[tool.poetry.group.test.dependencies]
-pytest = "^8.3.0"
-pytest-mock = "*"
-
-[tool.poetry.requires-plugins]
-poetry-plugin-export = ">=1.8.0"
-poetry-plugin-shell = ">=1.0.1"
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
 [project.optional-dependencies]
-teleclass-classifier = [
+teleclass = [
     "sentence-transformers>=3.3.1",
     "networkx>=3.4.2",
     "numpy>=2.2.1",
@@ -40,3 +25,62 @@ teleclass-classifier = [
     "yake>=0.4.8",
     "rank_bm25>=0.2.2",
 ]
+sensorthings = [
+    "paho-mqtt>=2.1.0",
+]
+
+[dependency-groups]
+test = [
+    "pytest>=8.3.0",
+    "pytest-mock",
+    "pytest-cov>=4.1.0",
+]
+lint = [
+    "ruff<1.0.0,>=0.5.0",
+    "codespell>=2.2.0,<3.0.0",
+]
+dev = []
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.uv.sources]
+wrench = { path = "./wrench", editable = true }
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "D",  # pydocstyle
+]
+ignore = [
+    "D203",  # one-blank-line-before-class
+    "D212",  # multi-line-summary-first-line
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"  # Use Google-style docstrings
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]  # Disable docstring checks for tests
+
+[tool.codespell]
+skip = '.git,*.pdf,*.svg,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,*.json,_dist,build,*.pyc,.venv'
+ignore-words-list = 'wrench'
+check-filenames = true
+check-hidden = true
+
+[tool.pytest.ini_options]
+addopts = "-v --cov=wrench --cov-report=term-missing"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.coverage.run]
+source = ["wrench"]
