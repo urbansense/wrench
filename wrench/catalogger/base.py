@@ -1,14 +1,7 @@
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel
-
-from wrench.common.models import CommonMetadata
-from wrench.grouper.base import Group
-
-
-class CatalogEntry(BaseModel):
-    name: str
-    description: str
+from wrench.log import logger
+from wrench.models import CatalogEntry
 
 
 class BaseCatalogger(ABC):
@@ -16,6 +9,8 @@ class BaseCatalogger(ABC):
         self.endpoint = endpoint
         self.api_key = api_key
 
+        self.logger = logger.getChild(self.__class__.__name__)
+
     @abstractmethod
-    def register(self, metadata: CommonMetadata, data: list[Group]):
+    def register(self, service: CatalogEntry, groups: list[CatalogEntry]):
         pass

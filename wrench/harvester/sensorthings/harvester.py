@@ -5,19 +5,13 @@ from pathlib import Path
 import requests
 from geojson import Polygon
 
-from wrench.common.models import CommonMetadata, TimeFrame
 from wrench.harvester.base import BaseHarvester
 from wrench.log import logger
+from wrench.models import CommonMetadata, TimeFrame
 
 from .config import SensorThingsConfig
 from .models import GenericLocation, Location, SensorThingsBase, Thing
 from .translator import LibreTranslateService
-
-# SensorThingsHarvester capabilities:
-# - pagination
-# - authentication (potentially)
-# - mqtt streaming if applicable
-# - translation (if needed)
 
 
 class SensorThingsHarvester(BaseHarvester):
@@ -30,26 +24,63 @@ class SensorThingsHarvester(BaseHarvester):
         config: SensorThingsConfig | str | Path,
         location_model: type[GenericLocation] = Location,
     ):
+        """
+        Initializes the SensorThings harvester.
+
+        Args:
+            config (SensorThingsConfig | str | Path): Configuration for the SensorThings harvester.
+                Can be an instance of SensorThingsConfig, a path to a YAML configuration file, or a string.
+            location_model (type[GenericLocation], optional): The location model to use. Defaults to Location.
+
+        Attributes:
+            config (SensorThingsConfig): The configuration for the SensorThings harvester.
+            logger (Logger): Logger instance for the harvester.
+            translator (LibreTranslateService | None): Translator service if configured, otherwise None.
+            location_model (type[GenericLocation]): The location model to use.
+            things (list): List of things fetched based on the default limit in the configuration.
+        """
         # Load config if path is provided
         if isinstance(config, (str, Path)):
-           config = SensorThingsConfig.from_yaml(config)
+            config = SensorThingsConfig.from_yaml(config)
 
         self.config = config
         self.logger = logger.getChild(self.__class__.__name__)
 
         # Set up translator if configured
         translator_config = self.config.translator
-        self.translator = LibreTranslateService(
-            translator_config.url, translator_config.source_lang) if translator_config else None
+        self.translator = (
+            LibreTranslateService(translator_config.url, translator_config.source_lang)
+            if translator_config
+            else None
+        )
 
         self.location_model = location_model
 
         self.things = self.fetch_things(limit=self.config.default_limit)
-        self.locations = self.fetch_locations(limit=self.config.default_limit)
 
     def get_metadata(self) -> CommonMetadata:
+        """
+        Retrieves metadata for the SensorThings data.
 
-        geographic_extent = self._calculate_geographic_extent(self.locations)
+        This method collects the locations of each 'thing' and calculates the geographic extent
+        and timeframe for the data. It then returns a CommonMetadata object populated with
+        this information.
+
+        Returns:
+            CommonMetadata: An object containing metadata such as endpoint URL, title,
+                            identifier, description, spatial extent, temporal extent,
+                            source type, and last updated time.
+        """
+
+        # get locations of each thing, put them into a set to avoid duplicates
+        locations = {
+            loc.get_coordinates()
+            for thing in self.things
+            if thing.location
+            for loc in thing.location
+        }
+
+        geographic_extent = self._calculate_geographic_extent(locations)
         timeframe = self._calculate_timeframe(self.things)
 
         return CommonMetadata(
@@ -59,15 +90,30 @@ class SensorThingsHarvester(BaseHarvester):
             description=self.config.description,
             spatial_extent=str(geographic_extent),
             temporal_extent=timeframe,
-            source_type='sensorthings',
-            last_updated=timeframe.latest_time
-            )
+            source_type="sensorthings",
+            last_updated=timeframe.latest_time,
+        )
 
     def get_items(self) -> list[Thing]:
+        """
+        Retrieve the list of Thing objects.
+
+        Returns:
+            list[Thing]: A list of Thing objects.
+        """
         return self.things
 
     def fetch_things(self, limit: int = -1) -> list[Thing]:
-        """Fetch Things with their associated Datastreams and Sensors"""
+        """
+        Fetches a list of Thing objects, optionally translating them if a translator is configured.
+        Args:
+            limit (int): The maximum number of Thing objects to fetch. Defaults to -1, which means no limit.
+        Returns:
+            list[Thing]: A list of fetched Thing objects, potentially translated if a translator is configured.
+        Raises:
+            Exception: If translation fails for any Thing object, logs the error and returns the original Thing object.
+        """
+
         self.logger.debug("Fetching %d things", limit if limit != -1 else 0)
         things = self._fetch_paginated(
             "Things?$expand=Locations,Datastreams($expand=Sensor)",
@@ -78,7 +124,7 @@ class SensorThingsHarvester(BaseHarvester):
         if not self.translator:
             return things
 
-        # Do translation if translator exists
+        # Run translation if translator exists
         self.logger.debug("Translator was configured, starting translation")
         translated_things = []
         for thing in things:
@@ -86,90 +132,214 @@ class SensorThingsHarvester(BaseHarvester):
                 translated_thing = self.translator.translate(thing)
                 translated_things.append(translated_thing)
             except Exception as e:
-                self.logger.error(
-                    "Translation failed for thing %s: %s", thing.id, e)
+                self.logger.error("Translation failed for thing %s: %s", thing.id, e)
                 translated_things.append(thing)
 
         return translated_things
 
     def fetch_locations(self, limit: int = -1) -> list[GenericLocation]:
-        """Fetch Locations for further processing"""
+        """
+        Fetches a list of locations from the SensorThings API.
+
+        Args:
+            limit (int, optional): The maximum number of locations to fetch.
+                                   If set to -1, fetches all available locations. Defaults to -1.
+
+        Returns:
+            list[GenericLocation]: A list of fetched locations.
+        """
+
         self.logger.debug("Fetching %d locations", limit if limit != -1 else 0)
-        return self._fetch_paginated(
-            "Locations",
-            self.location_model,
-            limit=limit
-        )
+        return self._fetch_paginated("Locations", self.location_model, limit=limit)
 
-    def _fetch_paginated[T: SensorThingsBase](self, endpoint: str, model_class: type[T], limit: int = -1) -> list[T]:
-        """Generic paginated data fetching"""
-        url = f"{self.config.base_url}/{endpoint}"
+    def _fetch_paginated(
+        self, endpoint: str, model_class: type[SensorThingsBase], limit: int = -1
+    ) -> list[SensorThingsBase]:
+        """
+        Fetch paginated data from a SensorThings API endpoint.
+
+        Args:
+            endpoint: API endpoint path to fetch from
+            model_class: Pydantic model class to validate response data
+            limit: Maximum number of items to fetch (-1 for no limit)
+
+        Returns:
+            list[SensorThingsBase]: List of validated model instances
+        """
+        items: list[SensorThingsBase] = []
         page_count = 1
-        items: list[T] = []
+        current_url = f"{self.config.base_url}/{endpoint}"
+        remaining_items = limit if limit != -1 else None
 
-        while url:
-            self.logger.info("Fetching page %s", page_count)
+        while current_url and (remaining_items is None or remaining_items > 0):
+            self.logger.info("Fetching page %d", page_count)
+
             try:
-                response = requests.get(
-                    url, timeout=self.config.pagination.timeout)
-                response.raise_for_status()
-                data = response.json()
+                # Fetch and parse page data
+                response = self._fetch_page(current_url)
+                page_data = response.json()
 
-                if "value" not in data:
+                # Check for valid response structure
+                if "value" not in page_data:
+                    self.logger.warning(
+                        "No 'value' field in response, stopping pagination"
+                    )
                     break
 
-                for value in data["value"]:
-                    if limit != -1 and len(items) >= limit:
-                        self.logger.info("Finished fetching data")
-                        return items
+                # Process items from current page
+                new_items = self._process_page_items(
+                    page_data["value"], model_class, remaining_items
+                )
+                items.extend(new_items)
 
-                    item = model_class.model_validate(value)
-                    items.append(item)
+                self.logger.info(
+                    "Added %d items from page %d", len(new_items), page_count
+                )
 
-                self.logger.info("Added %d items from page %d",
-                                 len(data["value"]), page_count)
+                # Update remaining items count
+                if remaining_items is not None:
+                    remaining_items -= len(new_items)
+                    self.logger.debug("Remaining items to fetch: %d", remaining_items)
 
-                page_count += 1
-                url = data.get("@iot.nextLink")
-                if url:
+                # Prepare for next page
+                current_url = page_data.get("@iot.nextLink")
+                if current_url:
                     time.sleep(self.config.pagination.page_delay)
 
+                page_count += 1
+
             except requests.RequestException as e:
-                self.logger.error("Error fetching data: %s", e)
+                self.logger.error("Failed to fetch page %d: %s", page_count, e)
                 break
 
-        self.logger.info("Finished fetching data")
-
+        self.logger.info("Finished fetching data, retrieved %d items", len(items))
         return items
 
-    def _calculate_geographic_extent(self, locations: list[GenericLocation]) -> Polygon:
-        """Calculate the geographic bounding box from locations"""
-        min_lat = float('inf')
-        max_lat = float('-inf')
-        min_lng = float('inf')
-        max_lng = float('-inf')
+    def _fetch_page(self, url: str) -> requests.Response:
+        """
+        Fetch a single page of data from the API.
 
-        for loc in locations:
-            lng, lat = loc.get_coordinates()
-            min_lat = min(min_lat, lat)
-            max_lat = max(max_lat, lat)
-            min_lng = min(min_lng, lng)
-            max_lng = max(max_lng, lng)
+        Args:
+            url: Full URL to fetch from
 
-        return Polygon([[(min_lat, min_lng), (min_lat, max_lng), (max_lat, max_lng), (max_lat, min_lng), (min_lat, min_lng)]])
+        Returns:
+            Response object from successful request
+
+        Raises:
+            requests.RequestException: If request fails
+        """
+        response = requests.get(url, timeout=self.config.pagination.timeout)
+        response.raise_for_status()
+        return response
+
+    def _process_page_items(
+        self,
+        items: list[dict],
+        model_class: type[SensorThingsBase],
+        remaining_limit: int | None = None,
+    ) -> list[SensorThingsBase]:
+        """
+        Process and validate items from a page.
+
+        Args:
+            items: Raw item data from API response
+            model_class: Pydantic model class for validation
+            remaining_limit: Maximum items to process (None for no limit)
+
+        Returns:
+            list[SensorThingsBase]: List of validated model instances
+        """
+        processed_items: list[SensorThingsBase] = []
+
+        for item in items:
+            if remaining_limit is not None and len(processed_items) >= remaining_limit:
+                break
+
+            validated_item = model_class.model_validate(item)
+            processed_items.append(validated_item)
+
+        return processed_items
+
+    def _calculate_geographic_extent(
+        self, locations: set[tuple[float, float]]
+    ) -> Polygon:
+        """
+        Calculate the geographic bounding box from a set of locations.
+
+        Args:
+            locations: Set of locations with coordinate data
+
+        Returns:
+            Polygon: GeoJSON polygon representing the bounding box
+        """
+
+        # Initialize bounds
+        bounds = {
+            "min_lat": float("inf"),
+            "max_lat": float("-inf"),
+            "min_lng": float("inf"),
+            "max_lng": float("-inf"),
+        }
+
+        # Update bounds for each location
+        for lng, lat in locations:
+            bounds["min_lat"] = min(bounds["min_lat"], lat)
+            bounds["max_lat"] = max(bounds["max_lat"], lat)
+            bounds["min_lng"] = min(bounds["min_lng"], lng)
+            bounds["max_lng"] = max(bounds["max_lng"], lng)
+
+        # Create polygon coordinates
+        coordinates = [
+            (bounds["min_lat"], bounds["min_lng"]),
+            (bounds["min_lat"], bounds["max_lng"]),
+            (bounds["max_lat"], bounds["max_lng"]),
+            (bounds["max_lat"], bounds["min_lng"]),
+            (bounds["min_lat"], bounds["min_lng"]),  # Close the polygon
+        ]
+
+        return Polygon([coordinates])
 
     def _calculate_timeframe(self, things: list[Thing]) -> TimeFrame:
-        """Calculate the overall timeframe from thing data"""
-        earliest = datetime.max.replace(tzinfo=timezone.utc)
-        latest = datetime.min.replace(tzinfo=timezone.utc)
+        """
+        Calculate the overall timeframe spanning all sensor data.
 
+        Args:
+            things: List of Thing objects containing datastream information
+
+        Returns:
+            TimeFrame: Object containing the earliest start time and latest end time
+
+        Notes:
+            - Handles ISO format datetime strings from phenomenon_time
+            - All times are converted to UTC timezone
+            - Skips datastreams with no phenomenon_time
+        """
+
+        # Initialize timeframe boundaries
+        time_bounds = {
+            "earliest": datetime.max.replace(tzinfo=timezone.utc),
+            "latest": datetime.min.replace(tzinfo=timezone.utc),
+        }
+
+        # Process each datastream's phenomenon time
         for thing in things:
-            for ds in thing.datastreams:
-                if ds.phenomenon_time:
-                    start, end = ds.phenomenon_time.split('/')
-                    start_time = datetime.fromisoformat(start)
-                    end_time = datetime.fromisoformat(end)
-                    earliest = min(earliest, start_time)
-                    latest = max(latest, end_time)
+            for datastream in thing.datastreams:
+                if not datastream.phenomenon_time:
+                    continue
 
-        return TimeFrame(start_time=earliest, latest_time=latest)
+                # Parse phenomenon time range
+                start_str, end_str = datastream.phenomenon_time.split("/")
+                timespan = {
+                    "start": datetime.fromisoformat(start_str),
+                    "end": datetime.fromisoformat(end_str),
+                }
+
+                # Update overall boundaries
+                time_bounds["earliest"] = min(
+                    time_bounds["earliest"], timespan["start"]
+                )
+                time_bounds["latest"] = max(time_bounds["latest"], timespan["end"])
+
+        return TimeFrame(
+            start_time=time_bounds["earliest"], latest_time=time_bounds["latest"]
+        )
