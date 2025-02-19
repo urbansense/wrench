@@ -104,7 +104,7 @@ class EntityType(Enum):
 
 
 class QueryOptions(BaseModel):
-    """Options for SensorThings API query"""
+    """Options for SensorThings API query."""
 
     limit: int | None = None
     skip: int | None = None
@@ -137,7 +137,7 @@ class Query(ABC):
 
     def expand(self, entity: str, nested_expansions: set[str] | None = None) -> "Query":
         """
-        Add an entity to expand in the query
+        Add an entity to expand in the query.
 
         Args:
             entity: Name of entity to expand (e.g. "Locations", "Datastreams")
@@ -148,7 +148,8 @@ class Query(ABC):
         """
         if entity not in self.VALID_EXPANSIONS:
             raise ValueError(
-                f"'{entity}' is not a valid expansion for Things. Valid expansions are: {self.VALID_EXPANSIONS}"
+                f"""'{entity}' is not a valid expansion for Things.
+                Valid expansions are: {self.VALID_EXPANSIONS}"""
             )
 
         self.expansions.add(entity)
@@ -161,7 +162,7 @@ class Query(ABC):
             if invalid_nested:
                 raise ValueError(
                     f"Invalid nested expansion(s) for {entity}: {invalid_nested}. "
-                    f"Valid nested expansions are: {self.VALID_NESTED_EXPANSIONS[entity]}"
+                    f"Valid nested expansions: {self.VALID_NESTED_EXPANSIONS[entity]}"
                 )
 
             self.nested_expansions[entity].update(nested_expansions)
@@ -173,17 +174,17 @@ class Query(ABC):
         return self
 
     def filter(self, expression: FilterExpression) -> "Query":
-        """Add a filter expression to the query"""
+        """Add a filter expression to the query."""
         self.options.filter = str(expression)
         return self
 
     @staticmethod
     def property(name: str) -> Filter:
-        """Create a filter for a property"""
+        """Create a filter for a property."""
         return Filter(name)
 
     def build(self) -> str:
-        """Build the query string"""
+        """Build the query string."""
         params = {}
 
         # Handle expansions
@@ -215,7 +216,7 @@ class Query(ABC):
 
 
 class ThingQuery(Query):
-    """Query builder for Thing entities"""
+    """Query builder for Thing entities."""
 
     RESOURCE_NAME = "Things"
     VALID_EXPANSIONS = {"Locations", "Datastreams"}

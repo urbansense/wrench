@@ -1,7 +1,7 @@
 .PHONY: clean test install lint lint_src lint_tests lint_types help
 
 setup:
-	poetry install --extras "teleclass-classifier sensorthings"
+	uv pip install -e ".[teleclass,sensorthings]"
 
 clean:
 	rm -rf build/
