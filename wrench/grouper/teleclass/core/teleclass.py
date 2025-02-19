@@ -7,9 +7,7 @@ from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
 from wrench.grouper.base import BaseGrouper, Group
-from wrench.grouper.teleclass.classifier.similarity import (
-    SimilarityClassifier,
-)
+from wrench.grouper.teleclass.classifier.similarity import SimilarityClassifier
 from wrench.grouper.teleclass.core.cache import TELEClassCache
 from wrench.grouper.teleclass.core.config import TELEClassConfig
 from wrench.grouper.teleclass.core.document_loader import (
@@ -63,7 +61,7 @@ class TELEClass(BaseGrouper):
 
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def _load_documents(
+    def _load_items(
         self, source: Union[str, Path, list[BaseModel]]
     ) -> list[DocumentMeta]:
         """Load documents from either a JSON file path or a list of pydantic models."""
@@ -93,10 +91,19 @@ class TELEClass(BaseGrouper):
 
     def run(self, documents: list[DocumentMeta], sample_size: int = 20) -> None:
         """
-        Main training process with clear stages
+        Executes the training process on a given list of documents.
+
+        This method performs the following steps:
+        1. Performs LLM-enhanced core class annotation on the documents.
+        2. Performs corpus-based enrichment on the documents.
+        3. Initializes the classifier manager with the enriched classes.
 
         Args:
-            sample_size: Number of documents to use for initial training
+            documents (list[DocumentMeta]): The list of documents to be used for training.
+            sample_size (int, optional): The maximum number of documents to use. Defaults to 20.
+
+        Raises:
+            Exception: If any error occurs during the training process, it is logged and re-raised.
         """
         self.logger.info("Starting training process")
         documents = documents[: min(len(documents), sample_size)]
@@ -215,14 +222,12 @@ class TELEClass(BaseGrouper):
 
         return self.classifier_manager.predict(text)
 
-    def group_documents(
-        self, documents: Union[str, Path, list[BaseModel]]
-    ) -> list[Group]:
+    def group_items(self, items: Union[str, Path, list[BaseModel]]) -> list[Group]:
         """
         Groups a collection of documents into predefined categories.
 
         Args:
-            documents (Union[str, Path, list[BaseModel]]): The documents to classify. This can be a path to a file or directory,
+            items (Union[str, Path, list[BaseModel]]): The items to classify. This can be a path to a file or directory,
                                                            a string containing document content, or a list of BaseModel instances.
 
         Returns:
@@ -230,12 +235,12 @@ class TELEClass(BaseGrouper):
         """
 
         self.logger.debug(
-            "Starting document classification with input type: %s", type(documents)
+            "Starting document classification with input type: %s", type(items)
         )
 
         try:
-            docs = self._load_documents(documents)
-            self.logger.debug("Loaded %d documents", len(docs))
+            docs = self._load_items(items)
+            self.logger.debug("Loaded %d items", len(docs))
             if not hasattr(self, "classifier_manager"):
                 self.run(docs)
 
@@ -248,12 +253,12 @@ class TELEClass(BaseGrouper):
                 self.logger.debug("Predicted classes: %s", classes)
                 leaf_predictions = classes & leaf_nodes
                 for leaf_class in leaf_predictions:
-                    leaf_classifications[leaf_class].append(d)
+                    leaf_classifications[leaf_class].append(d.content)
 
             groups = []
             for leaf_class, class_docs in leaf_classifications.items():
                 groups.append(
-                    Group[DocumentMeta](
+                    Group(
                         name=leaf_class,
                         items=class_docs,
                         parent_classes=self.taxonomy_manager.get_ancestors(leaf_class),
@@ -271,7 +276,7 @@ class TELEClass(BaseGrouper):
     ) -> Group:
         """ """
         try:
-            docs = self._load_documents(documents)
+            docs = self._load_items(documents)
             labels = self._load_labels("./test_script/labels.json")
             if not hasattr(self, "classifier_manager"):
                 self.run(docs)

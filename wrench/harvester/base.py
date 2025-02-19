@@ -3,7 +3,7 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-from wrench.common.models import CommonMetadata, Item
+from wrench.models import CommonMetadata, Item
 
 T = TypeVar("T", bound=BaseModel)  # For input
 T_co = TypeVar("T_co", bound=BaseModel, covariant=True)  # For output
@@ -26,5 +26,5 @@ class TranslationService(ABC, Generic[T]):
     url: str
 
     @abstractmethod
-    def translate(obj: T) -> T:
+    def translate[T: BaseModel](obj: T) -> T:
         pass

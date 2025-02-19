@@ -1,13 +1,8 @@
 from pathlib import Path
 
 from ckanapi import RemoteCKAN
-from ollama import Client
 
 from wrench.catalogger.base import BaseCatalogger
-from wrench.catalogger.sddi.utils import CatalogGenerator
-from wrench.common.models import CommonMetadata
-from wrench.grouper.base import Group
-from wrench.log import logger
 
 from .config import SDDIConfig
 from .models import DeviceGroup, OnlineService
@@ -31,29 +26,21 @@ class SDDICatalogger(BaseCatalogger):
         super().__init__(endpoint=self.config.base_url, api_key=self.config.api_key)
 
         self.ckan_server = RemoteCKAN(address=self.endpoint, apikey=self.api_key)
-        self.generator = CatalogGenerator(
-            llm_client=Client(host=self.config.llm_host),
-            model=self.config.llm_model,
-        )
 
-        self.logger = logger.getChild(self.__class__.__name__)
-
-    def register(self, metadata: CommonMetadata, groups: list[Group]):
+    def register(self, service: OnlineService, groups: list[DeviceGroup]):
         try:
-            api_service = self.generator.create_api_service(metadata)
-            self._register_api_service(api_service)
+            self._register_api_service(service)
 
             self.logger.info("Successfully registered API Service")
 
             if groups:
-                device_groups = self.generator.create_device_groups(api_service, groups)
-                self._register_device_groups(device_groups)
-                for d in device_groups:
+                self._register_device_groups(groups)
+                for d in groups:
                     self.logger.info(
                         "Creating relationships for device_group %s", d.name
                     )
                     self._register_relationship(
-                        api_service_name=api_service.name,
+                        api_service_name=service.name,
                         device_group_name=d.name,
                     )
 
@@ -71,7 +58,8 @@ class SDDICatalogger(BaseCatalogger):
 
         for device_group in device_groups:
             pkg = self.ckan_server.call_action(
-                action="package_create", data_dict=device_group.model_dump()
+                action="package_create",
+                data_dict=device_group.model_dump(),
             )
 
         return pkg

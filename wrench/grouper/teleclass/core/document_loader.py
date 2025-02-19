@@ -5,8 +5,8 @@ from typing import Protocol, Union
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
-from wrench.common.models import Item
 from wrench.grouper.teleclass.core.models import DocumentMeta
+from wrench.models import Item
 
 
 class DocumentLoader(Protocol):

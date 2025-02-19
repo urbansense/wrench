@@ -5,9 +5,9 @@ from pathlib import Path
 import requests
 from geojson import Polygon
 
-from wrench.common.models import CommonMetadata, TimeFrame
 from wrench.harvester.base import BaseHarvester
 from wrench.log import logger
+from wrench.models import CommonMetadata, TimeFrame
 
 from .config import SensorThingsConfig
 from .models import GenericLocation, Location, SensorThingsBase, Thing

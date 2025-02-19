@@ -1,6 +1,8 @@
 from enum import Enum
 
-from pydantic import BaseModel, computed_field
+from pydantic import Field, computed_field
+
+from wrench.models import CatalogEntry
 
 
 class SDDICategory(Enum):
@@ -8,12 +10,12 @@ class SDDICategory(Enum):
     device = "device"
 
 
-class SDDIDataset(BaseModel):
+class SDDIDataset(CatalogEntry):
     # required
-    name: str
-    notes: str
+    id: str = Field(serialization_alias="name")  # use "name" for the JSON payload
+    name: str = Field(serialization_alias="title")
+    description: str = Field(serialization_alias="notes")
     owner_org: str
-    title: str
     # optional with predefined defaults
     url: str | None = None
     author: str = ""
@@ -32,6 +34,11 @@ class SDDIDataset(BaseModel):
     state: str = "active"
     tags: list[dict] = []
     type: str = "dataset"
+
+    def model_dump(self, **kwargs):
+        """Override to ensure serialization aliases are used by default"""
+        kwargs.setdefault("by_alias", True)
+        return super().model_dump(**kwargs)
 
 
 class OnlineService(SDDIDataset):
@@ -68,9 +75,9 @@ class DeviceGroup(SDDIDataset):
         data = online_service.model_dump(exclude={"groups", "resources"})
         data.update(
             {
-                "name": ckan_name,
-                "title": name,
-                "notes": description,
+                "id": ckan_name,
+                "name": name,
+                "description": description,
                 "tags": tags,
                 "resources": resources or [],
             }

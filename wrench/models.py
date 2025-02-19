@@ -1,10 +1,17 @@
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Protocol, TypeVar, runtime_checkable
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
 # Define a generic type for source-specific data
 T = TypeVar("T")
+
+
+# define a protcol for location
+@runtime_checkable
+class Location(Protocol):
+    def get_coordinates(self):
+        tuple[float, float]
 
 
 class TimeFrame(BaseModel):
@@ -12,11 +19,15 @@ class TimeFrame(BaseModel):
     latest_time: datetime
 
 
+# all items know that Items.location has a get_coordinates function
 class Item(BaseModel):
     id: str
 
+    model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
 
-class CommonMetadata(BaseModel, Generic[T]):
+
+# common metadata model
+class CommonMetadata(BaseModel):
     """
     Extensible common metadata format that preserves source-specific information
     while providing standardized fields for common attributes
@@ -43,16 +54,7 @@ class CommonMetadata(BaseModel, Generic[T]):
     # license and access information
     license: str | None = None
 
-    # extensibility mechanisms
-    custom_attributes: dict[str, Any] = Field(default_factory=dict)
-    source_specific_data: T | None = None
 
-    model_config = {"extra": "allow"}
-
-    def add_custom_attribute(self, key: str, value: Any):
-        """Add a custom attribute to the metadata"""
-        self.custom_attributes[key] = value
-
-    def get_custom_attribute(self, key: str, default: Any = None) -> Any:
-        """Retrieve a custom attribute"""
-        return self.custom_attributes.get(key, default)
+class CatalogEntry(BaseModel):
+    name: str
+    description: str

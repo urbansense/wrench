@@ -2,7 +2,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from .common.models import TimeFrame
+from .models import TimeFrame
 
 # Define common types used across the package
 DocumentType = TypeVar("DocumentType", bound=BaseModel)

@@ -24,11 +24,3 @@ class SDDIConfig(BaseModel):
     owner_org: str = Field(
         description="Owner organization under which the data will be registered"
     )
-
-    llm_host: str = Field(
-        description="Ollama host endpoint used to generate name and descriptions for catalog entries"
-    )
-
-    llm_model: str = Field(
-        description="Name of Ollama model to use to generate the name and description"
-    )
