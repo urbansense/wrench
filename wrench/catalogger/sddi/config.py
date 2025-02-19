@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class SDDIConfig(BaseModel):
-    """Configuration for SDDI Catalogger"""
+    """Configuration for SDDI Catalogger."""
 
     @classmethod
     def from_yaml(cls, config: str | Path) -> "SDDIConfig":

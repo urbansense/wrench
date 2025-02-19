@@ -31,7 +31,7 @@ class AdapterConfig(BaseModel):
 class BaseCatalogAdapter[H: BaseHarvester, C: BaseCatalogger](ABC):
     """
     H = Type of Harvester
-    C = Type of Catalogger
+    C = Type of Catalogger.
     """
 
     def __init__(self, llm_host: str, model: str):

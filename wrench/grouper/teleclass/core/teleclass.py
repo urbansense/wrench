@@ -28,7 +28,7 @@ from wrench.log import logger
 
 
 class TELEClass(BaseGrouper):
-    """Main class for taxonomy-enhanced text classification"""
+    """Main class for taxonomy-enhanced text classification."""
 
     def __init__(self, config: TELEClassConfig | str | Path):
         # Load config if path is provided
@@ -140,7 +140,7 @@ class TELEClass(BaseGrouper):
     def _perform_llm_enrichment(
         self, collection: list[DocumentMeta]
     ) -> LLMEnrichmentResult:
-        """Perform LLM-based taxonomy enrichment"""
+        """Perform LLM-based taxonomy enrichment."""
         self.logger.info("Performing LLM enrichment")
         if not self.config.cache.enabled:
             return self.llm_enricher.process(
@@ -186,7 +186,7 @@ class TELEClass(BaseGrouper):
         self,
         collection: list[DocumentMeta],
     ) -> CorpusEnrichmentResult:
-        """Perform corpus-based enrichment"""
+        """Perform corpus-based enrichment."""
         self.logger.info("Performing corpus-based enrichment")
         corpus_enrichment_result = self.corpus_enricher.enrich(
             enriched_classes=self.enriched_classes, collection=collection

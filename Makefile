@@ -38,6 +38,9 @@ lint_types:
 # Main lint command that runs all groups
 lint: lint_src lint_tests lint_docs lint_types
 
+lint-fix:
+	uv run --group lint ruff check wrench --fix
+
 ## format: Format the project files.
 format:
 	uv run --group lint ruff format wrench tests

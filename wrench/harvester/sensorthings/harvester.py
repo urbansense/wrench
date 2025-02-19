@@ -16,7 +16,8 @@ from .translator import LibreTranslateService
 
 class SensorThingsHarvester(BaseHarvester):
     """
-    A class to interact with the SensorThings server and retrieve SensorThings API Entities.
+    A class to interact with the SensorThings server and
+    retrieve SensorThings API Entities.
     """
 
     def __init__(
@@ -28,8 +29,8 @@ class SensorThingsHarvester(BaseHarvester):
         Initializes the SensorThings harvester.
 
         Args:
-            config (SensorThingsConfig | str | Path): Configuration for the SensorThings harvester.
-                Can be an instance of SensorThingsConfig, a path to a YAML configuration file, or a string.
+            config (SensorThingsConfig | str | Path):
+            Configuration for the SensorThings harvester. Can be an instance of SensorThingsConfig, a path to a YAML configuration file, or a string.
             location_model (type[GenericLocation], optional): The location model to use. Defaults to Location.
 
         Attributes:
@@ -62,16 +63,15 @@ class SensorThingsHarvester(BaseHarvester):
         """
         Retrieves metadata for the SensorThings data.
 
-        This method collects the locations of each 'thing' and calculates the geographic extent
-        and timeframe for the data. It then returns a CommonMetadata object populated with
-        this information.
+        This method collects the locations of each 'thing' and calculates the geographic
+        extent and timeframe for the data. It then returns a CommonMetadata object
+        populated with this information.
 
         Returns:
             CommonMetadata: An object containing metadata such as endpoint URL, title,
                             identifier, description, spatial extent, temporal extent,
                             source type, and last updated time.
         """
-
         # get locations of each thing, put them into a set to avoid duplicates
         locations = {
             loc.get_coordinates()
@@ -106,14 +106,16 @@ class SensorThingsHarvester(BaseHarvester):
     def fetch_things(self, limit: int = -1) -> list[Thing]:
         """
         Fetches a list of Thing objects, optionally translating them if a translator is configured.
+
         Args:
             limit (int): The maximum number of Thing objects to fetch. Defaults to -1, which means no limit.
+
         Returns:
             list[Thing]: A list of fetched Thing objects, potentially translated if a translator is configured.
+
         Raises:
             Exception: If translation fails for any Thing object, logs the error and returns the original Thing object.
         """
-
         self.logger.debug("Fetching %d things", limit if limit != -1 else 0)
         things = self._fetch_paginated(
             "Things?$expand=Locations,Datastreams($expand=Sensor)",
@@ -148,7 +150,6 @@ class SensorThingsHarvester(BaseHarvester):
         Returns:
             list[GenericLocation]: A list of fetched locations.
         """
-
         self.logger.debug("Fetching %d locations", limit if limit != -1 else 0)
         return self._fetch_paginated("Locations", self.location_model, limit=limit)
 
@@ -272,7 +273,6 @@ class SensorThingsHarvester(BaseHarvester):
         Returns:
             Polygon: GeoJSON polygon representing the bounding box
         """
-
         # Initialize bounds
         bounds = {
             "min_lat": float("inf"),
@@ -314,7 +314,6 @@ class SensorThingsHarvester(BaseHarvester):
             - All times are converted to UTC timezone
             - Skips datastreams with no phenomenon_time
         """
-
         # Initialize timeframe boundaries
         time_bounds = {
             "earliest": datetime.max.replace(tzinfo=timezone.utc),

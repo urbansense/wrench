@@ -18,6 +18,14 @@ class SimilarityClassifier:
         encoder: SentenceTransformer,
         enriched_classes: list[EnrichedClass],
     ):
+        """
+        Initialize the classifier with the given taxonomy manager, encoder, and enriched classes.
+
+        Args:
+            taxonomy_manager (TaxonomyManager): The manager for handling taxonomy-related operations.
+            encoder (SentenceTransformer): The encoder used for transforming sentences into embeddings.
+            enriched_classes (list[EnrichedClass]): A list of enriched classes to be used for creating class embeddings.
+        """
         self.taxonomy_manager = taxonomy_manager
         self.encoder = encoder
         self.enriched_classes = enriched_classes
@@ -135,7 +143,6 @@ class SimilarityClassifier:
         Returns:
             set of predicted class names
         """
-
         # Get document embedding
         doc_embedding = self.encoder.encode(text)
 

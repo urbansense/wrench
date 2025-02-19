@@ -40,7 +40,7 @@ class CorpusEnricher:
         collection: list[DocumentMeta],
     ) -> CorpusEnrichmentResult:
         """
-        Enrich taxonomy using documents
+        Enrich taxonomy using documents.
 
         Args:
             collection: List of DocumentMeta containing documents and its assigned core classes
@@ -77,9 +77,7 @@ class CorpusEnricher:
         class_name: str,
         collection: list[DocumentMeta],
     ) -> dict[str, list[DocumentMeta]]:
-        """
-        Get documents assigned to sibling classes, preserving IoT format
-        """
+        """Get documents assigned to sibling classes, preserving IoT format."""
         sibling_docs: dict[str, list[DocumentMeta]] = {}
         # Group documents by their assigned classes
         for doc in collection:
@@ -93,9 +91,7 @@ class CorpusEnricher:
         return sibling_docs
 
     def calculate_popularity(self, term: str, documents: list[str]) -> float:
-        """
-        Calculate popularity for multi-word terms with more precise matching
-        """
+        """Calculate popularity for multi-word terms with more precise matching."""
         term = term.lower().strip()
         term_words = term.split()
 
@@ -116,9 +112,7 @@ class CorpusEnricher:
     def calculate_distinctiveness(
         self, term: str, class_docs: list[str], sibling_docs: dict[str, list[str]]
     ) -> float:
-        """
-        Calculate distinctiveness using BM25 scores with phrase preservation
-        """
+        """Calculate distinctiveness using BM25 scores with phrase preservation."""
         term = term.lower().strip()
 
         # Prepare documents with phrase preservation
@@ -154,9 +148,7 @@ class CorpusEnricher:
         return softmax_scores[0]
 
     def calculate_semantic_similarity(self, term: str, class_name: str) -> float:
-        """
-        Calculate semantic similarity using sentence transformer embeddings
-        """
+        """Calculate semantic similarity using sentence transformer embeddings."""
         term_embedding = self.encoder.encode(term)
         class_embedding = self.encoder.encode(class_name)
 
@@ -170,9 +162,7 @@ class CorpusEnricher:
         return [keyword for keyword, _ in keywords]
 
     def extract_candidate_terms(self, iot_data_list: list[DocumentMeta]) -> set[str]:
-        """
-        Extract candidate terms from IoT data
-        """
+        """Extract candidate terms from IoT data."""
         terms = set()
         # Extract terms from descriptions
         text = " ".join(data.content for data in iot_data_list)
@@ -190,9 +180,7 @@ class CorpusEnricher:
         class_siblings: dict[str, list[DocumentMeta]],
         top_k: int = 3,
     ) -> set[TermScore]:
-        """
-        Enrich a class with terms from IoT data
-        """
+        """Enrich a class with terms from IoT data."""
         # Convert IoT data to text documents
         class_docs = [doc.content for doc in input_class]
 

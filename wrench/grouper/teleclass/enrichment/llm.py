@@ -37,7 +37,7 @@ class LLMEnricher:
     def process(
         self, enriched_classes: list[EnrichedClass], collection: List[DocumentMeta]
     ) -> LLMEnrichmentResult:
-        """Process generates both terms for each classes, and runs the core class selection for documents"""
+        """Process generates both terms for each classes, and runs the core class selection for documents."""
         class_with_terms = self.enrich_classes_with_terms(enriched_classes)
         document_with_core_classes = self.assign_classes_to_docs(
             collection=collection, enriched_classes=class_with_terms
@@ -150,7 +150,7 @@ class LLMEnricher:
     def assign_classes_to_docs(
         self, collection: List[DocumentMeta], enriched_classes: list[EnrichedClass]
     ) -> List[DocumentMeta]:
-        """Assign initial classes to documents"""
+        """Assign initial classes to documents."""
         self.logger.info("Assigning initial classes")
 
         for doc in collection:
@@ -172,9 +172,7 @@ class LLMEnricher:
     def _select_core_classes(
         self, doc: str, candidates: dict[int, set[str]]
     ) -> List[str]:
-        """
-        Select core classes from a list of candidates using LLM
-        """
+        """Select core classes from a list of candidates using LLM."""
         try:
             candidates_text = []
             for level in sorted(candidates.keys()):
@@ -225,7 +223,7 @@ Return only the selected class names separated by commas, nothing else."""
         taxonomy_manager: TaxonomyManager,
         enriched_classes: list[EnrichedClass],
     ) -> dict[int, set[str]]:
-        """Select candidate classes for a document using level-wise traversal"""
+        """Select candidate classes for a document using level-wise traversal."""
         candidates = defaultdict(set)
         current_level = set(taxonomy_manager.root_nodes)
 
@@ -260,7 +258,7 @@ Return only the selected class names separated by commas, nothing else."""
     def _compute_similarity(
         self, embedding: np.ndarray, enriched_class: EnrichedClass
     ) -> float:
-        """Compute similarity between a document and an enriched class"""
+        """Compute similarity between a document and an enriched class."""
         if enriched_class is None:
             self.logger.error("enriched_class is None")
             return 0.0

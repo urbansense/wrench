@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class PaginationConfig(BaseModel):
-    """Configuration for pagination behavior"""
+    """Configuration for pagination behavior."""
 
     page_delay: float = Field(
         default=0.1, description="Delay between pagination requests in seconds"
@@ -15,14 +15,14 @@ class PaginationConfig(BaseModel):
 
 
 class TranslatorConfig(BaseModel):
-    """Configuration for translation service"""
+    """Configuration for translation service."""
 
     url: str = Field(description="Base URL for the translation service")
     source_lang: str | None = Field(default=None, description="Source language code")
 
 
 class SensorThingsConfig(BaseModel):
-    """Main configuration for SensorThings harvester"""
+    """Main configuration for SensorThings harvester."""
 
     @classmethod
     def from_yaml(cls, config: str | Path) -> "SensorThingsConfig":

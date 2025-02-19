@@ -45,7 +45,6 @@ class LibreTranslateService(TranslationService):
         Returns:
             Thing: A new Thing object with translated attributes.
         """
-
         # translate thing
         translated_thing = translated_thing.model_copy(deep=True)
 
@@ -118,7 +117,7 @@ class LibreTranslateService(TranslationService):
 
     def translate_text(self, text: str):
         """
-        Translates the input text into English by calling the LibreTranslate API Endpoint.
+        Translates text into English with the LibreTranslate API.
 
         Args:
             text (str): The text to be translated.
@@ -127,9 +126,9 @@ class LibreTranslateService(TranslationService):
             str: The translated text in English.
 
         Raises:
-            requests.exceptions.RequestException: If there is an issue with the API request.
+            requests.exceptions.RequestException:
+            If there is an issue with the API request.
         """
-        """Translates the input text into english by calling the LibreTranslate API Endpoint"""
         payload = {"q": text, "source": self.source_lang, "target": "en"}
 
         response = requests.post(

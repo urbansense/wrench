@@ -26,30 +26,112 @@ class Filter:
         self.property_name = property_name
 
     def eq(self, value) -> "FilterExpression":
+        """
+        Creates a filter expression for equality comparison.
+
+        Args:
+            value: The value to compare against.
+
+        Returns:
+            FilterExpression: For the equality comparison.
+        """
         return FilterExpression(self.property_name, FilterOperator.EQ, value)
 
     def ne(self, value) -> "FilterExpression":
+        """
+        Creates a filter expression for the 'not equal' (NE) operator.
+
+        Args:
+            value: The value to compare against.
+
+        Returns:
+            FilterExpression: For the 'not equal' condition.
+        """
         return FilterExpression(self.property_name, FilterOperator.NE, value)
 
     def gt(self, value: Union[int, float]) -> "FilterExpression":
+        """
+        Creates a filter expression for the 'greater than' (GT) operator.
+
+        Args:
+            value (Union[int, float]): The value to compare against.
+
+        Returns:
+            FilterExpression: For the 'greater than' condition.
+        """
         return FilterExpression(self.property_name, FilterOperator.GT, value)
 
     def ge(self, value: Union[int, float]) -> "FilterExpression":
+        """
+        Creates a filter expression for the 'greater than or equal to' (>=) comparison.
+
+        Args:
+            value (Union[int, float]): The value to compare against.
+
+        Returns:
+            FilterExpression: For the 'greater than or equal to' comparison.
+        """
         return FilterExpression(self.property_name, FilterOperator.GE, value)
 
     def lt(self, value: Union[int, float]) -> "FilterExpression":
+        """
+        Creates a filter expression for the 'less than' comparison.
+
+        Args:
+            value (Union[int, float]): The value to compare against.
+
+        Returns:
+            FilterExpression: For the 'less than' comparison.
+        """
         return FilterExpression(self.property_name, FilterOperator.LT, value)
 
     def le(self, value: Union[int, float]) -> "FilterExpression":
+        """
+        Creates a 'less than or equal to' filter expression.
+
+        Args:
+            value (Union[int, float]): The value to compare against.
+
+        Returns:
+            FilterExpression: For the 'less than or equal to' condition.
+        """
         return FilterExpression(self.property_name, FilterOperator.LE, value)
 
     def contains(self, value: str) -> "FilterExpression":
+        """
+        Creates a FilterExpression that checks if the given value is a substring
+        of the property represented by this query builder.
+
+        Args:
+            value (str): The substring to check for within the property.
+
+        Returns:
+            FilterExpression: A filter expression that represents the substring check.
+        """
         return FilterExpression(self.property_name, FilterOperator.SUBSTRINGOF, value)
 
     def startswith(self, value: str) -> "FilterExpression":
+        """
+        Creates a FilterExpression that checks if the property starts with the given value.
+
+        Args:
+            value (str): The value to check if the property starts with.
+
+        Returns:
+            FilterExpression: A filter expression representing the startswith condition.
+        """
         return FilterExpression(self.property_name, FilterOperator.STARTSWITH, value)
 
     def endswith(self, value: str) -> "FilterExpression":
+        """
+        Creates a FilterExpression that checks if the property ends with the specified value.
+
+        Args:
+            value (str): The substring to check if the property ends with.
+
+        Returns:
+            FilterExpression: A new FilterExpression object with the ENDSWITH operator.
+        """
         return FilterExpression(self.property_name, FilterOperator.ENDSWITH, value)
 
 
@@ -224,7 +306,7 @@ class ThingQuery(Query):
 
 
 class DatastreamQuery(Query):
-    """Query builder for Datastream entities"""
+    """Query builder for Datastream entities."""
 
     RESOURCE_NAME = "Datastreams"
     VALID_EXPANSIONS = {"Sensor", "ObservedProperty", "Thing", "Observations"}

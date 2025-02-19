@@ -5,7 +5,6 @@ repos:
     hooks:
       - id: codespell
         files: ^.*\.(py|c|h|md|rst|yml)$
-        # args: ["--ignore-words", ".codespellignore" ]
   # Ruff for Python formatting and linting
   # - repo: https://github.com/astral-sh/ruff-pre-commit
   #   # Ruff version.

@@ -15,7 +15,7 @@ model_config = ConfigDict(
 
 
 class SensorThingsBase(Item):
-    """Base mixin for common fields for relevant SensorThings API Entities"""
+    """Base mixin for common fields for relevant SensorThings API Entities."""
 
     model_config = model_config
     id: str = Field(alias="@iot.id")
@@ -44,7 +44,7 @@ class Datastream(SensorThingsBase):
 
 
 class GeoPoint(BaseModel):
-    """Represents a GeoJSON Point Geometry"""
+    """Represents a GeoJSON Point Geometry."""
 
     type: str = "Point"
     coordinates: tuple[float, float]  # longitude, latitude
