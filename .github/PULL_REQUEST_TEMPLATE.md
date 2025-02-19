@@ -1,7 +1,7 @@
 ### Description
 
 Changes proposed in this pull request (what was done and why):
-- 
+-
 
 
 Changes refer to particular issues, PRs or documents:

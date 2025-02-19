@@ -33,6 +33,7 @@ class BaseCatalogAdapter[H: BaseHarvester, C: BaseCatalogger](ABC):
     H = Type of Harvester
     C = Type of Catalogger
     """
+
     def __init__(self, llm_host: str, model: str):
         self.llm = Client(host=llm_host)
         self.model = model
@@ -42,12 +43,13 @@ class BaseCatalogAdapter[H: BaseHarvester, C: BaseCatalogger](ABC):
     def create_service_entry(self, metadata: CommonMetadata) -> CatalogEntry:
         """
         Creates a service entry in the catalog using the provided metadata.
+
         Args:
             metadata (CommonMetadata): The metadata information required to create the catalog entry.
+
         Returns:
             CatalogEntry: The created catalog entry.
         """
-
         pass
 
     @abstractmethod

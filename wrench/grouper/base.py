@@ -16,14 +16,13 @@ class Group(BaseModel):
 
 
 class BaseGrouper(ABC):
-
     @abstractmethod
     def group_items(self, items: list) -> list[Group]:
         """
         Return a dictionary where the keys are strings representing categories
         and the values are lists of items belonging to those categories.
+
         Returns:
             dict[str, list]: A dictionary with category names as keys and lists of items as values.
         """
-
         pass

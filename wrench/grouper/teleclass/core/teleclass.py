@@ -31,7 +31,6 @@ class TELEClass(BaseGrouper):
     """Main class for taxonomy-enhanced text classification"""
 
     def __init__(self, config: TELEClassConfig | str | Path):
-
         # Load config if path is provided
         if isinstance(config, (str, Path)):
             config = TELEClassConfig.from_yaml(config)
@@ -233,7 +232,6 @@ class TELEClass(BaseGrouper):
         Returns:
             list[Group]: A list of Groups containing information about documents classified and group parent classes
         """
-
         self.logger.debug(
             "Starting document classification with input type: %s", type(items)
         )

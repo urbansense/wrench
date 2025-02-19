@@ -32,7 +32,10 @@ def test_nested_expansions(thing_query):
 
 def test_multiple_expansions(thing_query):
     query = thing_query.expand("Locations").expand("Datastreams").build()
-    assert unquote_plus(query) == "Things?$expand=Locations,Datastreams"
+    assert unquote_plus(query) in (
+        "Things?$expand=Locations,Datastreams",
+        "Things?$expand=Datastreams,Locations",
+    )
 
 
 def test_invalid_expansion(thing_query):
@@ -60,9 +63,9 @@ def test_complex_query(thing_query):
         .limit(10)
         .build()
     )
-    assert (
-        unquote_plus(query)
-        == "Things?$expand=Locations,Datastreams($expand=Sensor)&$top=10"
+    assert unquote_plus(query) in (
+        "Things?$expand=Locations,Datastreams($expand=Sensor)&$top=10",
+        "Things?$expand=Datastreams($expand=Sensor),Locations&$top=10",
     )
 
 

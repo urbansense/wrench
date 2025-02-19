@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 T = TypeVar("T")
 
 
-# define a protcol for location
+# define a protocol for location
 @runtime_checkable
 class Location(Protocol):
     def get_coordinates(self):
@@ -29,8 +29,25 @@ class Item(BaseModel):
 # common metadata model
 class CommonMetadata(BaseModel):
     """
-    Extensible common metadata format that preserves source-specific information
-    while providing standardized fields for common attributes
+    CommonMetadata is an extensible common metadata format that preserves source-specific information.
+
+    Attributes:
+        identifier (str): A unique identifier for the metadata.
+        title (str): The title of the metadata.
+        description (str): A brief description of the metadata.
+        endpoint_url (str): The URL endpoint where the metadata can be accessed.
+
+        spatial_extent (str, optional): The spatial extent of the data. Defaults to an empty string.
+        temporal_extent (TimeFrame, optional): The temporal extent of the data. Defaults to None.
+        tags (list[str], optional): A list of tags associated with the metadata. Defaults to an empty list.
+        keywords (list[str], optional): A list of keywords associated with the metadata. Defaults to an empty list.
+
+        source_type (str): The type of source from which the data originates.
+        last_updated (datetime, optional): The date and time when the metadata was last updated. Defaults to None.
+        update_frequency (str, optional): The frequency at which the data is updated. Defaults to None.
+        owner (str, optional): The owner of the metadata. Defaults to None.
+
+        license (str, optional): The license under which the data is provided. Defaults to None.
     """
 
     # required fields

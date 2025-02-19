@@ -165,7 +165,6 @@ class CorpusEnricher:
         return similarity
 
     def extract_key_phrases(self, text: str) -> list[str]:
-
         keywords = self.keyword_model.extract_keywords(text)
 
         return [keyword for keyword, _ in keywords]

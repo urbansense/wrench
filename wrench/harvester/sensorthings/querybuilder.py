@@ -113,7 +113,6 @@ class QueryOptions(BaseModel):
 
 
 class Query(ABC):
-
     @property
     @abstractmethod
     def RESOURCE_NAME(self) -> str:

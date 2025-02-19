@@ -71,7 +71,10 @@ class Pipeline[H: BaseHarvester, C: BaseCatalogger, G: BaseGrouper]:
             # Step 3: Run results through adapter
             service_entry = self.adapter.create_service_entry(service_metadata)
 
-            group_entries = [self.adapter.create_group_entry(service_entry, group) for group in grouped_docs]
+            group_entries = [
+                self.adapter.create_group_entry(service_entry, group)
+                for group in grouped_docs
+            ]
 
             # Step 4: Catalog results
             try:

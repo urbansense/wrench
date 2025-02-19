@@ -63,6 +63,8 @@ select = [
 ignore = [
     "D203",  # one-blank-line-before-class
     "D212",  # multi-line-summary-first-line
+    "D100",  # missing docstring in public module
+    "D101",  # missing docstring in public class
 ]
 
 [tool.ruff.lint.pydocstyle]

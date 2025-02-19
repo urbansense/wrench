@@ -55,7 +55,6 @@ class SDDICatalogger(BaseCatalogger):
         return pkg
 
     def _register_device_groups(self, device_groups: list[DeviceGroup]):
-
         for device_group in device_groups:
             pkg = self.ckan_server.call_action(
                 action="package_create",

@@ -1,3 +1,20 @@
+"""
+This module defines the SensorThingsSDDIAdapter class, which adapts data from SensorThings API to SDDI catalog.
+
+Classes:
+    SensorThingsSDDIAdapter: A class that extends BaseCatalogAdapter to adapt SensorThings data to SDDI catalog.
+
+Methods:
+    __init__(self, config: AdapterConfig | str | Path):
+        Initializes the SensorThingsSDDIAdapter with the given configuration.
+
+    create_service_entry(self, metadata: CommonMetadata) -> OnlineService:
+        Creates an OnlineService entry from the given metadata.
+
+    create_group_entry(self, api_service: OnlineService, group: Group) -> DeviceGroup:
+        Creates a DeviceGroup entry from the given API service and group.
+"""
+
 from pathlib import Path
 
 from geojson import MultiPoint
@@ -15,6 +32,22 @@ from wrench.models import CommonMetadata
 class SensorThingsSDDIAdapter(
     BaseCatalogAdapter[SensorThingsHarvester, SDDICatalogger]
 ):
+    """
+    Adapter class to convert SensorThings data to SDDI format.
+
+    Args:
+        config (AdapterConfig | str | Path): Configuration for the adapter.
+            Can be an AdapterConfig object, a YAML file path, or a string
+            representing the configuration.
+
+    Methods:
+        create_service_entry(metadata: CommonMetadata) -> OnlineService:
+            Creates an OnlineService entry from the provided metadata.
+        create_group_entry(api_service: OnlineService, group: Group) -> DeviceGroup:
+            Creates a DeviceGroup entry from the provided API service and
+            group information.
+    """
+
     def __init__(self, config: AdapterConfig | str | Path):
         if isinstance(config, (str, Path)):
             config = AdapterConfig.from_yaml(config)
@@ -23,7 +56,6 @@ class SensorThingsSDDIAdapter(
         super().__init__(llm_host=self.config.llm_host, model=self.config.llm_model)
 
     def create_service_entry(self, metadata: CommonMetadata) -> OnlineService:
-
         # set a default owner for now HANDLE THIS LATER
         owner = metadata.owner or "lehrstuhl-fur-geoinformatik"
 
@@ -37,14 +69,11 @@ class SensorThingsSDDIAdapter(
             spatial=metadata.spatial_extent,
         )
 
-        print(service)
-
         return service
 
     def create_group_entry(
         self, api_service: OnlineService, group: Group
     ) -> DeviceGroup:
-
         self.logger.info("Creating device group")
 
         domain_groups = [
@@ -105,7 +134,8 @@ class SensorThingsSDDIAdapter(
             resources=[
                 {
                     "name": f"URL for {catalog_entry.name}",
-                    "description": f"URL provides a list of all data associated with the category {group.name}",
+                    "description": f"URL provides a list of all data associated "
+                    f"with the category {group.name}",
                     "format": "JSON",
                     "url": f"{api_service.url}/{param_url}",
                 }

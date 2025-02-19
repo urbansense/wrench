@@ -196,7 +196,7 @@ except requests.RequestException as e:
 # Validate geographic extent
 if metadata.spatial_extent:
     for coordinate in metadata.spatial_extent:
-        if not (-180 <= coordinate.longitude <= 180 and 
+        if not (-180 <= coordinate.longitude <= 180 and
                 -90 <= coordinate.latitude <= 90):
             logger.warning(f"Invalid coordinate: {coordinate}")
 ```
