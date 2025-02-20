@@ -55,6 +55,13 @@ class GenericLocation(ABC, SensorThingsBase):
 
     @abstractmethod
     def get_coordinates(self) -> tuple[float, float]:
+        """
+        Retrieves the coordinates of the location.
+
+        Returns:
+            tuple[float, float]: Tuple with latitude and longitude
+            of the location.
+        """
         pass
 
 
@@ -66,7 +73,8 @@ class Location(GenericLocation):
         Retrieves the coordinates of the location.
 
         Returns:
-            tuple[float, float]: A tuple containing the latitude and longitude of the location.
+            tuple[float, float]: Tuple with latitude and longitude
+            of the location.
         """
         return self.location.coordinates
 

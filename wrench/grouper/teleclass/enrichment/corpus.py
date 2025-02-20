@@ -21,6 +21,19 @@ class CorpusEnricher:
         config: CorpusConfig,
         encoder_model: str,
     ):
+        """
+        Initializes the Corpus class with the given configuration and encoder model.
+
+        Args:
+            config (CorpusConfig): The configuration object for the corpus.
+            encoder_model (str): The name or path of the encoder model to be used.
+
+        Attributes:
+            encoder (SentenceTransformer): The model for encoding text.
+            keyword_model (yake.KeywordExtractor): The YAKE keyword extractor.
+            class_terms (list[EnrichedClass]): A list to store enriched class terms.
+            logger (Logger): Logger instance specific to this class.
+        """
         self.encoder = SentenceTransformer(encoder_model)
         self.keyword_model = yake.KeywordExtractor(
             lan="en",
@@ -40,15 +53,18 @@ class CorpusEnricher:
         collection: list[DocumentMeta],
     ) -> CorpusEnrichmentResult:
         """
-        Enrich taxonomy using documents.
+        Enriches the provided classes with additional data and embeddings.
 
         Args:
-            collection: List of DocumentMeta containing documents and its assigned core classes
+            enriched_classes (list[EnrichedClass]): A list of classes to be enriched.
+            collection (list[DocumentMeta]): A list of document metadata to be used for enrichment.
 
         Returns:
-            Dictionary mapping class names to their enriched terms with scores
+            CorpusEnrichmentResult: The result of the enrichment process containing the enriched classes.
+
+        Raises:
+            ValueError: If core classes for a document are not defined.
         """
-        # Convert documents to dictionary format with IoT structure
 
         for ec in enriched_classes:
             self.logger.info("Enriching class %s", ec.class_name)
@@ -157,6 +173,15 @@ class CorpusEnricher:
         return similarity
 
     def extract_key_phrases(self, text: str) -> list[str]:
+        """
+        Extracts key phrases from the given text using a keyword extraction model.
+
+        Args:
+            text (str): The input text from which to extract key phrases.
+
+        Returns:
+            list[str]: A list of extracted key phrases.
+        """
         keywords = self.keyword_model.extract_keywords(text)
 
         return [keyword for keyword, _ in keywords]
@@ -205,7 +230,7 @@ class CorpusEnricher:
             semantic_similarity = self.calculate_semantic_similarity(term, class_name)
 
             self.logger.debug(
-                "\nPopularity: %10.3f\nDistinctiveness: %10.3f\nSemantic Similarity: %10.3f\n",
+                "\nPopularity: %10.3f\nDistinctiveness: %10.3f\nSemantic Similarity: %10.3f\n",  # noqa: E501
                 popularity,
                 distinctiveness,
                 semantic_similarity,

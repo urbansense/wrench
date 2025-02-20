@@ -65,6 +65,7 @@ ignore = [
     "D212",  # multi-line-summary-first-line
     "D100",  # missing docstring in public module
     "D101",  # missing docstring in public class
+    "D104",  # missing docstring in public package
 ]
 
 [tool.ruff.lint.pydocstyle]

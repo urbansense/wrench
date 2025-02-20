@@ -226,11 +226,13 @@ class TELEClass(BaseGrouper):
         Groups a collection of documents into predefined categories.
 
         Args:
-            items (Union[str, Path, list[BaseModel]]): The items to classify. This can be a path to a file or directory,
-                                                           a string containing document content, or a list of BaseModel instances.
+            items (Union[str, Path, list[BaseModel]]): The items to classify.
+                This can be a path to a file or directory, a string containing
+                document content, or a list of BaseModel instances.
 
         Returns:
-            list[Group]: A list of Groups containing information about documents classified and group parent classes
+            list[Group]: A list of Groups containing information about documents
+                         classified and group parent classes
         """
         self.logger.debug(
             "Starting document classification with input type: %s", type(items)
@@ -272,7 +274,21 @@ class TELEClass(BaseGrouper):
     def evaluate_classifier(
         self, documents: Union[str, Path, list[BaseModel]]
     ) -> Group:
-        """ """
+        """
+        Evaluates the classifier using the provided documents.
+
+        Args:
+            documents (Union[str, Path, list[BaseModel]]): The documents to be
+                evaluated. This can be a string or Path to a file containing
+                the documents, or a list of BaseModel instances.
+
+        Returns:
+            Group: The evaluation result as a Group object.
+
+        Raises:
+            Exception: If the evaluation process fails, an exception is
+                       raised with the error details.
+        """
         try:
             docs = self._load_items(documents)
             labels = self._load_labels("./test_script/labels.json")

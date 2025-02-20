@@ -16,8 +16,10 @@ from .translator import LibreTranslateService
 
 class SensorThingsHarvester(BaseHarvester):
     """
-    A class to interact with the SensorThings server and
-    retrieve SensorThings API Entities.
+    Harvests SensorThings API entities.
+
+    Returns metadata and list of items contained in the
+    API server
     """
 
     def __init__(
@@ -30,7 +32,7 @@ class SensorThingsHarvester(BaseHarvester):
 
         Args:
             config (SensorThingsConfig | str | Path): Configuration for the harvester.
-            location_model (type[GenericLocation], optional): Location model. Defaults to Location.
+            location_model (type[GenericLocation], optional): Custom Location Model.
 
         Attributes:
             config (SensorThingsConfig): Harvester configuration.
@@ -107,10 +109,10 @@ class SensorThingsHarvester(BaseHarvester):
         Fetches a list of Thing objects, optionally translating them if configured.
 
         Args:
-            limit (int): Max number of Thing objects to fetch. Defaults to -1 (no limit).
+            limit (int): Max number of Things to fetch. Defaults to -1 (no limit).
 
         Returns:
-            list[Thing]: List of fetched Thing objects, potentially translated.
+            list[Thing]: List of fetched Things, potentially translated.
 
         Raises:
             Exception: Logs error and returns original Thing if translation fails.
@@ -144,7 +146,8 @@ class SensorThingsHarvester(BaseHarvester):
 
         Args:
             limit (int, optional): The maximum number of locations to fetch.
-                                   If set to -1, fetches all available locations. Defaults to -1.
+                                   If set to -1, fetches all available locations.
+                                   Defaults to -1.
 
         Returns:
             list[GenericLocation]: A list of fetched locations.

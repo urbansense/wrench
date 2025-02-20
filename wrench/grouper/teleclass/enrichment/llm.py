@@ -18,6 +18,25 @@ from wrench.log import logger
 
 class LLMEnricher:
     def __init__(self, config: LLMConfig, taxonomy_manager: TaxonomyManager):
+        """
+        Initializes the LLM enrichment class.
+
+        Args:
+            config (LLMConfig): Configuration object containing LLM settings
+                                such as host, model, temperature, and prompt.
+            taxonomy_manager (TaxonomyManager): Manager for handling
+                                                taxonomy-related operations.
+
+        Attributes:
+            llm (Client): The LLM client initialized with the provided host.
+            model (str): The model name to be used by the LLM.
+            temperature (float): The temperature setting for the LLM.
+            taxonomy_manager (TaxonomyManager): The taxonomy manager instance.
+            prompt (str): The prompt template for generating keywords.
+            encoder (SentenceTransformer): The sentence transformer model for
+                                           encoding text.
+            logger (Logger): Logger instance for logging within this class.
+        """
         self.llm = Client(host=config.host)
         self.model = config.model
         self.temperature = config.temperature
@@ -28,7 +47,7 @@ class LLMEnricher:
             Generate 10 specific urban sensor use case keywords for the class '{class_name}' described as '{class_description}' which is a subclass of '{parent_class}'.
             These keywords should be relevant to '{class_name}' but not to these sibling classes: {siblings}. Be specific and relevant.
             Respond with only the comma-separated terms, no explanations.
-            """
+            """  # noqa: E501
         )
         self.encoder = SentenceTransformer("all-mpnet-base-v2")
 
@@ -37,7 +56,7 @@ class LLMEnricher:
     def process(
         self, enriched_classes: list[EnrichedClass], collection: List[DocumentMeta]
     ) -> LLMEnrichmentResult:
-        """Process generates both terms for each classes, and runs the core class selection for documents."""
+        """Generates terms for each classes, runs core class selection for documents."""
         class_with_terms = self.enrich_classes_with_terms(enriched_classes)
         document_with_core_classes = self.assign_classes_to_docs(
             collection=collection, enriched_classes=class_with_terms
@@ -51,6 +70,24 @@ class LLMEnricher:
     def enrich_classes_with_terms(
         self, enriched_classes: list[EnrichedClass]
     ) -> list[EnrichedClass]:
+        """
+        Enriches a list of classes with terms and creates class embeddings.
+
+        This method iterates over each class in the provided list, retrieves its parent
+        and sibling nodes from the taxonomy manager, and enriches the class with
+        additional terms based on its relationships. If the class has no parents (i.e.,
+        it is a root node), it is enriched without parent context. After enriching the
+        terms, embeddings are computed for the terms using the encoder.
+
+
+        Args:
+            enriched_classes (list[EnrichedClass]): A list of EnrichedClass
+                                                    objects to be enriched.
+
+        Returns:
+            list[EnrichedClass]: The list of EnrichedClass objects with
+                                 updated terms and embeddings.
+        """
         for ec in enriched_classes:
             # Get all nodes that are parents of the current node
             parents = list(self.taxonomy_manager.get_parents(ec.class_name))
@@ -98,7 +135,7 @@ class LLMEnricher:
         siblings: Set[str],
     ) -> Set[TermScore]:
         """
-        Enrich a class by generating class-specific terms using a language model (LLM) with parent and sibling context.
+        Enrich a class by generating specific-terms with parent and sibling context.
 
         Args:
             class_name (str): The name of the class to enrich.
@@ -110,7 +147,8 @@ class LLMEnricher:
             Set[TermScore]: A set of TermScore objects representing the generated terms.
 
         Raises:
-            Exception: If there is an error during term generation, it logs the error and returns an empty set.
+            Exception: If there is an error during term generation,
+            it logs the error and returns an empty set.
         """
         try:
             siblings_str = ", ".join(siblings) if siblings else "none"
@@ -194,7 +232,7 @@ Important guidelines:
 - Only select ONE class maximum per level
 - If uncertain about a class, exclude it
 
-Return only the selected class names separated by commas, nothing else."""
+Return only the selected class names separated by commas, nothing else."""  # noqa: E501
 
             response = self.llm.chat(
                 model=self.model,

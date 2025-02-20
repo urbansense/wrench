@@ -26,6 +26,19 @@ class SensorThingsConfig(BaseModel):
 
     @classmethod
     def from_yaml(cls, config: str | Path) -> "SensorThingsConfig":
+        """
+        Create a SensorThingsConfig instance from a YAML file.
+
+        Args:
+            config (str | Path): The path to the YAML configuration file.
+
+        Returns:
+            SensorThingsConfig: SensorThingsConfig with the data from the YAML file.
+
+        Raises:
+            FileNotFoundError: If the specified YAML file does not exist.
+            yaml.YAMLError: If there is an error parsing the YAML file.
+        """
         with open(config, "r") as f:
             config_dict = yaml.safe_load(f)
         return cls.model_validate(config_dict)
