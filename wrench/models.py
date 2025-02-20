@@ -25,8 +25,14 @@ class TimeFrame(BaseModel):
     latest_time: datetime
 
 
-# all items know that Items.location has a get_coordinates function
 class Item(BaseModel):
+    """
+    Item model representing an entity with an ID.
+
+    Attributes:
+        id (str): The unique identifier for the item.
+    """
+
     id: str
 
     model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)

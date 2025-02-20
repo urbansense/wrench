@@ -26,19 +26,18 @@ class SensorThingsHarvester(BaseHarvester):
         location_model: type[GenericLocation] = Location,
     ):
         """
-        Initializes the SensorThings harvester.
+        Initialize the harvester.
 
         Args:
-            config (SensorThingsConfig | str | Path):
-            Configuration for the SensorThings harvester. Can be an instance of SensorThingsConfig, a path to a YAML configuration file, or a string.
-            location_model (type[GenericLocation], optional): The location model to use. Defaults to Location.
+            config (SensorThingsConfig | str | Path): Configuration for the harvester.
+            location_model (type[GenericLocation], optional): Location model. Defaults to Location.
 
         Attributes:
-            config (SensorThingsConfig): The configuration for the SensorThings harvester.
-            logger (Logger): Logger instance for the harvester.
-            translator (LibreTranslateService | None): Translator service if configured, otherwise None.
-            location_model (type[GenericLocation]): The location model to use.
-            things (list): List of things fetched based on the default limit in the configuration.
+            config (SensorThingsConfig): Harvester configuration.
+            logger (Logger): Logger instance.
+            translator (LibreTranslateService | None): Translator service if configured.
+            location_model (type[GenericLocation]): Location model.
+            things (list): Fetched things based on default limit.
         """
         # Load config if path is provided
         if isinstance(config, (str, Path)):
@@ -105,16 +104,16 @@ class SensorThingsHarvester(BaseHarvester):
 
     def fetch_things(self, limit: int = -1) -> list[Thing]:
         """
-        Fetches a list of Thing objects, optionally translating them if a translator is configured.
+        Fetches a list of Thing objects, optionally translating them if configured.
 
         Args:
-            limit (int): The maximum number of Thing objects to fetch. Defaults to -1, which means no limit.
+            limit (int): Max number of Thing objects to fetch. Defaults to -1 (no limit).
 
         Returns:
-            list[Thing]: A list of fetched Thing objects, potentially translated if a translator is configured.
+            list[Thing]: List of fetched Thing objects, potentially translated.
 
         Raises:
-            Exception: If translation fails for any Thing object, logs the error and returns the original Thing object.
+            Exception: Logs error and returns original Thing if translation fails.
         """
         self.logger.debug("Fetching %d things", limit if limit != -1 else 0)
         things = self._fetch_paginated(

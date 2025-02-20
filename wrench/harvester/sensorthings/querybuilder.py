@@ -23,6 +23,12 @@ class FilterOperator(Enum):
 
 class Filter:
     def __init__(self, property_name: str):
+        """
+        Initializes the QueryBuilder with the specified property name.
+
+        Args:
+            property_name (str): The name of the property to be used in the query.
+        """
         self.property_name = property_name
 
     def eq(self, value) -> "FilterExpression":
@@ -99,8 +105,7 @@ class Filter:
 
     def contains(self, value: str) -> "FilterExpression":
         """
-        Creates a FilterExpression that checks if the given value is a substring
-        of the property represented by this query builder.
+        Checks if the given value is a substring of the property.
 
         Args:
             value (str): The substring to check for within the property.
@@ -112,7 +117,7 @@ class Filter:
 
     def startswith(self, value: str) -> "FilterExpression":
         """
-        Creates a FilterExpression that checks if the property starts with the given value.
+        Checks if the property starts with the given value.
 
         Args:
             value (str): The value to check if the property starts with.
@@ -124,7 +129,7 @@ class Filter:
 
     def endswith(self, value: str) -> "FilterExpression":
         """
-        Creates a FilterExpression that checks if the property ends with the specified value.
+        Checks if the property ends with the specified value.
 
         Args:
             value (str): The substring to check if the property ends with.
@@ -137,17 +142,54 @@ class Filter:
 
 class FilterExpression:
     def __init__(self, property_name: str, operator: FilterOperator, value):
+        """
+        Initializes a QueryBuilder instance.
+
+        Args:
+            property_name (str): The name of the property to filter on.
+            operator (FilterOperator): The operator to use for filtering.
+            value: The value to compare the property against.
+        """
         self.property_name = property_name
         self.operator = operator
         self.value = value
 
     def __and__(self, other: "FilterExpression") -> "FilterExpression":
+        """
+        Combine this filter with another using AND.
+
+        Args:
+            other (FilterExpression): The other filter to combine with.
+
+        Returns:
+            FilterExpression: A new filter representing the logical AND of both.
+        """
         return CombinedFilter(FilterOperator.AND, [self, other])
 
     def __or__(self, other: "FilterExpression") -> "FilterExpression":
+        """
+        Combine the current filter expression with another using the OR operator.
+
+        Args:
+            other (FilterExpression): The other filter expression to combine with.
+
+        Returns:
+            FilterExpression: A new filter expression representing the combination
+            using the OR operator.
+        """
         return CombinedFilter(FilterOperator.OR, [self, other])
 
     def __str__(self) -> str:
+        """
+        Returns a string representation of the query filter.
+
+        Constructs a string representation of the query filter based on the operator
+        and value. Handles function-style operators (SUBSTRINGOF, STARTSWITH, ENDSWITH)
+        differently from standard operators.
+
+        Returns:
+            str: The string representation of the query filter.
+        """
         # Handle function-style operators differently
         if self.operator in {
             FilterOperator.SUBSTRINGOF,
@@ -166,10 +208,27 @@ class FilterExpression:
 
 class CombinedFilter(FilterExpression):
     def __init__(self, operator: FilterOperator, expressions: list[FilterExpression]):
+        """
+        Initializes a QueryBuilder instance.
+
+        Args:
+            operator (FilterOperator): The operator to be used in the query.
+            expressions (list[FilterExpression]): A list of filter expressions
+                                                  to be applied.
+
+        """
         self.operator = operator
         self.expressions = expressions
 
     def __str__(self) -> str:
+        """
+        Returns a string representation of the query expression.
+
+        The expressions are joined by the operator's value and enclosed in parentheses.
+
+        Returns:
+            str: The string representation of the query expression.
+        """
         joined = f" {self.operator.value} ".join(str(exp) for exp in self.expressions)
         return f"({joined})"
 
@@ -198,19 +257,58 @@ class Query(ABC):
     @property
     @abstractmethod
     def RESOURCE_NAME(self) -> str:
+        """
+        Returns the name of the resource.
+
+        This method should be overridden in subclasses to provide the specific
+        resource name.
+
+        Returns:
+            str: The name of the resource.
+        """
         pass
 
     @property
     @abstractmethod
     def VALID_EXPANSIONS(self) -> set[str]:
+        """
+        Returns a set of valid expansions for the SensorThings API query.
+
+        This method should be overridden to provide the specific valid expansions
+        for the implementation.
+
+        Returns:
+            set[str]: A set of strings representing the valid expansions.
+        """
         pass
 
     @property
     @abstractmethod
     def VALID_NESTED_EXPANSIONS(self) -> dict[str, set[str]]:
+        """
+        Definition of nested expansions for nested entities.
+
+        Returns a dictionary where the keys are strings representing the names of
+        entities, and the values are sets of strings representing the valid nested
+        expansions for each entity.
+
+        Returns:
+            dict[str, set[str]]: A dictionary mapping entity names to sets of valid
+            nested expansions.
+        """
         pass
 
     def __init__(self):
+        """
+        Initializes the QueryBuilder instance.
+
+        Attributes:
+            expansions (set[str]): A set to store expansion options.
+            nested_expansions (dict[str, set[str]]): A dictionary to store nested
+            expansion options, initialized with keys from VALID_NESTED_EXPANSIONS
+            and empty sets as values.
+            options (QueryOptions): An instance of QueryOptions to store query options.
+        """
         self.expansions: set[str] = set()
         self.nested_expansions: dict[str, set[str]] = {
             k: set() for k in self.VALID_NESTED_EXPANSIONS.keys()
@@ -252,6 +350,15 @@ class Query(ABC):
         return self
 
     def limit(self, n: int) -> "Query":
+        """
+        Sets the maximum number of records to retrieve in the query.
+
+        Args:
+            n (int): The maximum number of records to return.
+
+        Returns:
+            Query: The current query instance with the limit applied.
+        """
         self.options.limit = n
         return self
 

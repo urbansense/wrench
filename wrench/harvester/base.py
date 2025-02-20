@@ -15,10 +15,22 @@ class BaseHarvester(ABC):
 
     @abstractmethod
     def get_metadata(self) -> CommonMetadata:
+        """
+        Retrieve metadata information.
+
+        Returns:
+            CommonMetadata: The metadata information.
+        """
         pass
 
     @abstractmethod
     def get_items(self) -> list[Item]:
+        """
+        Retrieve a list of items.
+
+        Returns:
+            list[Item]: A list of items.
+        """
         pass
 
 

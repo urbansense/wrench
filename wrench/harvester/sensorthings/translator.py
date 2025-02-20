@@ -8,27 +8,39 @@ from .models import Thing
 
 class LibreTranslateService(TranslationService):
     """
-    LibreTranslateService takes in a LibreTranslate base URL endpoint and can translate incoming SensorThings API Thing Entity into English.
+    LibreTranslateService translates SensorThings API Thing Entity into English.
 
     Attributes:
-        url (str): The base URL endpoint for the LibreTranslate API.
-        source_lang (str): The source language of the text to be translated. Defaults to "auto" if not provided.
-        headers (dict): The headers to be used in the API request.
+        url (str): Base URL for the LibreTranslate API.
+        source_lang (str): Source language of the text. Defaults to "auto".
+        headers (dict): Headers for the API request.
 
     Methods:
         translate(translated_thing: Thing) -> Thing:
-            Translates the given Thing entity into English, including its name, description, properties, and datastreams.
+            Translates the given Thing entity into English.
 
         translate_value(value):
-            Recursively translates values that are strings, lists, or dictionaries.
+            Recursively translates values that are strings, lists, or dicts.
 
         translate_text(text: str):
-            Translates the input text from `source_lang` into English by calling the LibreTranslate API Endpoint.
+            Translates text from `source_lang` into English using the API.
     """
 
-    """LibreTranslateService takes in a LibreTranslate base URL endpoint and can translate incoming SensorThings API Thing Entity into english"""
-
     def __init__(self, url: str, source_lang):
+        """
+        Initializes the Translator object with the given URL and source language.
+
+        Args:
+            url (str): The URL to be used for translation.
+            source_lang (str): The source language for translation.
+                               If not provided, defaults to "auto".
+
+        Attributes:
+            url (str): The URL to be used for translation.
+            source_lang (str): The source language for translation.
+            headers (dict): The headers to be used for HTTP requests.
+            logger (Logger): The logger instance for this class.
+        """
         self.url = url
         self.source_lang = "auto" if not source_lang else source_lang
         self.headers = {"Content-Type": "application/json"}
@@ -36,8 +48,10 @@ class LibreTranslateService(TranslationService):
 
     def translate(self, translated_thing: Thing) -> Thing:
         """
-        Translates the attributes of a Thing object, including its name, description,
-        properties, and datastreams, into another language or format.
+        Translates the attributes of a Thing object.
+
+        Includes its name, description, properties,
+        and datastreams, into another language or format.
 
         Args:
             translated_thing (Thing): The Thing object to be translated.
@@ -90,20 +104,18 @@ class LibreTranslateService(TranslationService):
 
     def translate_value(self, value):
         """
-        Recursively translate values that are strings, lists, or dictionaries.
+        Recursively translate values that are strings, lists, or dicts.
 
         Args:
-            value (str, list, dict): The value to be translated. It can be a string,
-                                     a list of values, or a dictionary with string keys
-                                     and values of any type.
+            value (str, list, dict): The value to be translated.
 
         Returns:
-            The translated value. If the input is a string, it returns the translated string.
-            If the input is a list, it returns a list with each item translated.
-            If the input is a dictionary, it returns a dictionary with translated keys and values.
-            If the input is of any other type, it returns the input value unchanged.
+            The translated value. If the input is a string, it returns
+            the translated string. If the input is a list, it returns
+            a list with each item translated. If the input is a dict,
+            it returns a dict with translated keys and values.If the
+            input is of any other type, it returns the input value unchanged.
         """
-        """Recursively translate values that are strings or lists"""
         if isinstance(value, str):
             return self.translate_text(value)
         elif isinstance(value, list):

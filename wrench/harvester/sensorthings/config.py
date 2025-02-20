@@ -33,7 +33,8 @@ class SensorThingsConfig(BaseModel):
     base_url: str = Field(description="Base URL for the SensorThings server")
 
     identifier: str = Field(
-        description="Identifier for registering into backend, must be lowercase and separated by underscores"
+        description="""Identifier for registering into backend,
+                    must be lowercase and separated by underscores"""
     )
 
     title: str = Field(
