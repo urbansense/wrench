@@ -20,7 +20,7 @@ repos:
   #       types_or: [python, pyi]
   #       stages: [pre-commit]
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0  # the release, git tag, or commit you want to use
+    rev: v4.5.0 # the release, git tag, or commit you want to use
     hooks:
       - id: check-toml
       - id: check-yaml

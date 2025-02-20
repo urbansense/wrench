@@ -98,11 +98,13 @@ class TELEClass(BaseGrouper):
         3. Initializes the classifier manager with the enriched classes.
 
         Args:
-            documents (list[DocumentMeta]): The list of documents to be used for training.
-            sample_size (int, optional): The maximum number of documents to use. Defaults to 20.
+            documents (list[DocumentMeta]): The list of documents to use for training.
+            sample_size (int, optional): The maximum number of documents to use.
+                                         Defaults to 20.
 
         Raises:
-            Exception: If any error occurs during the training process, it is logged and re-raised.
+            Exception: If any error occurs during the training process,
+                       it is logged and re-raised.
         """
         self.logger.info("Starting training process")
         documents = documents[: min(len(documents), sample_size)]

@@ -57,15 +57,16 @@ class CorpusEnricher:
 
         Args:
             enriched_classes (list[EnrichedClass]): A list of classes to be enriched.
-            collection (list[DocumentMeta]): A list of document metadata to be used for enrichment.
+            collection (list[DocumentMeta]): A list of document metadata to be used
+                                             for enrichment.
 
         Returns:
-            CorpusEnrichmentResult: The result of the enrichment process containing the enriched classes.
+            CorpusEnrichmentResult: The result of the enrichment process containing the
+            enriched classes.
 
         Raises:
             ValueError: If core classes for a document are not defined.
         """
-
         for ec in enriched_classes:
             self.logger.info("Enriching class %s", ec.class_name)
             class_docs = []
