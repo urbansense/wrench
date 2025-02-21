@@ -8,6 +8,17 @@ class TELEClassCache:
     """Handles caching and loading of TELEClass state and results."""
 
     def __init__(self, cache_dir: str = ".teleclass_cache"):
+        """
+        Initializes the cache directory and defines paths for cache components.
+
+        Args:
+            cache_dir (str): Directory for cache files. Defaults to ".teleclass_cache".
+
+        Attributes:
+            cache_dir (Path): Path to the cache directory.
+            class_terms_path (Path): Path to the class terms cache file.
+            assignments_path (Path): Path to the assignments cache file.
+        """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
 
