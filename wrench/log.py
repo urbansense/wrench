@@ -2,7 +2,7 @@ import logging
 
 
 def setup_logging(level=logging.DEBUG):
-    """Configure package-wide logging"""
+    """Configure package-wide logging."""
     logger = logging.getLogger("wrench")
     # Clear any existing handlers
     logger.handlers.clear()

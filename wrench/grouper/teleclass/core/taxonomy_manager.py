@@ -6,18 +6,18 @@ from .config import TELEClassConfig
 
 
 class TaxonomyManager:
-    """Manages taxonomy operations and caching"""
+    """Manages taxonomy operations and caching."""
 
     @classmethod
     def from_config(cls, config: TELEClassConfig) -> "TaxonomyManager":
-        """Create from TELEClassConfig"""
+        """Create from TELEClassConfig."""
         graph = cls._build_graph(config.taxonomy)
         return cls(graph)
 
     @staticmethod
     def _build_graph(taxonomy: list[dict]) -> nx.DiGraph:
         """
-        Convert taxonomy configuration into a NetworkX DiGraph
+        Convert taxonomy configuration into a NetworkX DiGraph.
 
         Args:
             taxonomy: Taxonomy structure contained in TELEClass Config
@@ -84,22 +84,33 @@ class TaxonomyManager:
         return G
 
     def __init__(self, taxonomy: nx.DiGraph):
+        """
+        Initializes the TaxonomyManager with a given taxonomy graph.
+
+        Args:
+            taxonomy (nx.DiGraph): A directed graph representing the taxonomy.
+
+        Attributes:
+            taxonomy (nx.DiGraph): The directed graph representing the taxonomy.
+            root_nodes (list): A list of root nodes in the taxonomy.
+            max_depth (int): The maximum depth of the taxonomy.
+        """
         self.taxonomy = taxonomy
         self.root_nodes = self._find_root_nodes()
         self.max_depth = self._calculate_max_depth()
 
     def _find_root_nodes(self) -> list[str]:
-        """Find all root nodes in the taxonomy"""
+        """Find all root nodes in the taxonomy."""
         return [
             node for node in self.taxonomy.nodes() if self.taxonomy.in_degree(node) == 0
         ]
 
     def get_all_classes(self) -> list[str]:
-        """Get all classes and their description if they exist in the taxonomy"""
+        """Get all classes and their description if they exist in the taxonomy."""
         return list(self.taxonomy.nodes())
 
     def get_all_classes_with_description(self) -> dict[str, str]:
-        """Get all classes including their descriptions in the taxonomy"""
+        """Get all classes including their descriptions in the taxonomy."""
         node_w_desc: dict[str, str] = {}
         for node in list(self.taxonomy.nodes()):
             if "description" in self.taxonomy.nodes[node]:
@@ -110,19 +121,19 @@ class TaxonomyManager:
         return node_w_desc
 
     def _calculate_max_depth(self) -> int:
-        """Calculate the maximum depth of the taxonomy"""
+        """Calculate the maximum depth of the taxonomy."""
         return nx.dag_longest_path_length(self.taxonomy)
 
     def get_ancestors(self, node: str) -> set[str]:
-        """Get all ancestors of a node"""
+        """Get all ancestors of a node."""
         return set(nx.ancestors(self.taxonomy, node))
 
     def get_parents(self, node: str) -> set[str]:
-        """Get all parents of a node"""
+        """Get all parents of a node."""
         return set(self.taxonomy.predecessors(node))
 
     def get_siblings(self, node: str) -> set[str]:
-        """Get siblings of a node across all parents"""
+        """Get siblings of a node across all parents."""
         siblings = set()
         for parent in self.taxonomy.predecessors(node):
             siblings.update(self.taxonomy.successors(parent))
@@ -132,6 +143,7 @@ class TaxonomyManager:
     def get_leaf_nodes(self) -> set[str]:
         """
         Find all leaf nodes (nodes with no children) in the taxonomy.
+
         Returns a set of node names that are leaves.
         """
         return {
@@ -143,6 +155,7 @@ class TaxonomyManager:
     def get_all_paths(self) -> list[list[str]]:
         """
         Get all meaningful paths from level-1 nodes to leaf nodes in the taxonomy.
+
         A meaningful path starts from a non-root node (level-1) and goes to a leaf node.
 
         Returns:

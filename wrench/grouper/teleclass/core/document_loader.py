@@ -26,12 +26,20 @@ class JSONDocumentLoader:
             Initializes the JSONDocumentLoader with the given file path.
 
         load(encoder: SentenceTransformer) -> list[DocumentMeta]:
-            Loads the JSON file, processes the documents, and returns a list of DocumentMeta objects.
+            Loads the JSON file, processes the documents, and returns a list
+            of DocumentMeta objects.
             Raises FileNotFoundError if the JSON file does not exist.
             Raises ValueError if the JSON file does not contain a list of documents.
     """
 
     def __init__(self, file_path: Union[str, Path]):
+        """
+        Initialize the DocumentLoader with the given file path.
+
+        Args:
+            file_path (Union[str, Path]): The path to the file to be
+            loaded. It can be a string or a Path object.
+        """
         self.file_path = Path(file_path)
 
     def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:
@@ -71,6 +79,16 @@ class ModelDocumentLoader:
     """
 
     def __init__(self, documents: list[Item]):
+        """
+        Initialize the DocumentLoader with a list of documents.
+
+        Args:
+            documents (list[Item]): A list of Item instances.
+
+        Raises:
+            TypeError: If documents is not a list or if any element
+                       in documents is not an instance of BaseModel.
+        """
         if not isinstance(documents, list) or not all(
             isinstance(doc, BaseModel) for doc in documents
         ):

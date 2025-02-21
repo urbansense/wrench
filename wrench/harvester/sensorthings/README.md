@@ -1,9 +1,11 @@
 # SensorThings Harvester Documentation
 
 ## Overview
+
 The SensorThings Harvester is a component designed to retrieve and process data from SensorThings API endpoints. It provides functionality for fetching sensor data, locations, and enriching metadata about the data source.
 
 ## Key Features
+
 - Paginated data retrieval from SensorThings API endpoints
 - Support for customizable location models
 - Optional translation service integration
@@ -15,19 +17,23 @@ The SensorThings Harvester is a component designed to retrieve and process data 
 ### Core Components
 
 #### 1. SensorThingsHarvester
+
 The main class that orchestrates the harvesting process. It handles:
+
 - Data retrieval from the API
 - Metadata enrichment
 - Geographic calculations
 - Timeframe determinations
 
 #### 2. Models
+
 - **Thing**: Represents a SensorThings API Thing entity
 - **Datastream**: Represents a data stream from a sensor
 - **Location**: Represents geographic location information
 - **Sensor**: Represents sensor metadata
 
 #### 3. Configuration
+
 The harvester uses a YAML-based configuration system with the following structure:
 
 ```yaml
@@ -89,10 +95,11 @@ The harvester supports automatic translation of text fields using a translation 
 # In your config.yaml
 translator:
   url: "http://translate-service.com"
-  source_lang: "de"  # Source language code
+  source_lang: "de" # Source language code
 ```
 
 When configured, the harvester will automatically translate:
+
 - Thing names and descriptions
 - Datastream information
 - Sensor descriptions
@@ -138,7 +145,9 @@ except Exception as e:
 ## Data Structures
 
 ### Metadata Output
+
 The harvester returns CommonMetadata containing:
+
 - Endpoint URL
 - Spatial extent
 - Temporal extent
@@ -147,6 +156,7 @@ The harvester returns CommonMetadata containing:
 - Other relevant metadata
 
 ### Thing Entity Structure
+
 ```python
 class Thing:
     id: int
@@ -160,16 +170,19 @@ class Thing:
 ## Best Practices
 
 1. **Configuration Management**
+
    - Keep configuration in separate YAML files
    - Use environment variables for sensitive information
    - Validate configuration before use
 
 2. **Error Handling**
+
    - Always implement proper error handling
    - Log errors appropriately
    - Provide meaningful error messages
 
 3. **Performance Optimization**
+
    - Use appropriate pagination settings
    - Implement reasonable timeouts
    - Consider rate limiting for large datasets
@@ -182,6 +195,7 @@ class Thing:
 ## Common Issues and Solutions
 
 ### Connection Issues
+
 ```python
 harvester = SensorThingsHarvester("config.yaml")
 try:
@@ -192,11 +206,12 @@ except requests.RequestException as e:
 ```
 
 ### Data Validation
+
 ```python
 # Validate geographic extent
 if metadata.spatial_extent:
     for coordinate in metadata.spatial_extent:
-        if not (-180 <= coordinate.longitude <= 180 and 
+        if not (-180 <= coordinate.longitude <= 180 and
                 -90 <= coordinate.latitude <= 90):
             logger.warning(f"Invalid coordinate: {coordinate}")
 ```

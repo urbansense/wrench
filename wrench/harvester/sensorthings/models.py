@@ -15,7 +15,7 @@ model_config = ConfigDict(
 
 
 class SensorThingsBase(Item):
-    """Base mixin for common fields for relevant SensorThings API Entities"""
+    """Base mixin for common fields for relevant SensorThings API Entities."""
 
     model_config = model_config
     id: str = Field(alias="@iot.id")
@@ -44,7 +44,7 @@ class Datastream(SensorThingsBase):
 
 
 class GeoPoint(BaseModel):
-    """Represents a GeoJSON Point Geometry"""
+    """Represents a GeoJSON Point Geometry."""
 
     type: str = "Point"
     coordinates: tuple[float, float]  # longitude, latitude
@@ -55,6 +55,13 @@ class GenericLocation(ABC, SensorThingsBase):
 
     @abstractmethod
     def get_coordinates(self) -> tuple[float, float]:
+        """
+        Retrieves the coordinates of the location.
+
+        Returns:
+            tuple[float, float]: Tuple with latitude and longitude
+            of the location.
+        """
         pass
 
 
@@ -62,6 +69,13 @@ class Location(GenericLocation):
     location: GeoPoint
 
     def get_coordinates(self) -> tuple[float, float]:
+        """
+        Retrieves the coordinates of the location.
+
+        Returns:
+            tuple[float, float]: Tuple with latitude and longitude
+            of the location.
+        """
         return self.location.coordinates
 
 
@@ -76,4 +90,13 @@ class Thing(SensorThingsBase):
     )
 
     def __str__(self):
+        """
+        Returns a JSON string representation of the model.
+
+        The JSON string is generated using the `model_dump_json` method with
+        `by_alias` set to True and `exclude_none` set to True.
+
+        Returns:
+            str: A JSON string representation of the model.
+        """
         return self.model_dump_json(by_alias=True, exclude_none=True)

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class LLMConfig(BaseModel):
-    """Configuration for the LLM service"""
+    """Configuration for the LLM service."""
 
     host: str = Field(description="LLM service host URL")
     model: str = Field(description="Model to use for LLM enrichment")
@@ -19,7 +19,7 @@ class LLMConfig(BaseModel):
 
 
 class EmbeddingConfig(BaseModel):
-    """Configuration for the embedding service"""
+    """Configuration for the embedding service."""
 
     model_name: str = Field(
         default="all-mpnet-base-v2",
@@ -28,7 +28,7 @@ class EmbeddingConfig(BaseModel):
 
 
 class CorpusConfig(BaseModel):
-    """Configuration for corpus enrichment"""
+    """Configuration for corpus enrichment."""
 
     phrase_extractor: str = Field(
         default="yake", description="Phrase extraction method (keybert or yake)"
@@ -37,7 +37,7 @@ class CorpusConfig(BaseModel):
 
 
 class CacheConfig(BaseModel):
-    """Configuration for caching"""
+    """Configuration for caching."""
 
     enabled: bool = Field(
         default=True, description="Whether to enable caching, set to False by default"
@@ -48,7 +48,7 @@ class CacheConfig(BaseModel):
 
 
 class TaxonomyMetadata(BaseModel):
-    """Metadata about the taxonomy"""
+    """Metadata about the taxonomy."""
 
     name: str = Field(default="", description="Name of the taxonomy")
     description: str = Field(
@@ -57,7 +57,7 @@ class TaxonomyMetadata(BaseModel):
 
 
 class TELEClassConfig(BaseModel):
-    """Main configuration for TELEClass"""
+    """Main configuration for TELEClass."""
 
     llm: LLMConfig
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
@@ -72,7 +72,7 @@ class TELEClassConfig(BaseModel):
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "TELEClassConfig":
-        """Load config from YAML file"""
+        """Load config from YAML file."""
         with open(path, "r") as f:
             config_dict = yaml.safe_load(f)
         return cls.model_validate(config_dict)

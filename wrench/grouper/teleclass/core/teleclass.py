@@ -28,10 +28,25 @@ from wrench.log import logger
 
 
 class TELEClass(BaseGrouper):
-    """Main class for taxonomy-enhanced text classification"""
+    """Main class for taxonomy-enhanced text classification."""
 
     def __init__(self, config: TELEClassConfig | str | Path):
+        """
+        Initialize the TELEClass instance.
 
+        Args:
+            config (TELEClassConfig | str | Path): Configuration object or path to the configuration file.
+
+        Attributes:
+            config (TELEClassConfig): Loaded configuration.
+            taxonomy_manager (TaxonomyManager): Manager for handling taxonomy-related operations.
+            encoder (SentenceTransformer): Model for encoding sentences.
+            llm_enricher (LLMEnricher): Enricher for handling large language model operations.
+            corpus_enricher (CorpusEnricher): Enricher for handling corpus-related operations.
+            enriched_classes (list of EnrichedClass): List of enriched classes with terms initialized.
+            cache (TELEClassCache, optional): Cache for storing intermediate results if enabled in the config.
+            logger (Logger): Logger instance for the class.
+        """
         # Load config if path is provided
         if isinstance(config, (str, Path)):
             config = TELEClassConfig.from_yaml(config)
@@ -99,11 +114,13 @@ class TELEClass(BaseGrouper):
         3. Initializes the classifier manager with the enriched classes.
 
         Args:
-            documents (list[DocumentMeta]): The list of documents to be used for training.
-            sample_size (int, optional): The maximum number of documents to use. Defaults to 20.
+            documents (list[DocumentMeta]): The list of documents to use for training.
+            sample_size (int, optional): The maximum number of documents to use.
+                                         Defaults to 20.
 
         Raises:
-            Exception: If any error occurs during the training process, it is logged and re-raised.
+            Exception: If any error occurs during the training process,
+                       it is logged and re-raised.
         """
         self.logger.info("Starting training process")
         documents = documents[: min(len(documents), sample_size)]
@@ -141,7 +158,7 @@ class TELEClass(BaseGrouper):
     def _perform_llm_enrichment(
         self, collection: list[DocumentMeta]
     ) -> LLMEnrichmentResult:
-        """Perform LLM-based taxonomy enrichment"""
+        """Perform LLM-based taxonomy enrichment."""
         self.logger.info("Performing LLM enrichment")
         if not self.config.cache.enabled:
             return self.llm_enricher.process(
@@ -187,7 +204,7 @@ class TELEClass(BaseGrouper):
         self,
         collection: list[DocumentMeta],
     ) -> CorpusEnrichmentResult:
-        """Perform corpus-based enrichment"""
+        """Perform corpus-based enrichment."""
         self.logger.info("Performing corpus-based enrichment")
         corpus_enrichment_result = self.corpus_enricher.enrich(
             enriched_classes=self.enriched_classes, collection=collection
@@ -227,13 +244,14 @@ class TELEClass(BaseGrouper):
         Groups a collection of documents into predefined categories.
 
         Args:
-            items (Union[str, Path, list[BaseModel]]): The items to classify. This can be a path to a file or directory,
-                                                           a string containing document content, or a list of BaseModel instances.
+            items (Union[str, Path, list[BaseModel]]): The items to classify.
+                This can be a path to a file or directory, a string containing
+                document content, or a list of BaseModel instances.
 
         Returns:
-            list[Group]: A list of Groups containing information about documents classified and group parent classes
+            list[Group]: A list of Groups containing information about documents
+                         classified and group parent classes
         """
-
         self.logger.debug(
             "Starting document classification with input type: %s", type(items)
         )
@@ -274,7 +292,21 @@ class TELEClass(BaseGrouper):
     def evaluate_classifier(
         self, documents: Union[str, Path, list[BaseModel]]
     ) -> Group:
-        """ """
+        """
+        Evaluates the classifier using the provided documents.
+
+        Args:
+            documents (Union[str, Path, list[BaseModel]]): The documents to be
+                evaluated. This can be a string or Path to a file containing
+                the documents, or a list of BaseModel instances.
+
+        Returns:
+            Group: The evaluation result as a Group object.
+
+        Raises:
+            Exception: If the evaluation process fails, an exception is
+                       raised with the error details.
+        """
         try:
             docs = self._load_items(documents)
             labels = self._load_labels("./test_script/labels.json")

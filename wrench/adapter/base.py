@@ -29,11 +29,16 @@ class AdapterConfig(BaseModel):
 
 
 class BaseCatalogAdapter[H: BaseHarvester, C: BaseCatalogger](ABC):
-    """
-    H = Type of Harvester
-    C = Type of Catalogger
-    """
+    """H = Type of Harvester, C = Type of Catalogger."""
+
     def __init__(self, llm_host: str, model: str):
+        """
+        Initializes the base adapter with the given language model host and model name.
+
+        Args:
+            llm_host (str): The host address of the language model.
+            model (str): The name of the model to be used.
+        """
         self.llm = Client(host=llm_host)
         self.model = model
         self.logger = logger.getChild(self.__class__.__name__)
@@ -42,12 +47,14 @@ class BaseCatalogAdapter[H: BaseHarvester, C: BaseCatalogger](ABC):
     def create_service_entry(self, metadata: CommonMetadata) -> CatalogEntry:
         """
         Creates a service entry in the catalog using the provided metadata.
+
         Args:
-            metadata (CommonMetadata): The metadata information required to create the catalog entry.
+            metadata (CommonMetadata): The metadata information
+                                       required to create the catalog entry.
+
         Returns:
             CatalogEntry: The created catalog entry.
         """
-
         pass
 
     @abstractmethod

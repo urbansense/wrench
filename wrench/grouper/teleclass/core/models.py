@@ -16,7 +16,7 @@ class DocumentMeta(BaseModel):
 
 
 class TermScore(BaseModel):
-    """Store terms and scores for a candidate term, used in enrichment process"""
+    """Store terms and scores for a candidate term, used in enrichment process."""
 
     term: str
     popularity: float | None = None
@@ -25,8 +25,7 @@ class TermScore(BaseModel):
 
     @property
     def affinity_score(self) -> float:
-        """Calculate geometric mean of scores"""
-
+        """Calculate geometric mean of scores."""
         if (
             self.popularity is None
             or self.distinctiveness is None
@@ -39,18 +38,18 @@ class TermScore(BaseModel):
         )
 
     def __hash__(self) -> int:
-        """Make hashable based on term"""
+        """Make hashable based on term."""
         return hash(self.term)
 
     def __eq__(self, other: object) -> bool:
-        """Check equality based on term"""
+        """Check equality based on term."""
         if not isinstance(other, TermScore):
             return NotImplemented
         return self.term == other.term
 
 
 class EnrichedClass(BaseModel):
-    """Represents an enriched class with metadata and assigned terms"""
+    """Represents an enriched class with metadata and assigned terms."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -61,7 +60,7 @@ class EnrichedClass(BaseModel):
 
 
 class EnrichmentResult(BaseModel):
-    """Container for enrichment results"""
+    """Container for enrichment results."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
