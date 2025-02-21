@@ -17,6 +17,20 @@ class SDDICatalogger(BaseCatalogger):
     """
 
     def __init__(self, config: SDDIConfig | str | Path):
+        """
+        Initialize the register with the given configuration.
+
+        Args:
+            config (SDDIConfig | str | Path): The configuration for the register.
+                This can be an instance of SDDIConfig, a path to a YAML
+                configuration file,or a string representing the path to the
+                configuration file.
+
+        Raises:
+            ValueError: If the provided configuration path is invalid or the configuration
+                file cannot be loaded.
+
+        """
         # Load config if path is provided
         if isinstance(config, (str, Path)):
             config = SDDIConfig.from_yaml(config)

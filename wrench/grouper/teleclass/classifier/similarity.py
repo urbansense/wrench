@@ -8,7 +8,9 @@ from wrench.log import logger
 
 class SimilarityClassifier:
     """
-    A similarity-based hierarchical classifier that uses class embeddings based on core classes
+    A similarity-based hierarchical classifier.
+
+    Uses class embeddings based on core classes
     to map documents to the taxonomy hierarchy.
     """
 

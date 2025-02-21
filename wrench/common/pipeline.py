@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 class Pipeline[H: BaseHarvester, C: BaseCatalogger, G: BaseGrouper]:
     """
     A composable pipeline for processing sensor data.
+
     Components can be added or omitted based on requirements.
     """
 
@@ -24,12 +25,13 @@ class Pipeline[H: BaseHarvester, C: BaseCatalogger, G: BaseGrouper]:
         grouper: Optional[G] = None,
     ):
         """
-        Initialize pipeline with required and optional components.
+        Initialize the pipeline with the given components.
 
         Args:
-            harvester: Component for harvesting sensor data
-            catalogger: Component for cataloging results
-            classifier: Optional component for classification
+            harvester (H): The harvester component responsible for data collection.
+            catalogger (C): The catalogger component responsible for cataloging data.
+            adapter (BaseCatalogAdapter): The adapter for catalog operations.
+            grouper (Optional[G], optional): The grouper component for grouping data. Defaults to None.
         """
         self.harvester = harvester
         self.catalogger = catalogger
@@ -40,6 +42,7 @@ class Pipeline[H: BaseHarvester, C: BaseCatalogger, G: BaseGrouper]:
     def run(self):
         """
         Execute the pipeline with available components.
+
         Returns PipelineResult containing execution results or None if failed.
         """
         self.logger.info(

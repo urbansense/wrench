@@ -84,6 +84,17 @@ class TaxonomyManager:
         return G
 
     def __init__(self, taxonomy: nx.DiGraph):
+        """
+        Initializes the TaxonomyManager with a given taxonomy graph.
+
+        Args:
+            taxonomy (nx.DiGraph): A directed graph representing the taxonomy.
+
+        Attributes:
+            taxonomy (nx.DiGraph): The directed graph representing the taxonomy.
+            root_nodes (list): A list of root nodes in the taxonomy.
+            max_depth (int): The maximum depth of the taxonomy.
+        """
         self.taxonomy = taxonomy
         self.root_nodes = self._find_root_nodes()
         self.max_depth = self._calculate_max_depth()
@@ -132,6 +143,7 @@ class TaxonomyManager:
     def get_leaf_nodes(self) -> set[str]:
         """
         Find all leaf nodes (nodes with no children) in the taxonomy.
+
         Returns a set of node names that are leaves.
         """
         return {
@@ -143,6 +155,7 @@ class TaxonomyManager:
     def get_all_paths(self) -> list[list[str]]:
         """
         Get all meaningful paths from level-1 nodes to leaf nodes in the taxonomy.
+
         A meaningful path starts from a non-root node (level-1) and goes to a leaf node.
 
         Returns:

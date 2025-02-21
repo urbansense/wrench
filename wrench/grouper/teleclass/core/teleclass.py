@@ -31,6 +31,22 @@ class TELEClass(BaseGrouper):
     """Main class for taxonomy-enhanced text classification."""
 
     def __init__(self, config: TELEClassConfig | str | Path):
+        """
+        Initialize the TELEClass instance.
+
+        Args:
+            config (TELEClassConfig | str | Path): Configuration object or path to the configuration file.
+
+        Attributes:
+            config (TELEClassConfig): Loaded configuration.
+            taxonomy_manager (TaxonomyManager): Manager for handling taxonomy-related operations.
+            encoder (SentenceTransformer): Model for encoding sentences.
+            llm_enricher (LLMEnricher): Enricher for handling large language model operations.
+            corpus_enricher (CorpusEnricher): Enricher for handling corpus-related operations.
+            enriched_classes (list of EnrichedClass): List of enriched classes with terms initialized.
+            cache (TELEClassCache, optional): Cache for storing intermediate results if enabled in the config.
+            logger (Logger): Logger instance for the class.
+        """
         # Load config if path is provided
         if isinstance(config, (str, Path)):
             config = TELEClassConfig.from_yaml(config)

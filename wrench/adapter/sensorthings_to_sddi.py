@@ -49,6 +49,17 @@ class SensorThingsSDDIAdapter(
     """
 
     def __init__(self, config: AdapterConfig | str | Path):
+        """
+        Initialize the SensorThingsToSDDI adapter with the given configuration.
+
+        Args:
+            config (AdapterConfig | str | Path): The configuration for the adapter.
+                This can be an instance of AdapterConfig, a path to a YAML file,
+                or a string representing the path.
+
+        Raises:
+            ValueError: If the provided configuration is not valid.
+        """
         if isinstance(config, (str, Path)):
             config = AdapterConfig.from_yaml(config)
 
