@@ -44,7 +44,7 @@ class TranslationService(ABC, Generic[T]):
     url: str
 
     @abstractmethod
-    def translate[T: BaseModel](obj: T) -> T:
+    def translate[T: BaseModel](self, obj: T) -> T:
         """
         Translates the given object.
 

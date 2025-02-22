@@ -46,7 +46,7 @@ class LibreTranslateService(TranslationService):
         self.headers = {"Content-Type": "application/json"}
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def translate(self, translated_thing: Thing) -> Thing:
+    def translate[T: Thing](self, translated_thing: T) -> T:
         """
         Translates the attributes of a Thing object.
 
