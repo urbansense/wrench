@@ -5,12 +5,12 @@ from typing import Protocol, Union
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
-from wrench.grouper.teleclass.core.models import DocumentMeta
+from wrench.grouper.teleclass.core.models import Document
 from wrench.models import Item
 
 
 class DocumentLoader(Protocol):
-    def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:
+    def load(self, encoder: SentenceTransformer) -> list[Document]:
         pass
 
 
@@ -42,7 +42,7 @@ class JSONDocumentLoader:
         """
         self.file_path = Path(file_path)
 
-    def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:
+    def load(self, encoder: SentenceTransformer) -> list[Document]:
         if not self.file_path.exists():
             raise FileNotFoundError(f"JSON file not found: {self.file_path}")
 
@@ -53,10 +53,10 @@ class JSONDocumentLoader:
             raise ValueError("JSON file must contain a list of documents")
 
         return [
-            DocumentMeta(
+            Document(
                 id=str(idx),
                 content=json.dumps(doc),
-                embeddings=encoder.encode(json.dumps(doc)),
+                embeddings=encoder.encode(json.dumps(doc), convert_to_numpy=True),
             )
             for idx, doc in enumerate(data)
         ]
@@ -95,12 +95,12 @@ class ModelDocumentLoader:
             raise TypeError("documents must be a list of Item instances")
         self.documents = documents
 
-    def load(self, encoder: SentenceTransformer) -> list[DocumentMeta]:
+    def load(self, encoder: SentenceTransformer) -> list[Document]:
         return [
-            DocumentMeta(
+            Document(
                 id=doc.id,
                 content=doc.model_dump_json(),
-                embeddings=encoder.encode(doc.model_dump_json()),
+                embeddings=encoder.encode(doc.model_dump_json(), convert_to_numpy=True),
             )
             for doc in self.documents
         ]

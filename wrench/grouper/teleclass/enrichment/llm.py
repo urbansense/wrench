@@ -7,7 +7,7 @@ from sentence_transformers import SentenceTransformer
 
 from wrench.grouper.teleclass.core.config import LLMConfig
 from wrench.grouper.teleclass.core.models import (
-    DocumentMeta,
+    Document,
     EnrichedClass,
     LLMEnrichmentResult,
     TermScore,
@@ -15,8 +15,10 @@ from wrench.grouper.teleclass.core.models import (
 from wrench.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from wrench.log import logger
 
+from .base import Enricher
 
-class LLMEnricher:
+
+class LLMEnricher(Enricher):
     def __init__(self, config: LLMConfig, taxonomy_manager: TaxonomyManager):
         """
         Initializes the LLM enrichment class.
@@ -53,8 +55,8 @@ class LLMEnricher:
 
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def process(
-        self, enriched_classes: list[EnrichedClass], collection: List[DocumentMeta]
+    def enrich(
+        self, enriched_classes: list[EnrichedClass], collection: List[Document]
     ) -> LLMEnrichmentResult:
         """Generates terms for each classes, runs core class selection for documents."""
         class_with_terms = self.enrich_classes_with_terms(enriched_classes)
@@ -153,6 +155,7 @@ class LLMEnricher:
         try:
             siblings_str = ", ".join(siblings) if siblings else "none"
             parent_str = parent_class if parent_class else "root"
+
             prompt = self.prompt.format(
                 class_name=class_name,
                 class_description=class_description,
@@ -186,8 +189,8 @@ class LLMEnricher:
             return set()
 
     def assign_classes_to_docs(
-        self, collection: List[DocumentMeta], enriched_classes: list[EnrichedClass]
-    ) -> List[DocumentMeta]:
+        self, collection: List[Document], enriched_classes: list[EnrichedClass]
+    ) -> List[Document]:
         """Assign initial classes to documents."""
         self.logger.info("Assigning initial classes")
 
@@ -257,13 +260,17 @@ Return only the selected class names separated by commas, nothing else."""  # no
 
     def _select_candidates_for_document(
         self,
-        doc_embedding: np.ndarray,
+        doc_embedding: np.ndarray | None,
         taxonomy_manager: TaxonomyManager,
         enriched_classes: list[EnrichedClass],
     ) -> dict[int, set[str]]:
         """Select candidate classes for a document using level-wise traversal."""
         candidates = defaultdict(set)
         current_level = set(taxonomy_manager.root_nodes)
+
+        if doc_embedding is None:
+            self.logger.error("document embedding is not calculated")
+            raise ValueError
 
         self.logger.info("Taxonomy max depth is %d", taxonomy_manager.max_depth + 1)
         for level in range(taxonomy_manager.max_depth + 1):

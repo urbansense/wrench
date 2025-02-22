@@ -1,7 +1,7 @@
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from wrench.grouper.teleclass.core.models import EnrichedClass
+from wrench.grouper.teleclass.core.models import Document, EnrichedClass
 from wrench.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from wrench.log import logger
 
@@ -33,51 +33,46 @@ class SimilarityClassifier:
         self.enriched_classes = enriched_classes
         self.logger = logger.getChild(self.__class__.__name__)
 
-        # Create class prototype embeddings from enriched classes
+        # Update class embeddings from enriched classes
         self.class_embeddings = self._create_class_embeddings()
 
     def _create_class_embeddings(self) -> dict[str, np.ndarray]:
         """
-        Create prototype embeddings for each class using enriched terms.
+        Update embeddings for each class using enriched terms.
 
-        This method generates embeddings for each class by either using pre-computed
-        embeddings if available, or by creating new embeddings from the terms associated
-        with each class. If no terms are available, it falls back to using the class name
-        for generating the embedding.
+        This method uses pre-computed embeddings if available, or creates new embeddings
+        from the terms associated with each class. If no terms are available,it raises
+        a RuntimeError indicating the classifier hasn't been trained yet.
 
         Returns:
             dict[str, np.ndarray]: A dictionary where the keys are class names and the values
             are the corresponding embeddings as numpy arrays.
         """
-        class_embeddings = {}
-
+        class_map: dict[str, np.ndarray] = {}
         for ec in self.enriched_classes:
             if ec.embeddings is not None:
-                # Use pre-computed embeddings if available
-                class_embeddings[ec.class_name] = np.mean(ec.embeddings, axis=0)
-                self.logger.info(
-                    "Using existing class embeddings with dimension: %s",
-                    class_embeddings[ec.class_name].shape,
+                # Use pre-computed embeddings
+                self.logger.debug(
+                    "using existing class embeddings",
                 )
+                class_map[ec.class_name] = ec.embeddings
             else:
                 # Create embedding from class terms
                 terms = [term.term for term in ec.terms]
                 if terms:
                     # Average the embeddings of all terms
                     term_embeddings = self.encoder.encode(terms)
-                    class_embeddings[ec.class_name] = np.mean(term_embeddings, axis=0)
-                    self.logger.info(
-                        "Create average class embeddings from terms through averaging with dimension: %s",
-                        class_embeddings[ec.class_name].shape,
+                    ec.embeddings = np.mean(term_embeddings, axis=0)
+                    self.logger.debug(
+                        "creating average class embeddings from terms through averaging with dimension: %s",
+                        ec.embeddings.shape,
                     )
+                    class_map[ec.class_name] = ec.embeddings
                 else:
-                    # Fallback to class name embedding
-                    class_embeddings[ec.class_name] = self.encoder.encode(ec.class_name)
-                    self.logger.info(
-                        "Create average class embeddings from class name through averaging with dimension: %s",
-                        class_embeddings[ec.class_name].shape,
+                    raise RuntimeError(
+                        "Class terms are empty, TELEClass classifier must be trained before prediction"
                     )
-        return class_embeddings
+        return class_map
 
     def _assign_to_level(
         self, doc_embedding: np.ndarray, candidate_nodes: set[str], level: int = 0
@@ -101,12 +96,13 @@ class SimilarityClassifier:
         """
         # Calculate similarities with candidate nodes
         similarities = []
-        for node in candidate_nodes:
-            if node in self.class_embeddings:
+
+        for name in candidate_nodes:
+            if name in self.class_embeddings:
                 sim = self.encoder.similarity(
-                    doc_embedding, self.class_embeddings[node]
-                )
-                similarities.append((node, sim))
+                    doc_embedding, self.class_embeddings[name]
+                ).numpy()
+                similarities.append((name, sim))
 
         # Sort by similarity in descending order
         similarities.sort(key=lambda x: x[1], reverse=True)
@@ -125,13 +121,13 @@ class SimilarityClassifier:
             selected = [similarities[0][0]] if similarities else []
             if selected:
                 self.logger.info(
-                    "Only one candidate at level %d, selecting: %s", level, selected[0]
+                    "only one candidate at level %d, selecting: %s", level, selected[0]
                 )
             return selected
 
         # Return only the top match
         top_node = similarities[0][0]
-        self.logger.info("Selected top node: %s", top_node)
+        self.logger.info("selected top node: %s", top_node)
 
         return [top_node]
 
@@ -146,7 +142,7 @@ class SimilarityClassifier:
             set of predicted class names
         """
         # Get document embedding
-        doc_embedding = self.encoder.encode(text)
+        doc_embedding = self.encoder.encode(text, convert_to_numpy=True)
 
         assigned_classes = set()
         current_level = 0
@@ -176,7 +172,7 @@ class SimilarityClassifier:
         return assigned_classes
 
     def evaluate(
-        self, test_docs: list[dict[str, any]], true_labels: list[set[str]]
+        self, test_docs: list[Document], true_labels: list[set[str]]
     ) -> dict[str, float]:
         """
         Evaluate classifier performance on test documents.
@@ -192,7 +188,7 @@ class SimilarityClassifier:
         predictions = []
         for doc in test_docs:
             pred = self.predict(doc.content)
-            self.logger.debug("Predictions for document %s: %s", doc.id, pred)
+            self.logger.debug("predictions for document %s: %s", doc.id, pred)
             predictions.append(pred)
 
         # Calculate metrics

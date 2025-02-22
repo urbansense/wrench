@@ -6,10 +6,10 @@ from pydantic import BaseModel, ConfigDict, computed_field
 T = TypeVar("T", bound=BaseModel)
 
 
-class DocumentMeta(BaseModel):
+class Document(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    id: str | None = ""
-    embeddings: np.ndarray | None = None
+    id: str = ""
+    embeddings: np.ndarray
     content: str
     # Core classes set after LLM enrichment
     core_classes: set[str] | None = None
@@ -68,12 +68,12 @@ class EnrichmentResult(BaseModel):
 
 
 class LLMEnrichmentResult(EnrichmentResult):
-    # Stores LLM enrichment results, such as classes with its relevant terms, and each document's core classes
-    DocumentCoreClasses: list[DocumentMeta]
+    # Stores LLM enrichment results, such as classes with its relevant terms, and each document's core classes.
+    DocumentCoreClasses: list[Document]
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def result(self) -> tuple[list[EnrichedClass], list[DocumentMeta]]:
+    def result(self) -> tuple[list[EnrichedClass], list[Document]]:
         return self.ClassEnrichment, self.DocumentCoreClasses
 
 
