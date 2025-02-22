@@ -1,7 +1,10 @@
 .PHONY: clean test install lint lint_src lint_tests lint_types help
 
 setup:
-	uv pip install -e ".[teleclass,sensorthings]"
+	rm -rf .venv/
+	uv venv
+	. .venv/bin/activate
+	uv sync --group lint --group test
 
 clean:
 	rm -rf build/
@@ -36,7 +39,7 @@ lint_types:
 	uv run --group lint mypy wrench
 
 # Main lint command that runs all groups
-lint: lint_src lint_tests lint_docs lint_types
+lint: lint_src lint_tests lint_types
 
 lint-fix:
 	uv run --group lint ruff check wrench --fix
@@ -58,7 +61,6 @@ help:
 	@echo "  make lint      - Run all lint checks"
 	@echo "  make lint_src  - Lint source code only"
 	@echo "  make lint_tests- Lint test code only"
-	@echo "  make lint_docs - Lint documentation only"
 	@echo "  make lint_types- Check type hints"
 	@echo ""
 	@echo "Available format commands:"
