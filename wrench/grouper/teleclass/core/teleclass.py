@@ -3,7 +3,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Union
 
-from pydantic import BaseModel
+import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from wrench.grouper.base import BaseGrouper, Group
@@ -17,7 +17,7 @@ from wrench.grouper.teleclass.core.document_loader import (
 )
 from wrench.grouper.teleclass.core.models import (
     CorpusEnrichmentResult,
-    DocumentMeta,
+    Document,
     EnrichedClass,
     LLMEnrichmentResult,
 )
@@ -25,27 +25,37 @@ from wrench.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from wrench.grouper.teleclass.enrichment.corpus import CorpusEnricher
 from wrench.grouper.teleclass.enrichment.llm import LLMEnricher
 from wrench.log import logger
+from wrench.models import Item
 
 
-class TELEClass(BaseGrouper):
-    """Main class for taxonomy-enhanced text classification."""
+class TELEClassGrouper(BaseGrouper):
+    """Main class for taxonomy-enhanced text classification.
+
+    This class provides functionality for classifying documents using a taxonomy-enhanced
+    approach that combines LLM-based enrichment with corpus-based classification.
+
+    Attributes:
+        config (TELEClassConfig): Configuration settings for the classifier.
+        taxonomy_manager (TaxonomyManager): Manages taxonomy operations and relationships.
+        encoder (SentenceTransformer): Model for encoding text into embeddings.
+        llm_enricher (LLMEnricher): Handles LLM-based enrichment operations.
+        corpus_enricher (CorpusEnricher): Handles corpus-based enrichment operations.
+        enriched_classes (list[EnrichedClass]): List of classes with their enriched terms.
+        cache (TELEClassCache, optional): Caches intermediate results if enabled.
+        logger (Logger): Logger instance for this class.
+    """
 
     def __init__(self, config: TELEClassConfig | str | Path):
-        """
-        Initialize the TELEClass instance.
+        """Initializes the TELEClass classifier.
 
         Args:
-            config (TELEClassConfig | str | Path): Configuration object or path to the configuration file.
+            config: Configuration for the classifier. Can be:
+                - TELEClassConfig: Direct config object
+                - str or Path: Path to YAML config file
 
-        Attributes:
-            config (TELEClassConfig): Loaded configuration.
-            taxonomy_manager (TaxonomyManager): Manager for handling taxonomy-related operations.
-            encoder (SentenceTransformer): Model for encoding sentences.
-            llm_enricher (LLMEnricher): Enricher for handling large language model operations.
-            corpus_enricher (CorpusEnricher): Enricher for handling corpus-related operations.
-            enriched_classes (list of EnrichedClass): List of enriched classes with terms initialized.
-            cache (TELEClassCache, optional): Cache for storing intermediate results if enabled in the config.
-            logger (Logger): Logger instance for the class.
+        Raises:
+            FileNotFoundError: If config file path doesn't exist.
+            ValidationError: If config file contains invalid settings.
         """
         # Load config if path is provided
         if isinstance(config, (str, Path)):
@@ -53,7 +63,7 @@ class TELEClass(BaseGrouper):
 
         self.config = config
         # Initialize components
-        self.taxonomy_manager = TaxonomyManager.from_config(config)
+        self.taxonomy_manager = TaxonomyManager.from_config(config.taxonomy)
         self.encoder = SentenceTransformer(config.embedding.model_name)
         # Initialize enrichers
         self.llm_enricher = LLMEnricher(
@@ -71,30 +81,50 @@ class TELEClass(BaseGrouper):
             for class_name, class_description in self.taxonomy_manager.get_all_classes_with_description().items()
         ]
         # Initialize cache
-        if config.cache.enabled:
-            self.cache = TELEClassCache(config.cache.directory)
+        self.cache = TELEClassCache(config.cache.directory)
 
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def _load_items(
-        self, source: Union[str, Path, list[BaseModel]]
-    ) -> list[DocumentMeta]:
-        """Load documents from either a JSON file path or a list of pydantic models."""
+    def _load_items(self, source: Union[str, Path, list[Item]]) -> list[Document]:
+        """Loads and processes documents from various input sources.
+
+        Args:
+            source: Input source for documents. Can be:
+                - str or Path: Path to a JSON file containing documents
+                - list[Item]: List of pydantic model instances representing documents
+
+        Returns:
+            list[DocumentMeta]: List of processed documents with embeddings.
+
+        Raises:
+            FileNotFoundError: If the input file path doesn't exist.
+            ValueError: If the JSON file format is invalid.
+        """
         loader: DocumentLoader = (
             JSONDocumentLoader(source)
             if isinstance(source, (str, Path))
             else ModelDocumentLoader(source)
         )
+
         return loader.load(self.encoder)
 
     # for testing and evaluation
-    def _load_labels(
-        self,
-        source: Union[str, Path, list[any]],
-    ) -> list[set[str]]:
+    def _load_labels(self, source: Union[str]) -> list[set[str]]:
+        """Loads ground truth labels from a JSON file for evaluation purposes.
+
+        Args:
+            source: Path to JSON file containing document labels.
+
+        Returns:
+            list[set[str]]: List of sets containing true class labels for each document.
+
+        Raises:
+            FileNotFoundError: If the labels file doesn't exist.
+            ValueError: If the JSON file format is invalid.
+        """
         file_path = Path(source)
         if not file_path.exists():
-            raise FileNotFoundError(f"JSON file not found: {self.file_path}")
+            raise FileNotFoundError(f"JSON file not found: {file_path}")
 
         with open(source, "r") as f:
             data = json.load(f)
@@ -104,14 +134,13 @@ class TELEClass(BaseGrouper):
 
         return [set(d["label"]) for d in data]
 
-    def run(self, documents: list[DocumentMeta], sample_size: int = 20) -> None:
+    def run(self, documents: list[Document], sample_size: int = 20) -> None:
         """
         Executes the training process on a given list of documents.
 
         This method performs the following steps:
         1. Performs LLM-enhanced core class annotation on the documents.
         2. Performs corpus-based enrichment on the documents.
-        3. Initializes the classifier manager with the enriched classes.
 
         Args:
             documents (list[DocumentMeta]): The list of documents to use for training.
@@ -139,29 +168,23 @@ class TELEClass(BaseGrouper):
 
             self.enriched_classes = self._perform_corpus_enrichment(documents).result
 
-            self.logger.info("Finished corpus-based enrichment step")
+            self.logger.info("Finished corpus-based enrichment step.")
 
-            # Add new step: Classifier Training
-            self.logger.info("Step 4: Initialize Classifier")
+            self._save_class_embeddings()
 
-            # Initialize classifier manager
-            self.classifier_manager = SimilarityClassifier(
-                taxonomy_manager=self.taxonomy_manager,
-                encoder=self.encoder,
-                enriched_classes=self.enriched_classes,
-            )
+            self.cache.save_class_embeddings(self.enriched_classes)
 
         except Exception as e:
             self.logger.error("Training failed: %s", e)
             raise
 
     def _perform_llm_enrichment(
-        self, collection: list[DocumentMeta]
+        self, collection: list[Document]
     ) -> LLMEnrichmentResult:
         """Perform LLM-based taxonomy enrichment."""
         self.logger.info("Performing LLM enrichment")
         if not self.config.cache.enabled:
-            return self.llm_enricher.process(
+            return self.llm_enricher.enrich(
                 enriched_classes=self.enriched_classes, collection=collection
             )
 
@@ -202,7 +225,7 @@ class TELEClass(BaseGrouper):
 
     def _perform_corpus_enrichment(
         self,
-        collection: list[DocumentMeta],
+        collection: list[Document],
     ) -> CorpusEnrichmentResult:
         """Perform corpus-based enrichment."""
         self.logger.info("Performing corpus-based enrichment")
@@ -220,6 +243,15 @@ class TELEClass(BaseGrouper):
 
         return corpus_enrichment_result
 
+    def _save_class_embeddings(self):
+        """Averages class term embeddings to create class representation."""
+        for ec in self.enriched_classes:
+            if ec.embeddings is not None:
+                # Use pre-computed embeddings
+                ec.embeddings = np.mean(ec.embeddings, axis=0)
+
+        self.cache.save_class_embeddings(self.enriched_classes)
+
     def predict(self, text: str) -> set[str]:
         """
         Predict classes for a given text.
@@ -229,17 +261,19 @@ class TELEClass(BaseGrouper):
 
         Returns:
             set[str]: A set of predicted classes for the input text.
-
-        Raises:
-            RuntimeError: If the classifier has not been trained before prediction.
         """
-        """Predict classes for a given text"""
-        if not hasattr(self, "classifier_manager"):
-            raise RuntimeError("Classifier must be trained before prediction")
+        enriched_classes = self.cache.load_class_embeddings()
+
+        # initialize classifier manager
+        self.classifier_manager = SimilarityClassifier(
+            taxonomy_manager=self.taxonomy_manager,
+            encoder=self.encoder,
+            enriched_classes=enriched_classes,
+        )
 
         return self.classifier_manager.predict(text)
 
-    def group_items(self, items: Union[str, Path, list[BaseModel]]) -> list[Group]:
+    def group_items(self, items: Union[str, Path, list[Item]]) -> list[Group]:
         """
         Groups a collection of documents into predefined categories.
 
@@ -289,9 +323,7 @@ class TELEClass(BaseGrouper):
             self.logger.exception("Classification failed with error: %s", str(e))
             raise
 
-    def evaluate_classifier(
-        self, documents: Union[str, Path, list[BaseModel]]
-    ) -> Group:
+    def evaluate_classifier(self, documents: Union[str, Path, list[Item]]):
         """
         Evaluates the classifier using the provided documents.
 
@@ -300,12 +332,9 @@ class TELEClass(BaseGrouper):
                 evaluated. This can be a string or Path to a file containing
                 the documents, or a list of BaseModel instances.
 
-        Returns:
-            Group: The evaluation result as a Group object.
-
         Raises:
             Exception: If the evaluation process fails, an exception is
-                       raised with the error details.
+                    raised with the error details.
         """
         try:
             docs = self._load_items(documents)

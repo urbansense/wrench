@@ -2,16 +2,14 @@ from typing import Any
 
 import networkx as nx
 
-from .config import TELEClassConfig
-
 
 class TaxonomyManager:
     """Manages taxonomy operations and caching."""
 
     @classmethod
-    def from_config(cls, config: TELEClassConfig) -> "TaxonomyManager":
+    def from_config(cls, taxonomy: list[dict[str, Any]]) -> "TaxonomyManager":
         """Create from TELEClassConfig."""
-        graph = cls._build_graph(config.taxonomy)
+        graph = cls._build_graph(taxonomy)
         return cls(graph)
 
     @staticmethod
@@ -40,9 +38,14 @@ class TaxonomyManager:
                         children = item.get("children", [])
                     else:
                         # Traditional format with single key and children
-                        node_name = next(iter(item.keys()))
-                        description = ""
-                        children = item[node_name]
+                        try:
+                            node_name = next(iter(item.keys()))
+                            description = ""
+                            children = item[node_name]
+                        except (StopIteration, AttributeError) as e:
+                            raise ValueError(
+                                f"Invalid taxonomy node structure: {str(e)}"
+                            ) from e
 
                     # Add edge from parent to current node
                     G.add_edge(parent, node_name)

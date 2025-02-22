@@ -10,7 +10,7 @@ class LLMConfig(BaseModel):
 
     host: str = Field(description="LLM service host URL")
     model: str = Field(description="Model to use for LLM enrichment")
-    prompt: str = Field(
+    prompt: str | None = Field(
         default=None, description="Prompt to generate key terms for enrichment"
     )
     temperature: float = Field(
@@ -30,9 +30,6 @@ class EmbeddingConfig(BaseModel):
 class CorpusConfig(BaseModel):
     """Configuration for corpus enrichment."""
 
-    phrase_extractor: str = Field(
-        default="yake", description="Phrase extraction method (keybert or yake)"
-    )
     top_n: int = Field(default=5, description="Number of top phrases to extract")
 
 

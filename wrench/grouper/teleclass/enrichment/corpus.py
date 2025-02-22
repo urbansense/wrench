@@ -8,14 +8,16 @@ from sentence_transformers import SentenceTransformer
 from wrench.grouper.teleclass.core.config import CorpusConfig
 from wrench.grouper.teleclass.core.models import (
     CorpusEnrichmentResult,
-    DocumentMeta,
+    Document,
     EnrichedClass,
     TermScore,
 )
 from wrench.log import logger
 
+from .base import Enricher
 
-class CorpusEnricher:
+
+class CorpusEnricher(Enricher):
     def __init__(
         self,
         config: CorpusConfig,
@@ -45,12 +47,13 @@ class CorpusEnricher:
             features=None,
         )
         self.class_terms: list[EnrichedClass] = []
+        self.top_k = config.top_n or 3
         self.logger = logger.getChild(self.__class__.__name__)
 
     def enrich(
         self,
         enriched_classes: list[EnrichedClass],
-        collection: list[DocumentMeta],
+        collection: list[Document],
     ) -> CorpusEnrichmentResult:
         """
         Enriches the provided classes with additional data and embeddings.
@@ -69,14 +72,14 @@ class CorpusEnricher:
         """
         for ec in enriched_classes:
             self.logger.info("Enriching class %s", ec.class_name)
-            class_docs = []
+            class_docs: list[str] = []
             for doc in collection:
                 if not doc.core_classes:
                     raise ValueError(
                         f"Core classes for document {str(doc.id)} not defined"
                     )
                 if ec.class_name in doc.core_classes:
-                    class_docs.append(doc)
+                    class_docs.append(doc.content)
             # Get sibling data
             sibling_docs = self.get_sibling_data(ec.class_name, collection)
 
@@ -90,20 +93,17 @@ class CorpusEnricher:
         return CorpusEnrichmentResult(ClassEnrichment=enriched_classes)
 
     def get_sibling_data(
-        self,
-        class_name: str,
-        collection: list[DocumentMeta],
-    ) -> dict[str, list[DocumentMeta]]:
-        """Get documents assigned to sibling classes, preserving IoT format."""
-        sibling_docs: dict[str, list[DocumentMeta]] = {}
-        # Group documents by their assigned classes
+        self, class_name: str, collection: list[Document]
+    ) -> list[str]:
+        """Get documents assigned to sibling classes."""
+        sibling_docs: list[str] = []
         for doc in collection:
-            if doc.core_classes:
-                for cls in doc.core_classes:
-                    if cls != class_name:
-                        if cls not in sibling_docs:
-                            sibling_docs[cls] = []  # Make sure document exists
-                        sibling_docs[cls].append(doc)
+            if not doc.core_classes:
+                continue
+
+            for cls in doc.core_classes:
+                if cls != class_name:
+                    sibling_docs.append(doc.content)
 
         return sibling_docs
 
@@ -127,7 +127,7 @@ class CorpusEnricher:
         return math.log(1 + df)
 
     def calculate_distinctiveness(
-        self, term: str, class_docs: list[str], sibling_docs: dict[str, list[str]]
+        self, term: str, class_docs: list[str], sibling_docs: list[str]
     ) -> float:
         """Calculate distinctiveness using BM25 scores with phrase preservation."""
         term = term.lower().strip()
@@ -150,7 +150,7 @@ class CorpusEnricher:
 
         # Calculate scores for sibling classes
         sibling_scores = []
-        for sib_docs in sibling_docs.values():
+        for sib_docs in sibling_docs:
             tokenized_sib_docs = [prepare_doc(doc) for doc in sib_docs]
             sib_bm25 = BM25Okapi(tokenized_sib_docs)
             sib_score = sib_bm25.get_scores([term_token])[0]
@@ -187,11 +187,11 @@ class CorpusEnricher:
 
         return [keyword for keyword, _ in keywords]
 
-    def extract_candidate_terms(self, iot_data_list: list[DocumentMeta]) -> set[str]:
+    def extract_candidate_terms(self, class_docs: list[str]) -> set[str]:
         """Extract candidate terms from IoT data."""
         terms = set()
         # Extract terms from descriptions
-        text = " ".join(data.content for data in iot_data_list)
+        text = " ".join(class_docs)
         words = self.extract_key_phrases(text)
 
         # Add single words
@@ -202,21 +202,15 @@ class CorpusEnricher:
     def enrich_class(
         self,
         class_name: str,
-        input_class: list[DocumentMeta],
-        class_siblings: dict[str, list[DocumentMeta]],
-        top_k: int = 3,
+        class_docs: list[str],
+        sibling_docs: list[str],
     ) -> set[TermScore]:
         """Enrich a class with terms from IoT data."""
         # Convert IoT data to text documents
-        class_docs = [doc.content for doc in input_class]
-
-        sibling_docs = {
-            sib: [d.content for d in docs] for sib, docs in class_siblings.items()
-        }
 
         # Extract candidate terms
         self.logger.info("Extracting candidate terms")
-        candidate_terms = self.extract_candidate_terms(input_class)
+        candidate_terms = self.extract_candidate_terms(class_docs)
         self.logger.debug("Candidate terms: %s", candidate_terms)
 
         # Score terms
@@ -250,4 +244,4 @@ class CorpusEnricher:
 
         # Sort by affinity score and return top-k
         scores.sort(key=lambda x: x.affinity_score, reverse=True)
-        return set(scores[:top_k])
+        return set(scores[: self.top_k])
