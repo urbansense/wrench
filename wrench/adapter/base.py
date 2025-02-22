@@ -128,4 +128,6 @@ class BaseCatalogAdapter[H: BaseHarvester, C: BaseCatalogger](ABC):
             messages=messages,
             format=CatalogEntry.model_json_schema(),
         )
+        if not response.message.content:
+            raise RuntimeError("LLM returned no messages")
         return CatalogEntry.model_validate_json(response.message.content)

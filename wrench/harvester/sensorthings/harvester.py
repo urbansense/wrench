@@ -7,7 +7,7 @@ from geojson import Polygon
 
 from wrench.harvester.base import BaseHarvester
 from wrench.log import logger
-from wrench.models import CommonMetadata, TimeFrame
+from wrench.models import CommonMetadata, Item, TimeFrame
 
 from .config import SensorThingsConfig
 from .models import GenericLocation, Location, SensorThingsBase, Thing
@@ -95,7 +95,7 @@ class SensorThingsHarvester(BaseHarvester):
             last_updated=timeframe.latest_time,
         )
 
-    def get_items(self) -> list[Thing]:
+    def get_items(self) -> list[Item]:
         """
         Retrieve the list of Thing objects.
 
@@ -155,9 +155,9 @@ class SensorThingsHarvester(BaseHarvester):
         self.logger.debug("Fetching %d locations", limit if limit != -1 else 0)
         return self._fetch_paginated("Locations", self.location_model, limit=limit)
 
-    def _fetch_paginated(
-        self, endpoint: str, model_class: type[SensorThingsBase], limit: int = -1
-    ) -> list[SensorThingsBase]:
+    def _fetch_paginated[T: SensorThingsBase](
+        self, endpoint: str, model_class: type[T], limit: int = -1
+    ) -> list[T]:
         """
         Fetch paginated data from a SensorThings API endpoint.
 
@@ -169,7 +169,7 @@ class SensorThingsHarvester(BaseHarvester):
         Returns:
             list[SensorThingsBase]: List of validated model instances
         """
-        items: list[SensorThingsBase] = []
+        items: list[T] = []
         page_count = 1
         current_url = f"{self.config.base_url}/{endpoint}"
         remaining_items = limit if limit != -1 else None
@@ -235,12 +235,12 @@ class SensorThingsHarvester(BaseHarvester):
         response.raise_for_status()
         return response
 
-    def _process_page_items(
+    def _process_page_items[T: SensorThingsBase](
         self,
         items: list[dict],
-        model_class: type[SensorThingsBase],
+        model_class: type[T],
         remaining_limit: int | None = None,
-    ) -> list[SensorThingsBase]:
+    ) -> list[T]:
         """
         Process and validate items from a page.
 
@@ -252,7 +252,7 @@ class SensorThingsHarvester(BaseHarvester):
         Returns:
             list[SensorThingsBase]: List of validated model instances
         """
-        processed_items: list[SensorThingsBase] = []
+        processed_items: list[T] = []
 
         for item in items:
             if remaining_limit is not None and len(processed_items) >= remaining_limit:

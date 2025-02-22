@@ -35,7 +35,7 @@ class Item(BaseModel):
 
     id: str
 
-    model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class CommonMetadata(BaseModel):
@@ -75,7 +75,7 @@ class CommonMetadata(BaseModel):
     endpoint_url: str
 
     # standard, but optional fields
-    spatial_extent: str | None = ""
+    spatial_extent: str = ""
     temporal_extent: TimeFrame | None = None
     tags: list[str] = []
     keywords: list[str] = []
