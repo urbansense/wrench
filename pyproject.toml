@@ -41,7 +41,10 @@ lint = [
     "codespell>=2.2.0,<3.0.0",
     "mypy>=1.15.0"
 ]
-dev = []
+dev = [
+    "sphinx>=8.2.1",
+    "sphinx-autobuild>=2024.10.3",
+]
 
 [build-system]
 requires = ["pdm-backend"]

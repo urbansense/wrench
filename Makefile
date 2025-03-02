@@ -4,7 +4,7 @@ setup:
 	rm -rf .venv/
 	uv venv
 	. .venv/bin/activate
-	uv sync --group lint --group test
+	uv sync --group lint --group test --group dev
 
 clean:
 	rm -rf build/
