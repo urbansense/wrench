@@ -1,84 +1,171 @@
-# Wrench
+# Wrench 🔧
 
-Build automated sensor registration pipelines with wrench 🔧.
+A powerful framework for building automated sensor registration pipelines.
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-FFEE8C.svg?logo=ruff)](https://docs.astral.sh/ruff/formatter/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Overview
+
+Wrench is a modular, extensible workflow framework designed to streamline the process of harvesting, enriching, and registering sensor metadata from diverse IoT sources into urban data catalogs. It provides a standardized pipeline architecture with interchangeable components to help make sensor data more discoverable and valuable.
+
 ## Features
 
-- 🔄 Automated metadata harvesting
-- 📊 Standardized data models using Pydantic
-- 🔍 Rich metadata extraction and enrichment
-- 🏗️ Modular workflow architecture
-- 🔌 Extensible harvester interfaces
+- 🔄 **Automated Metadata Harvesting**: Extract metadata from various IoT data sources with minimal configuration
+- 📊 **Standardized Data Models**: Type-safe data structures using Pydantic for consistent handling of metadata
+- 🔍 **Advanced Classification**: Group similar sensors using machine learning and taxonomy-based approaches
+- ✨ **Metadata Enrichment**: Enhance sensor descriptions with contextual information using LLM technologies
+- 🏗️ **Modular Architecture**: Compose workflows from interchangeable components for maximum flexibility
+- 🔌 **Extensible Interfaces**: Easily add support for new data sources and catalog systems
+- 🤖 **LLM Integration**: Leverage AI capabilities for automatic content generation and classification
 
 ## Installation
 
-```pip install auto-wrench```
+```bash
+pip install auto-wrench
+```
 
-## What is Wrench?
+To install with specific component dependencies:
 
-Wrench is a workflow framework to build pipelines for automated registration and enrichment of sensor metadata for IoT devices and sensors into data catalogs. Extract, process, and enrich metadata from various sensor data sources into various urban data catalogs.
+```bash
+pip install 'auto-wrench[teleclass]'
+```
 
-Wrench provides generic contracts for different components so that it can be extended to harvest from different IoT data sources and register to various urban data catalogs.
+## Core Components
 
-The objectives of wrench are:
+Wrench consists of three main component types that can be combined in a pipeline:
 
-- Discoverability: Easier to find sensor data in data catalogs.
-- Enrichment: Meaningful descriptions and metadata in catalog entries.
-- Extensible: Easy to create new components to use in the pipeline.
-- Ease-of-use: Reasonable default configuration, easy to setup and run.
-- Automation: Fully automated workflows with LLM agents assisting registration.
+1. **Harvesters**: Extract metadata from IoT data sources (e.g., SensorThings API)
+2. **Groupers**: Classify and organize sensors into meaningful groups
+3. **Cataloggers**: Register the processed metadata into data catalogs (e.g., SDDI/CKAN)
 
-## Usage
+Each component type follows a standardized interface, making it easy to extend with custom implementations.
 
-### Basic Example
+## Quick Start
 
-The example below sets up a pipeline with a SensorThings API harvester and an SDDI catalogger, with a grouper using TELEClass classifier. More documentation on the components can be found on the documentation page.
+The following example sets up a complete pipeline with a SensorThings API harvester, a TELEClass grouper for classification, and an SDDI catalogger for registration:
 
-```py
+```python
 from wrench.catalogger.sddi import SDDICatalogger
 from wrench.common.pipeline import Pipeline
 from wrench.grouper.teleclass.core.teleclass import TELEClassGrouper
 from wrench.harvester.sensorthings import SensorThingsHarvester
 from wrench.harvester.sensorthings.contentgenerator import ContentGenerator
-from wrench.harvester.sensorthings.models import GenericLocation
 
+# Initialize components with their respective configurations
+harvester = SensorThingsHarvester(
+    config="config/sta_config.yaml",
+    content_generator=ContentGenerator(config="config/generator_config.yaml")
+)
+
+grouper = TELEClassGrouper(config="config/teleclass_config.yaml")
+
+catalogger = SDDICatalogger(config="config/sddi_config.yaml")
+
+# Assemble and run the pipeline
 pipeline = Pipeline(
-    harvester=SensorThingsHarvester(
-        config="test_script/sta_config.yaml",content_generator=ContentGenerator(config="test_script/generator_config.yaml",
-    ),
-    grouper=TELEClassGrouper(config="test_script/teleclass_config.yaml"),
-    catalogger=SDDICatalogger(config="test_script/sddi_config.yaml"),
-    )
+    harvester=harvester,
+    grouper=grouper,
+    catalogger=catalogger
 )
 
 pipeline.run()
-
 ```
 
 ## Configuration
 
-The system can be configured through a YAML file:
+Each component can be configured via YAML files. Here's a basic example for the SensorThings harvester:
 
-```bash
+```yaml
+# sta_config.yaml
+base_url: "https://example.org/v1.1"
+identifier: "city_sensors"
+title: "City Sensor Network"
+description: "Environmental sensors across the city"
+
+pagination:
+  page_delay: 0.2
+  timeout: 60
+  batch_size: 100
+
+translator:
+  url: "https://translate.example.org"
+  source_lang: "de"
+```
+
+## Component Overview
+
+### Harvesters
+
+Harvesters connect to data sources and extract metadata. Wrench includes:
+
+- **SensorThingsHarvester**: Connects to OGC SensorThings API endpoints
+- Extensible base class for creating custom harvesters
+
+### Groupers
+
+Groupers organize sensors into logical groups:
+
+- **TELEClassGrouper**: Taxonomy-enhanced classification using LLMs and corpus-based methods
+- Can be extended with custom grouping algorithms
+
+### Cataloggers
+
+Cataloggers register metadata into data catalogs:
+
+- **SDDICatalogger**: Registers metadata into SDDI/CKAN-based catalogs
+- Extensible interface for supporting other catalog systems
+
+## Advanced Features
+
+### Translation Support
+
+Wrench includes built-in support for translating metadata using services like LibreTranslate:
+
+```python
+# Translation is configured in the harvester configuration
+translator:
+  url: "https://translate.example.org"
+  source_lang: "auto"  # Automatically detect source language
+```
+
+### LLM-Enhanced Content Generation
+
+Generate rich descriptions for sensor groups using LLM services:
+
+```python
+content_generator = ContentGenerator(config="config/generator_config.yaml")
+harvester = SensorThingsHarvester(
+    config="config/sta_config.yaml",
+    content_generator=content_generator
+)
 ```
 
 ## Development
 
 ### Setting up the Development Environment
 
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/wrench.git
+cd wrench
+
+# Run the make target
+make setup
+
+# Install component dependencies
+uv pip install -e ".[teleclass,sensorthings]"
+```
+
 ### Code Style
 
 This project follows the Ruff code style. Format your code using:
 
 ```bash
-ruff .
+ruff format .
+ruff check .
 ```
-
-## Documentation
 
 ## Contributing
 
@@ -88,22 +175,25 @@ ruff .
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+Please ensure your code follows our coding standards and includes appropriate tests.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
-- FROST-Server community for their excellent API documentation
-- LibreTranslate for translation services
+- FROST-Server community for their excellent SensorThings API implementation
+- LibreTranslate for providing open translation services
 - Pydantic team for their data validation library
+- Ollama for local LLM capabilities
 
 ---
 
-## Support
+## Support and Documentation
 
 For support, please:
 
 - Open an issue in the GitHub repository
 - Check the [documentation](docs/README.md)
-- Contact the development team
+- Contact the development team at [jeffrey.limnardy@tum.de](mailto:jeffrey.limnardy@tum.de)
