@@ -1,10 +1,10 @@
 # Wrench
 
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Build automated sensor registration pipelines with wrench 🔧.
 
-A workflow framework for automated registration and enrichment of sensor metadata for IoT devices and sensors into data catalogs. Extract, process, and enrich metadata from various sensor data sources.
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-FFEE8C.svg?logo=ruff)](https://docs.astral.sh/ruff/formatter/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
 
@@ -16,62 +16,54 @@ A workflow framework for automated registration and enrichment of sensor metadat
 
 ## Installation
 
-1. Clone the repository:
+```pip install auto-wrench```
 
-```bash
-git clone https://github.com/yourusername/wrench.git #to be changed
-cd wrench
-```
+## What is Wrench?
 
-2. Create and activate a virtual environment:
+Wrench is a workflow framework to build pipelines for automated registration and enrichment of sensor metadata for IoT devices and sensors into data catalogs. Extract, process, and enrich metadata from various sensor data sources into various urban data catalogs.
 
-```bash
-python -m venv env
+Wrench provides generic contracts for different components so that it can be extended to harvest from different IoT data sources and register to various urban data catalogs.
 
-# On Windows
-env\Scripts\activate
+The objectives of wrench are:
 
-# On Unix or MacOS
-source env/bin/activate
-```
-
-3. Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-## Project Structure
-
-```bash
-wrench/
-
-```
+- Discoverability: Easier to find sensor data in data catalogs.
+- Enrichment: Meaningful descriptions and metadata in catalog entries.
+- Extensible: Easy to create new components to use in the pipeline.
+- Ease-of-use: Reasonable default configuration, easy to setup and run.
+- Automation: Fully automated workflows with LLM agents assisting registration.
 
 ## Usage
 
 ### Basic Example
 
-### Translation Service
+The example below sets up a pipeline with a SensorThings API harvester and an SDDI catalogger, with a grouper using TELEClass classifier. More documentation on the components can be found on the documentation page.
 
-```python
-from harvester.frost import FrostTranslationService
+```py
+from wrench.catalogger.sddi import SDDICatalogger
+from wrench.common.pipeline import Pipeline
+from wrench.grouper.teleclass.core.teleclass import TELEClassGrouper
+from wrench.harvester.sensorthings import SensorThingsHarvester
+from wrench.harvester.sensorthings.contentgenerator import ContentGenerator
+from wrench.harvester.sensorthings.models import GenericLocation
 
-# Initialize translation service
-translator = FrostTranslationService(url="https://translate-service.example.com")
+pipeline = Pipeline(
+    harvester=SensorThingsHarvester(
+        config="test_script/sta_config.yaml",content_generator=ContentGenerator(config="test_script/generator_config.yaml",
+    ),
+    grouper=TELEClassGrouper(config="test_script/teleclass_config.yaml"),
+    catalogger=SDDICatalogger(config="test_script/sddi_config.yaml"),
+    )
+)
 
-# Translate metadata
-translated_thing = translator.translate(thing)
+pipeline.run()
+
 ```
 
 ## Configuration
 
-The system can be configured through environment variables:
+The system can be configured through a YAML file:
 
 ```bash
-FROST_BASE_URL=https://frost-server.example.com
-TRANSLATION_SERVICE_URL=https://translate-service.example.com
-LOG_LEVEL=INFO
 ```
 
 ## Development
@@ -80,19 +72,13 @@ LOG_LEVEL=INFO
 
 ### Code Style
 
-This project follows the Black code style. Format your code using:
+This project follows the Ruff code style. Format your code using:
 
 ```bash
-black .
+ruff .
 ```
 
 ## Documentation
-
-Detailed documentation is available in the `docs/` directory:
-
-- [API Reference](docs/api/README.md)
-- [Architecture Overview](docs/architecture/README.md)
-- [Deployment Guide](docs/deployment/README.md)
 
 ## Contributing
 
