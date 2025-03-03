@@ -1,9 +1,9 @@
 __pycache__/
 .teleclass_cache*/
 *.json
-.pylintrc
 *.egg-info
 dist/
+.coverage
 
 .venv/
 .trunk/

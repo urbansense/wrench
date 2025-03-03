@@ -40,7 +40,6 @@ Wrench consists of three main component types that can be combined in a pipeline
 2. **Groupers**: Classify and organize sensors into meaningful groups
 3. **Catalogers**: Register the processed metadata into data catalogs (e.g., SDDI/CKAN)
 
-
 Each component type follows a standardized interface, making it easy to extend with custom implementations.
 
 ## Quick Start
