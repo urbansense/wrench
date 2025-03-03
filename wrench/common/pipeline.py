@@ -1,7 +1,7 @@
 from typing import Optional
 
 # Use TYPE_CHECKING for imports needed only for type hints
-from wrench.catalogger.base import BaseCatalogger
+from wrench.cataloger.base import BaseCataloger
 from wrench.grouper.base import BaseGrouper
 from wrench.harvester.base import BaseHarvester
 from wrench.log import logger
@@ -17,7 +17,7 @@ class Pipeline:
     def __init__(
         self,
         harvester: BaseHarvester,
-        catalogger: BaseCatalogger,
+        cataloger: BaseCataloger,
         grouper: Optional[BaseGrouper] = None,
     ):
         """
@@ -25,12 +25,12 @@ class Pipeline:
 
         Args:
             harvester (H): The harvester component responsible for data collection.
-            catalogger (C): The catalogger component responsible for cataloging data.
+            cataloger (C): The cataloger component responsible for cataloging data.
             adapter (BaseCatalogAdapter): The adapter for catalog operations.
             grouper (Optional[G], optional): The grouper component for grouping data. Defaults to None.
         """
         self.harvester = harvester
-        self.catalogger = catalogger
+        self.cataloger = cataloger
         self.grouper = grouper
         self.logger = logger.getChild(self.__class__.__name__)
 
@@ -41,10 +41,10 @@ class Pipeline:
         Returns PipelineResult containing execution results or None if failed.
         """
         self.logger.info(
-            "Running pipeline with %s harvester, %s classifier, and %s catalogger...",
+            "Running pipeline with %s harvester, %s classifier, and %s cataloger...",
             self.harvester.__class__.__name__,
             self.grouper.__class__.__name__,
-            self.catalogger.__class__.__name__,
+            self.cataloger.__class__.__name__,
         )
         try:
             # Step 1: Harvest data
@@ -86,7 +86,7 @@ class Pipeline:
                 # Otherwise, use raw documents in a default structure
 
                 self.logger.debug("Registering data into catalog")
-                self.catalogger.register(service_metadata, group_metadata)
+                self.cataloger.register(service_metadata, group_metadata)
             except Exception as e:
                 self.logger.error("Cataloging failed: %s", e)
                 # Still return results even if cataloging fails

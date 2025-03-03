@@ -38,20 +38,20 @@ Wrench consists of three main component types that can be combined in a pipeline
 
 1. **Harvesters**: Extract metadata from IoT data sources (e.g., SensorThings API)
 2. **Groupers**: Classify and organize sensors into meaningful groups
-3. **Cataloggers**: Register the processed metadata into data catalogs (e.g., SDDI/CKAN)
+3. **Catalogers**: Register the processed metadata into data catalogs (e.g., SDDI/CKAN)
 
 Each component type follows a standardized interface, making it easy to extend with custom implementations.
 
 ## Quick Start
 
-The following example sets up a complete pipeline with a SensorThings API harvester, a TELEClass grouper for classification, and an SDDI catalogger for registration:
+The following example sets up a complete pipeline with a SensorThings API harvester, a TELEClass grouper for classification, and an SDDI cataloger for registration:
 
 ```python
-from wrench.catalogger.sddi import SDDICatalogger
+from wrench.cataloger import SDDICataloger
 from wrench.common.pipeline import Pipeline
-from wrench.grouper.teleclass.core.teleclass import TELEClassGrouper
-from wrench.harvester.sensorthings import SensorThingsHarvester
-from wrench.harvester.sensorthings.contentgenerator import ContentGenerator
+from wrench.grouper import TELEClassGrouper
+from wrench.harvester import CatalogGenerator, SensorThingsHarvester
+from wrench.harvester import ContentGenerator
 
 # Initialize components with their respective configurations
 harvester = SensorThingsHarvester(
@@ -61,13 +61,13 @@ harvester = SensorThingsHarvester(
 
 grouper = TELEClassGrouper(config="config/teleclass_config.yaml")
 
-catalogger = SDDICatalogger(config="config/sddi_config.yaml")
+cataloger = SDDICataloger(config="config/sddi_config.yaml")
 
 # Assemble and run the pipeline
 pipeline = Pipeline(
     harvester=harvester,
     grouper=grouper,
-    catalogger=catalogger
+    cataloger=cataloger
 )
 
 pipeline.run()
@@ -110,11 +110,11 @@ Groupers organize sensors into logical groups:
 - **TELEClassGrouper**: Taxonomy-enhanced classification using LLMs and corpus-based methods
 - Can be extended with custom grouping algorithms
 
-### Cataloggers
+### Catalogers
 
-Cataloggers register metadata into data catalogs:
+Catalogers register metadata into data catalogs:
 
-- **SDDICatalogger**: Registers metadata into SDDI/CKAN-based catalogs
+- **SDDICataloger**: Registers metadata into SDDI/CKAN-based catalogs
 - Extensible interface for supporting other catalog systems
 
 ## Advanced Features
@@ -180,15 +180,6 @@ Please ensure your code follows our coding standards and includes appropriate te
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- FROST-Server community for their excellent SensorThings API implementation
-- LibreTranslate for providing open translation services
-- Pydantic team for their data validation library
-- Ollama for local LLM capabilities
-
----
 
 ## Support and Documentation
 

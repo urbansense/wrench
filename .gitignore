@@ -15,6 +15,7 @@ dist/
 /*.py
 
 test_script/
+docs/_build/
 
 *.log
 
