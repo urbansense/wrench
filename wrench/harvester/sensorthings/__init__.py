@@ -3,7 +3,6 @@ from .contentgenerator import ContentGenerator, GeneratorConfig
 from .harvester import SensorThingsHarvester
 from .models import (
     Datastream,
-    GenericLocation,
     Location,
     ObservedProperty,
     Sensor,
@@ -17,7 +16,7 @@ __all__ = [
     "PaginationConfig",
     "TranslatorConfig",
     "Thing",
-    "GenericLocation",
+    "Location",
     "Datastream",
     "Sensor",
     "ObservedProperty",

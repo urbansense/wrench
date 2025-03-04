@@ -14,7 +14,7 @@ from wrench.models import CommonMetadata, TimeFrame
 
 from .config import SensorThingsConfig
 from .contentgenerator import ContentGenerator
-from .models import GenericLocation, Location, SensorThingsBase, Thing
+from .models import Location, SensorThingsBase, Thing
 from .querybuilder import FilterExpression, ThingQuery
 from .translator import LibreTranslateService
 
@@ -31,7 +31,7 @@ class SensorThingsHarvester(BaseHarvester):
         self,
         config: SensorThingsConfig | str | Path,
         content_generator: ContentGenerator,
-        location_model: type[GenericLocation] = Location,
+        location_model: type[Location] = Location,
     ):
         """
         Initialize the harvester.
