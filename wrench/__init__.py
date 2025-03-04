@@ -1,4 +1,4 @@
-from .catalogger.sddi import SDDICatalogger
+from .cataloger.sddi import SDDICataloger
 from .common import Pipeline
 from .exceptions import ClassifierError, HarvesterError, WrenchError
 from .grouper.teleclass.core.teleclass import TELEClassGrouper
@@ -11,7 +11,7 @@ __all__ = [
     "Pipeline",
     "SensorThingsHarvester",
     "TELEClassGrouper",
-    "SDDICatalogger",
+    "SDDICataloger",
     "WrenchError",
     "HarvesterError",
     "ClassifierError",

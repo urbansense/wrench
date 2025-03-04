@@ -36,7 +36,7 @@ The framework is composed of three main components:
 **Grouper**
    Classifies data using AI techniques. Includes the TELEClass system for taxonomy-enhanced classification.
 
-**Catalogger**
+**Cataloger**
    Registers data in catalog systems. Currently supports SDDI catalogs.
 
 Getting Started
@@ -70,7 +70,7 @@ Component Documentation
 
    components/harvester
    components/grouper
-   components/catalogger
+   components/cataloger
 
 API Reference
 ------------
@@ -81,7 +81,8 @@ API Reference
 
    api/harvester
    api/grouper
-   api/catalogger
+   api/cataloger
+
    api/common
 
 Examples and Tutorials

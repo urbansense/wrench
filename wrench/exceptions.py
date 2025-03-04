@@ -16,7 +16,7 @@ class ClassifierError(WrenchError):
     pass
 
 
-class CataloggerError(WrenchError):
+class CatalogerError(WrenchError):
     """Raised when catalogging operations fail."""
 
     pass

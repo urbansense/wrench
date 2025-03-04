@@ -1,7 +1,8 @@
-from abc import ABC, abstractmethod
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from geojson import Feature, FeatureCollection
+from geojson.geometry import Geometry
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 model_config = ConfigDict(
@@ -48,10 +49,51 @@ class GeoPoint(BaseModel):
     coordinates: tuple[float, float]  # longitude, latitude
 
 
-class GenericLocation(ABC, SensorThingsBase):
+class Location(SensorThingsBase):
     encoding_type: str
+    location: Feature | FeatureCollection | Geometry = Field(
+        description="GeoJSON location data as Feature, FeatureCollection, or Geometry"
+    )
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    @abstractmethod
+    @field_validator("location", mode="before")
+    @classmethod
+    def validate_geojson(cls, v):
+        """Validate that the location is proper GeoJSON."""
+        if isinstance(v, (Feature, FeatureCollection, Geometry)):
+            return v
+
+        # If it's a dict, try to convert it to the appropriate GeoJSON object
+        if isinstance(v, dict):
+            geo_type = v.get("type")
+            if not geo_type:
+                raise ValueError("GeoJSON object must have a 'type' field")
+
+            try:
+                if geo_type == "Feature":
+                    return Feature(**v)
+                elif geo_type == "FeatureCollection":
+                    return FeatureCollection(**v)
+                elif geo_type in [
+                    "Point",
+                    "LineString",
+                    "Polygon",
+                    "MultiPoint",
+                    "MultiLineString",
+                    "MultiPolygon",
+                    "GeometryCollection",
+                ]:
+                    # For geometry types, we need to use the specific class
+                    # For simplicity, we'll just return the validated dict
+                    # You could import specific geometry classes if needed
+                    return Geometry(**v)
+                else:
+                    raise ValueError(f"Unknown GeoJSON type: {geo_type}")
+            except Exception as e:
+                raise ValueError(f"Invalid GeoJSON format: {str(e)}")
+
+        raise ValueError("Location must be a valid GeoJSON object")
+
     def get_coordinates(self) -> tuple[float, float]:
         """
         Retrieves the coordinates of the location.
@@ -60,21 +102,19 @@ class GenericLocation(ABC, SensorThingsBase):
             tuple[float, float]: Tuple with latitude and longitude
             of the location.
         """
-        pass
+        if isinstance(self.location, Feature):
+            # Get coordinates from Feature geometry
+            geometry = self.location.geometry
+            if geometry and geometry.type == "Point":
+                return tuple(geometry.coordinates)
+        elif isinstance(self.location, Geometry) and self.location.type == "Point":
+            # Get coordinates directly from Point geometry
+            return tuple(self.location.coordinates)
 
+        print(self.location.coordinates)
 
-class Location(GenericLocation):
-    location: GeoPoint
-
-    def get_coordinates(self) -> tuple[float, float]:
-        """
-        Retrieves the coordinates of the location.
-
-        Returns:
-            tuple[float, float]: Tuple with latitude and longitude
-            of the location.
-        """
-        return self.location.coordinates
+        # For other cases, you might need more complex logic
+        raise ValueError("Cannot extract coordinates from this location type")
 
 
 class Thing(SensorThingsBase):

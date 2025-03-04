@@ -4,7 +4,7 @@ from wrench.log import logger
 from wrench.models import CommonMetadata
 
 
-class BaseCatalogger(ABC):
+class BaseCataloger(ABC):
     def __init__(self, endpoint: str, api_key: str):
         """
         Initializes the base class with the given endpoint and API key.

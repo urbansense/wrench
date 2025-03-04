@@ -14,7 +14,7 @@ class Content(BaseModel):
 
 
 class GeneratorConfig(BaseModel):
-    """Configuration for SDDI Catalogger."""
+    """Configuration for ContentGenerator."""
 
     @classmethod
     def from_yaml(cls, config: str | Path) -> "GeneratorConfig":
