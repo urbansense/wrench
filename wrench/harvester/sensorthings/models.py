@@ -1,7 +1,10 @@
-from abc import ABC, abstractmethod
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+import geojson
+from geojson import Feature, FeatureCollection
+from geojson.geometry import Geometry
+from geojson.utils import coords
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 model_config = ConfigDict(
@@ -48,33 +51,52 @@ class GeoPoint(BaseModel):
     coordinates: tuple[float, float]  # longitude, latitude
 
 
-class GenericLocation(ABC, SensorThingsBase):
+class Location(SensorThingsBase):
     encoding_type: str
+    location: Feature | FeatureCollection | Geometry = Field(
+        description="GeoJSON location data as Feature, FeatureCollection, or Geometry"
+    )
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    @abstractmethod
-    def get_coordinates(self) -> tuple[float, float]:
+    @field_validator("location", mode="before")
+    @classmethod
+    def validate_geojson(cls, v):
+        """Validate that the location is proper GeoJSON."""
+        if isinstance(v, (Feature, FeatureCollection, Geometry)):
+            return v
+
+        # If it's a dict, convert to a Feature object regardless of type
+        if isinstance(v, dict):
+            if not v.get("type"):
+                raise ValueError("GeoJSON object must have a 'type' field")
+
+            # If already a Feature, use as is, otherwise wrap it as a Feature
+            if v.get("type") == "Feature":
+                return geojson.GeoJSON.to_instance(v)
+            elif v.get("type") in [
+                "Point",
+                "LineString",
+                "Polygon",
+                "MultiPoint",
+                "MultiLineString",
+                "MultiPolygon",
+                "GeometryCollection",
+            ]:
+                # Create a Feature with this geometry
+                feature_dict = {"type": "Feature", "geometry": v, "properties": {}}
+                return geojson.GeoJSON.to_instance(feature_dict)
+
+        raise ValueError("Location must be a valid GeoJSON object")
+
+    def get_coordinates(self) -> list[tuple[float, float]]:
         """
         Retrieves the coordinates of the location.
 
         Returns:
-            tuple[float, float]: Tuple with latitude and longitude
+            list[tuple[float, float]]: List of tuples with latitude and longitude
             of the location.
         """
-        pass
-
-
-class Location(GenericLocation):
-    location: GeoPoint
-
-    def get_coordinates(self) -> tuple[float, float]:
-        """
-        Retrieves the coordinates of the location.
-
-        Returns:
-            tuple[float, float]: Tuple with latitude and longitude
-            of the location.
-        """
-        return self.location.coordinates
+        return list(coords(self.location))
 
 
 class Thing(SensorThingsBase):

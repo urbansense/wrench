@@ -2,7 +2,7 @@ from pathlib import Path
 
 from ckanapi import RemoteCKAN
 
-from wrench.catalogger.base import BaseCatalogger
+from wrench.cataloger.base import BaseCataloger
 from wrench.models import CommonMetadata
 
 from .config import SDDIConfig
@@ -11,9 +11,9 @@ from .models import DeviceGroup, OnlineService
 DEFAULT_OWNER = "lehrstuhl-fur-geoinformatik"
 
 
-class SDDICatalogger(BaseCatalogger):
+class SDDICataloger(BaseCataloger):
     """
-    SDDICatalogger is a class responsible for interacting with a SDDI CKAN server to register and manage datasets.
+    SDDICataloger is a class responsible for interacting with a SDDI CKAN server to register and manage datasets.
 
     :param url: The URL of the SDDI CKAN server.
     :param api_key: The API key for authenticating with the SDDI CKAN server.
