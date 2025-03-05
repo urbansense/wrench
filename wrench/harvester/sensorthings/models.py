@@ -1,7 +1,9 @@
 from typing import Any
 
+import geojson
 from geojson import Feature, FeatureCollection
 from geojson.geometry import Geometry
+from geojson.utils import coords
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
@@ -63,58 +65,38 @@ class Location(SensorThingsBase):
         if isinstance(v, (Feature, FeatureCollection, Geometry)):
             return v
 
-        # If it's a dict, try to convert it to the appropriate GeoJSON object
+        # If it's a dict, convert to a Feature object regardless of type
         if isinstance(v, dict):
-            geo_type = v.get("type")
-            if not geo_type:
+            if not v.get("type"):
                 raise ValueError("GeoJSON object must have a 'type' field")
 
-            try:
-                if geo_type == "Feature":
-                    return Feature(**v)
-                elif geo_type == "FeatureCollection":
-                    return FeatureCollection(**v)
-                elif geo_type in [
-                    "Point",
-                    "LineString",
-                    "Polygon",
-                    "MultiPoint",
-                    "MultiLineString",
-                    "MultiPolygon",
-                    "GeometryCollection",
-                ]:
-                    # For geometry types, we need to use the specific class
-                    # For simplicity, we'll just return the validated dict
-                    # You could import specific geometry classes if needed
-                    return Geometry(**v)
-                else:
-                    raise ValueError(f"Unknown GeoJSON type: {geo_type}")
-            except Exception as e:
-                raise ValueError(f"Invalid GeoJSON format: {str(e)}")
+            # If already a Feature, use as is, otherwise wrap it as a Feature
+            if v.get("type") == "Feature":
+                return geojson.GeoJSON.to_instance(v)
+            elif v.get("type") in [
+                "Point",
+                "LineString",
+                "Polygon",
+                "MultiPoint",
+                "MultiLineString",
+                "MultiPolygon",
+                "GeometryCollection",
+            ]:
+                # Create a Feature with this geometry
+                feature_dict = {"type": "Feature", "geometry": v, "properties": {}}
+                return geojson.GeoJSON.to_instance(feature_dict)
 
         raise ValueError("Location must be a valid GeoJSON object")
 
-    def get_coordinates(self) -> tuple[float, float]:
+    def get_coordinates(self) -> list[tuple[float, float]]:
         """
         Retrieves the coordinates of the location.
 
         Returns:
-            tuple[float, float]: Tuple with latitude and longitude
+            list[tuple[float, float]]: List of tuples with latitude and longitude
             of the location.
         """
-        if isinstance(self.location, Feature):
-            # Get coordinates from Feature geometry
-            geometry = self.location.geometry
-            if geometry and geometry.type == "Point":
-                return tuple(geometry.coordinates)
-        elif isinstance(self.location, Geometry) and self.location.type == "Point":
-            # Get coordinates directly from Point geometry
-            return tuple(self.location.coordinates)
-
-        print(self.location.coordinates)
-
-        # For other cases, you might need more complex logic
-        raise ValueError("Cannot extract coordinates from this location type")
+        return list(coords(self.location))
 
 
 class Thing(SensorThingsBase):

@@ -5,7 +5,7 @@ from operator import __or__
 from pathlib import Path
 
 import requests
-from geojson import MultiPoint, Polygon
+from geojson import FeatureCollection, Polygon
 
 from wrench.grouper.base import Group
 from wrench.harvester.base import BaseHarvester
@@ -147,9 +147,7 @@ class SensorThingsHarvester(BaseHarvester):
         """
         things_in_group = [Thing.model_validate_json(thing) for thing in group.items]
 
-        geographic_extent = self._calculate_multipoint_geographic_extent(
-            things_in_group
-        )
+        geographic_extent = self._calculate_multigeom_geographic_extent(things_in_group)
 
         timeframe = self._calculate_timeframe(things_in_group)
 
@@ -300,13 +298,17 @@ class SensorThingsHarvester(BaseHarvester):
             "max_lng": float("-inf"),
         }
 
-        # get locations of each thing, put them into a set to avoid duplicates
+        # get coordinates of each thing, put them into a set to avoid duplicates
         locations = {
-            loc.get_coordinates()
+            coord
             for thing in things
             if thing.location
             for loc in thing.location
+            for coord in loc.get_coordinates()
         }
+
+        if not locations:
+            raise ValueError("No locations are extracted from things")
 
         # Update bounds for each location
         for lng, lat in locations:
@@ -317,26 +319,24 @@ class SensorThingsHarvester(BaseHarvester):
 
         # Create polygon coordinates
         coordinates = [
-            (bounds["min_lat"], bounds["min_lng"]),
-            (bounds["min_lat"], bounds["max_lng"]),
-            (bounds["max_lat"], bounds["max_lng"]),
-            (bounds["max_lat"], bounds["min_lng"]),
-            (bounds["min_lat"], bounds["min_lng"]),  # Close the polygon
+            (bounds["min_lng"], bounds["min_lat"]),
+            (bounds["min_lng"], bounds["max_lat"]),
+            (bounds["max_lng"], bounds["max_lat"]),
+            (bounds["max_lng"], bounds["min_lat"]),
+            (bounds["min_lng"], bounds["min_lat"]),  # Close the polygon
         ]
 
         return Polygon([coordinates])
 
-    def _calculate_multipoint_geographic_extent(
+    def _calculate_multigeom_geographic_extent(
         self, things: list[Thing]
-    ) -> MultiPoint:
-        locations = [
-            loc.get_coordinates()
-            for thing in things
-            if thing.location
-            for loc in thing.location
-        ]
+    ) -> FeatureCollection:
+        geometries: list = []
+        for thing in things:
+            for loc in thing.location:
+                geometries.append(loc.location)
 
-        return MultiPoint(locations)
+        return FeatureCollection(geometries)
 
     def _calculate_timeframe(self, things: list[Thing]) -> TimeFrame:
         """
