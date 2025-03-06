@@ -66,19 +66,12 @@ class Pipeline:
                     # Continue pipeline even if classification fails
 
             # Step 3: Run results through adapter
-            # service_entry, group_entries = self.adapter.create_entries(
-            #     service_metadata, grouped_docs
-            # )
 
-            group_metadata = []
-
-            if grouped_docs:
-                group_metadata.extend(
-                    [
-                        self.harvester.get_device_group_metadata(group)
-                        for group in grouped_docs
-                    ]
-                )
+            group_metadata = [
+                self.harvester.get_device_group_metadata(group)
+                for group in grouped_docs
+                if grouped_docs
+            ]
 
             # Step 4: Catalog results
             try:
