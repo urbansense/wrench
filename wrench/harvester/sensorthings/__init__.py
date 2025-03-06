@@ -1,5 +1,4 @@
 from .config import PaginationConfig, SensorThingsConfig, TranslatorConfig
-from .contentgenerator import ContentGenerator, GeneratorConfig
 from .harvester import SensorThingsHarvester
 from .models import (
     Datastream,
@@ -22,6 +21,4 @@ __all__ = [
     "ObservedProperty",
     "Location",
     "LibreTranslateService",
-    "ContentGenerator",
-    "GeneratorConfig",
 ]

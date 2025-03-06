@@ -1,11 +1,8 @@
-from pathlib import Path
-
 from ckanapi import RemoteCKAN
 
 from wrench.cataloger.base import BaseCataloger
 from wrench.models import CommonMetadata
 
-from .config import SDDIConfig
 from .models import DeviceGroup, OnlineService
 
 DEFAULT_OWNER = "lehrstuhl-fur-geoinformatik"
@@ -19,30 +16,29 @@ class SDDICataloger(BaseCataloger):
     :param api_key: The API key for authenticating with the SDDI CKAN server.
     """
 
-    def __init__(self, config: SDDIConfig | str | Path):
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        owner_org: str = "lehrstuhl-fur-geoinformatik",
+    ):
         """
         Initialize the register with the given configuration.
 
         Args:
-            config (SDDIConfig | str | Path): The configuration for the register.
-                This can be an instance of SDDIConfig, a path to a YAML
-                configuration file,or a string representing the path to the
-                configuration file.
+            base_url (str): Base URL of the SDDI catalog to register to.
+            api_key (str): API Key for registration authorization.
+            owner_org (str): Owner organization to which the dataset will belong to.
 
         Raises:
-            ValueError: If the provided configuration path is invalid or the configuration
-                file cannot be loaded.
+            ValueError: If the provided configuration path is invalid or the
+            configuration file cannot be loaded.
 
         """
-        # Load config if path is provided
-        if isinstance(config, (str, Path)):
-            config = SDDIConfig.from_yaml(config)
-
-        self.config = config
-
-        super().__init__(endpoint=self.config.base_url, api_key=self.config.api_key)
+        super().__init__(endpoint=base_url, api_key=api_key)
 
         self.ckan_server = RemoteCKAN(address=self.endpoint, apikey=self.api_key)
+        self.owner_org = owner_org
 
     def register(self, service: CommonMetadata, groups: list[CommonMetadata]):
         online_service = self._create_online_service(service)
