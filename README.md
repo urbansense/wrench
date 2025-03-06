@@ -50,8 +50,8 @@ The following example sets up a complete pipeline with a SensorThings API harves
 from wrench.cataloger import SDDICataloger
 from wrench.common.pipeline import Pipeline
 from wrench.grouper import TELEClassGrouper
-from wrench.harvester import CatalogGenerator, SensorThingsHarvester
-from wrench.harvester import ContentGenerator
+from wrench.harvester import SensorThingsHarvester
+from wrench.utils import ContentGenerator
 
 # Initialize components with their respective configurations
 harvester = SensorThingsHarvester(

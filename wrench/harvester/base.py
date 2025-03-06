@@ -1,16 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
 from wrench.grouper.base import Group
+from wrench.log import logger
 from wrench.models import CommonMetadata
-
-T = TypeVar("T", bound=BaseModel)  # For input
-T_co = TypeVar("T_co", bound=BaseModel, covariant=True)  # For output
 
 
 class BaseHarvester(ABC):
+    def __init__(self):
+        """Initializes logger for all harvester classes."""
+        self.logger = logger.getChild(self.__class__.__name__)
+
     @abstractmethod
     def return_items(self) -> list:
         pass
@@ -38,11 +39,11 @@ class BaseHarvester(ABC):
         pass
 
 
-class TranslationService(ABC, Generic[T]):
+class TranslationService[T: BaseModel](ABC):
     url: str
 
     @abstractmethod
-    def translate[T: BaseModel](self, obj: T) -> T:
+    def translate(self, obj: T) -> T:
         """
         Translates the given object.
 

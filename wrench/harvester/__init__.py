@@ -1,6 +1,5 @@
 from .base import BaseHarvester, TranslationService
 from .sensorthings import (
-    ContentGenerator,
     Location,
     SensorThingsConfig,
     SensorThingsHarvester,
@@ -14,5 +13,4 @@ __all__ = [
     "SensorThingsConfig",
     "Thing",
     "Location",
-    "ContentGenerator",
 ]
