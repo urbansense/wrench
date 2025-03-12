@@ -2,7 +2,7 @@ from urllib.parse import unquote_plus
 
 import pytest
 
-from wrench.harvester.sensorthings.querybuilder import DatastreamQuery
+from wrench.metadatabuilder.sensorthings.querybuilder import DatastreamQuery
 
 
 @pytest.fixture

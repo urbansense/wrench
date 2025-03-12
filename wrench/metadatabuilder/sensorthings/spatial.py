@@ -61,6 +61,9 @@ class PolygonalExtentCalculator(SpatialExtentCalculator):
             for coord in loc.get_coordinates()  # a location can be have many coord
         }
 
+        if not locations:
+            raise ValueError("Locations cannot be extracted from Things")
+
         # Update bounds for each location
         for lng, lat in locations:
             bounds["min_lat"] = min(bounds["min_lat"], lat)

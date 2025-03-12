@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Protocol, Union
+from typing import Protocol, Sequence, Union
 
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
@@ -77,7 +77,7 @@ class ModelDocumentLoader:
             and returns a list of DocumentMeta instances.
     """
 
-    def __init__(self, documents: list[BaseModel]):
+    def __init__(self, documents: Sequence[BaseModel]):
         """
         Initialize the DocumentLoader with a list of documents.
 
@@ -91,7 +91,10 @@ class ModelDocumentLoader:
         if not isinstance(documents, list) or not all(
             isinstance(doc, BaseModel) for doc in documents
         ):
-            raise TypeError("documents must be a list of BaseModel instances")
+            doc = documents[0]
+            raise TypeError(
+                f"documents must be a list of BaseModel instances, got list of {type(doc)}"
+            )
         self.documents = documents
 
     def load(self, encoder: SentenceTransformer) -> list[Document]:

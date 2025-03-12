@@ -1,13 +1,13 @@
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import Union
+from typing import Sequence, Union
 
 import numpy as np
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
-from wrench.grouper.base import BaseGrouper, Group
+from wrench.grouper.base import BaseGrouper
 from wrench.grouper.teleclass.classifier.similarity import SimilarityClassifier
 from wrench.grouper.teleclass.core.cache import TELEClassCache
 from wrench.grouper.teleclass.core.config import TELEClassConfig
@@ -26,6 +26,7 @@ from wrench.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from wrench.grouper.teleclass.enrichment.corpus import CorpusEnricher
 from wrench.grouper.teleclass.enrichment.llm import LLMEnricher
 from wrench.log import logger
+from wrench.models import Group
 
 
 class TELEClassGrouper(BaseGrouper):
@@ -85,7 +86,9 @@ class TELEClassGrouper(BaseGrouper):
 
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def _load_items(self, source: Union[str, Path, list[BaseModel]]) -> list[Document]:
+    def _load_items(
+        self, source: Union[str, Path, Sequence[BaseModel]]
+    ) -> list[Document]:
         """Loads and processes documents from various input sources.
 
         Args:
@@ -273,7 +276,7 @@ class TELEClassGrouper(BaseGrouper):
 
         return self.classifier_manager.predict(text)
 
-    def group_items(self, items: Union[str, Path, list[BaseModel]]) -> list[Group]:
+    def group_items(self, items: Sequence[BaseModel]) -> list[Group]:
         """
         Groups a collection of documents into predefined categories.
 

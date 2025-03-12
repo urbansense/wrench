@@ -44,13 +44,6 @@ class Datastream(SensorThingsBase):
     )
 
 
-class GeoPoint(BaseModel):
-    """Represents a GeoJSON Point Geometry."""
-
-    type: str = "Point"
-    coordinates: tuple[float, float]  # longitude, latitude
-
-
 class Location(SensorThingsBase):
     encoding_type: str
     location: Feature | FeatureCollection | Geometry = Field(

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Protocol, TypeVar, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 # Define a generic type for source-specific data
 T = TypeVar("T")
@@ -89,3 +89,22 @@ class CommonMetadata(BaseModel):
 
     # license and access information
     license: str | None = None
+
+
+class Group(BaseModel):
+    """
+    Group model representing a collection of items.
+
+    Attributes:
+        name (str): Name of the group.
+        items (list[str]): List of items belonging to this group.
+        parent_classes (set[str], optional): Set of parent classes of this group, used
+        for hierarchical classification. Defaults to an empty set.
+    """
+
+    name: str = Field(description="Name of the group")
+    items: list[str] = Field(description="List of items belonging to this group")
+    # optional only for hierarchical classification
+    parent_classes: set[str] = Field(
+        default=set(), description="Set of parent classes of this group"
+    )

@@ -1,8 +1,7 @@
-from .base import BaseGrouper, Group
+from .base import BaseGrouper
 from .teleclass import TELEClassGrouper
 
 __all__ = [
     "BaseGrouper",
-    "Group",
     "TELEClassGrouper",
 ]
