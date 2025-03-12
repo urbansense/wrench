@@ -2,22 +2,27 @@ from datetime import datetime, timezone
 from functools import reduce
 from operator import __or__
 
-from wrench.grouper.base import Group
 from wrench.harvester.sensorthings.models import Thing
-from wrench.harvester.sensorthings.querybuilder import FilterExpression, ThingQuery
-from wrench.models import CommonMetadata, TimeFrame
+from wrench.metadatabuilder.base import BaseMetadataBuilder
+from wrench.metadatabuilder.sensorthings.querybuilder import (
+    FilterExpression,
+    ThingQuery,
+)
+from wrench.models import CommonMetadata, Group, TimeFrame
 from wrench.utils import ContentGenerator
 
-from .spatial import SpatialExtentCalculator
+from .spatial import (
+    GeometryCollector,
+    PolygonalExtentCalculator,
+)
 
 
-class MetadataBuilder:
+class SensorThingsMetadataBuilder(BaseMetadataBuilder):
     def __init__(
         self,
         base_url: str,
         title: str,
         description: str,
-        things: list[Thing],
         content_generator: ContentGenerator,
     ):
         """
@@ -34,12 +39,11 @@ class MetadataBuilder:
         self.base_url = base_url
         self.title = title
         self.description = description
-        self.things = things
         self.content_generator = content_generator
+        self.service_spatial_calculator = PolygonalExtentCalculator()
+        self.group_spatial_calculator = GeometryCollector()
 
-    def get_service_metadata(
-        self, spatial_calculator: SpatialExtentCalculator
-    ) -> CommonMetadata:
+    def build_service_metadata(self, things: list[Thing]) -> CommonMetadata:
         """
         Retrieves metadata for the SensorThings data.
 
@@ -52,8 +56,8 @@ class MetadataBuilder:
                             identifier, description, spatial extent, temporal extent,
                             source type, and last updated time.
         """
-        geographic_extent = spatial_calculator.calculate_extent(self.things)
-        timeframe = self._calculate_timeframe(self.things)
+        geographic_extent = self.service_spatial_calculator.calculate_extent(things)
+        timeframe = self._calculate_timeframe(things)
 
         self.metadata = CommonMetadata(
             endpoint_url=self.base_url,
@@ -68,11 +72,12 @@ class MetadataBuilder:
 
         return self.metadata
 
-    def get_device_group_metadata(
-        self, group: Group, spatial_calculator: SpatialExtentCalculator
-    ) -> CommonMetadata:
+    def build_group_metadata(self, group: Group) -> CommonMetadata:
         """
         Groups a list of Things and builds their metadata.
+
+        Args:
+            group (Group): The group returned from a Grouper.
 
         Returns:
             metadata (CommonMetadata): CommonMetadata extracted
@@ -80,7 +85,9 @@ class MetadataBuilder:
         """
         things_in_group = [Thing.model_validate_json(thing) for thing in group.items]
 
-        geographic_extent = spatial_calculator.calculate_extent(things_in_group)
+        geographic_extent = self.group_spatial_calculator.calculate_extent(
+            things_in_group
+        )
 
         timeframe = self._calculate_timeframe(things_in_group)
 
@@ -151,6 +158,17 @@ class MetadataBuilder:
         )
 
     def _build_group_url(self, things: list[Thing]) -> str:
+        """
+        Builds resource URL for groups.
+
+        Takes the ID of each Thing and filters the base URL for Things based on them.
+
+        Args:
+            things (list[Thing]): List of things belonging to a group.
+
+        Returns:
+            url (str): The resource URL with the ID of Things filtered
+        """
         filters: list[FilterExpression] = []
 
         for thing in things:

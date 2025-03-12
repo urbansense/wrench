@@ -2,9 +2,7 @@ from abc import ABC, abstractmethod
 
 from pydantic import BaseModel
 
-from wrench.grouper.base import Group
 from wrench.log import logger
-from wrench.models import CommonMetadata
 
 
 class BaseHarvester(ABC):
@@ -14,28 +12,6 @@ class BaseHarvester(ABC):
 
     @abstractmethod
     def return_items(self) -> list:
-        pass
-
-    @abstractmethod
-    def get_service_metadata(self) -> CommonMetadata:
-        """
-        Retrieve metadata information from the sensor service.
-
-        Returns:
-            CommonMetadata: The metadata information.
-        """
-        pass
-
-    @abstractmethod
-    def get_device_group_metadata(self, group: Group) -> CommonMetadata:
-        """
-        Retrieve metadata information from the device groups.
-
-        Args:
-            group(Group): The grouped devices returned from BaseGrouper
-        Returns:
-            CommonMetadata: The metadata of the device group
-        """
         pass
 
 

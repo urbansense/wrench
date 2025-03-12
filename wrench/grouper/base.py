@@ -1,23 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar
+from typing import Sequence
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-T = TypeVar("T", bound=BaseModel)
-
-
-class Group(BaseModel):
-    name: str = Field(description="Name of the group")
-    items: list[str] = Field(description="List of items belonging to this group")
-    # optional only for hierarchical classification
-    parent_classes: set[str] = Field(
-        default=set(), description="Set of parent classes of this group"
-    )
+from wrench.models import Group
 
 
 class BaseGrouper(ABC):
     @abstractmethod
-    def group_items(self, items: list) -> list[Group]:
+    def group_items(self, items: Sequence[BaseModel]) -> list[Group]:
         """
         Groups the given list of items into a list of Group objects.
 

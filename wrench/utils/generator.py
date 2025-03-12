@@ -6,7 +6,7 @@ import yaml
 from ollama import Client
 from pydantic import BaseModel, Field
 
-from wrench.grouper.base import Group
+from wrench.models import Group
 
 
 class Content(BaseModel):
