@@ -71,6 +71,10 @@ class ObjectConfig(AbstractConfig, Generic[T]):
     REQUIRED_PARAMS: ClassVar[list[str]] = []
     """List of required parameters for this object constructor."""
 
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.logger = logger.getChild(self.__class__.__name__)
+
     @field_validator("params_")
     @classmethod
     def validate_params(cls, params_: dict[str, Any]) -> dict[str, Any]:
@@ -101,24 +105,30 @@ class ObjectConfig(AbstractConfig, Generic[T]):
         Raises:
             ValueError: if the class can't be imported, even using the optional module.
         """
+        # splits class path from module path
         *modules, class_name = class_path.rsplit(".", 1)
         module_name = modules[0] if modules else optional_module
+
         if module_name is None:
             raise ValueError("Must specify a module to import class from")
+
         try:
             module = importlib.import_module(module_name)
+            # get class_name from the module if available
             klass = getattr(module, class_name)
         except (ImportError, AttributeError):
             if optional_module and module_name != optional_module:
                 full_klass_path = optional_module + "." + class_path
                 return cls._get_class(full_klass_path)
             raise ValueError(f"Could not find {class_name} in {module_name}")
+
         return cast(type, klass)
 
     def parse(self, resolved_data: dict[str, Any] | None = None) -> T:
         """Import `class_`, resolve `params_` and instantiate object."""
         self._global_data = resolved_data or {}
-        logger.debug(f"OBJECT_CONFIG: parsing {self} using {resolved_data}")
+        self.logger.debug(f"OBJECT_CONFIG: parsing {self} using {resolved_data}")
+
         if self.class_ is None:
             raise ValueError(f"`class_` is required to parse object {self}")
         klass = self._get_class(self.class_, self.get_module())
@@ -130,7 +140,7 @@ class ObjectConfig(AbstractConfig, Generic[T]):
         try:
             obj = klass(**params)
         except TypeError as e:
-            logger.error(
+            self.logger.error(
                 "OBJECT_CONFIG: failed to instantiate object due to improperly configured parameters"
             )
             raise e

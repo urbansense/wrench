@@ -4,8 +4,8 @@ from wrench.cataloger import BaseCataloger
 from wrench.grouper import BaseGrouper
 from wrench.harvester import BaseHarvester
 from wrench.metadatabuilder import BaseMetadataBuilder
-from wrench.pipeline.config.runner import PipelineRunner
-from wrench.pipeline.config.template_pipeline.sensor_pipeline import (
+from wrench.pipeline.config import (
+    PipelineRunner,
     SensorRegistrationPipelineConfig,
 )
 from wrench.pipeline.exceptions import PipelineDefinitionError
