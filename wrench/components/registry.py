@@ -37,7 +37,7 @@ class ComponentRegistry:
     _registry: dict[str, Any] = {
         "harvester": {},
         "grouper": {},
-        "metadata_builder": {},
+        "metadatabuilder": {},
         "cataloger": {},
     }
 

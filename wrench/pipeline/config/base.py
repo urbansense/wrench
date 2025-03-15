@@ -1,34 +1,39 @@
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, PrivateAttr
 
-from wrench.pipeline.pipeline import Pipeline
+from wrench.pipeline.config.param_resolver import ParamConfig, ParamToResolveConfig
 
 
 class AbstractConfig(BaseModel):
-    """Base class for all pipeline configurations."""
+    """Base class for all configs.
+
+    Provides methods to get a class from a string and resolve a parameter defined by
+    a dict with a 'resolver_' key.
+
+    Each subclass must implement a 'parse' method that returns the relevant object.
+    """
 
     _global_data: dict[str, Any] = PrivateAttr({})
+    """Additional parameter ignored by all Pydantic model_* methods."""
 
-    def resolve_param(self, param: Any) -> Any:
-        """Resolve parameter values from their definition."""
-        # Implementation similar to Neo4j's param resolver
-        pass
+    def resolve_param(self, param: ParamConfig) -> Any:
+        """Finds the parameter value from its definition."""
+        if not isinstance(param, ParamToResolveConfig):
+            # some parameters do not have to be resolved, real
+            # values are already provided
+            return param
+        return param.resolve(self._global_data)
 
-    def parse(self, resolved_data: Optional[dict[str, Any]] = None) -> Any:
-        """Parse the configuration into concrete objects."""
+    def resolve_params(self, params: dict[str, ParamConfig]) -> dict[str, Any]:
+        """Resolve all parameters.
+
+        Returning dict[str, Any] because parameters can be anything (str, float, list, dict...)
+        """
+        return {
+            param_name: self.resolve_param(param)
+            for param_name, param in params.items()
+        }
+
+    def parse(self, resolved_data: dict[str, Any] | None = None) -> Any:
         raise NotImplementedError()
-
-
-class PipelineConfig(AbstractConfig):
-    """Configuration for a custom pipeline."""
-
-    component_config: dict[str, dict[str, Any]]
-    connection_config: list[dict[str, Any]]
-
-    def parse(self, resolved_data: Optional[dict[str, Any]] = None) -> Pipeline:
-        """Parse config into a Pipeline instance."""
-        pipeline = Pipeline()
-        # Create and add components based on config
-        # Set up connections based on config
-        return pipeline

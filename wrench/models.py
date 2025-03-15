@@ -17,7 +17,7 @@ class Location(Protocol):
         Returns:
             tuple: A tuple containing two float values representing the coordinates.
         """
-        tuple[float, float]
+        pass
 
 
 class TimeFrame(BaseModel):
@@ -27,7 +27,7 @@ class TimeFrame(BaseModel):
 
 class Device(BaseModel):
     """
-    Item model representing an entity with an ID.
+    Device model representing an entity with an ID.
 
     Attributes:
         id (str): The unique identifier for the item.

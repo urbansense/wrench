@@ -1,8 +1,8 @@
-# wrench/pipeline/pipeline.py (part 1)
 import asyncio
-import logging
 import uuid
 from typing import Any, Optional
+
+from wrench.log import logger
 
 from .component import Component, DataModel
 from .exceptions import (
@@ -19,8 +19,6 @@ from .models import (
 from .pipeline_graph import PipelineEdge, PipelineGraph, PipelineNode, PipelineResult
 from .stores import InMemoryStore, ResultStore
 
-logger = logging.getLogger(__name__)
-
 
 class TaskNode(PipelineNode):
     """Node representing a runnable component in the pipeline graph."""
@@ -35,6 +33,7 @@ class TaskNode(PipelineNode):
         """
         super().__init__(name)
         self.component = component
+        self.logger = logger.getChild(self.__class__.__name__)
 
     async def run(self, **inputs: Any) -> RunResult:
         """Execute the component with the given inputs."""
@@ -42,7 +41,7 @@ class TaskNode(PipelineNode):
             result = await self.component.run(**inputs)
             return RunResult(status=RunStatus.DONE, result=result)
         except Exception as e:
-            logger.exception(f"Error executing component {self.name}: {str(e)}")
+            self.logger.exception(f"Error executing component {self.name}: {str(e)}")
             return RunResult(status=RunStatus.FAILED, error=e)
 
 
@@ -65,11 +64,13 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             store (Optional[ResultStore]) : Store to be used to store pipeline results.
         """
         super().__init__()
-        self.store = store or InMemoryStore()
+        self.store = store or InMemoryStore()  # default store
         self.final_results = InMemoryStore()  # For storing leaf node results
         self.is_validated = False
         self.param_mapping: dict[str, dict[str, dict[str, str]]] = {}
         self.missing_inputs: dict[str, list[str]] = {}
+
+        self.logger = logger.getChild(self.__class__.__name__)
 
     def add_component(self, name: str, component: Component) -> None:
         """Add a component to the pipeline."""
@@ -126,7 +127,7 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
 
     @classmethod
     def from_definition(
-        cls, definition: PipelineDefinition, store: Optional[ResultStore] = None
+        cls, definition: PipelineDefinition, store: ResultStore | None = None
     ) -> "Pipeline":
         """Create a pipeline from a PipelineDefinition."""
         pipeline = cls(store=store)
@@ -164,7 +165,12 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
         self.is_validated = True
 
     def _validate_component_connections(self, node: TaskNode) -> None:
-        """Validate connections for a single component."""
+        """
+        Validate connections for a single component.
+
+        Checks if outputs from previous nodes have fulfill
+        all required inputs of the current node.
+        """
         component = node.component
         required_inputs = {
             name: info
@@ -173,73 +179,16 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
         }
 
         # Get inputs from connections
-        provided_inputs = set()
+        provided_inputs: set[str] = set()
         prev_edges = self.previous_edges(node.name)
 
-        component_mapping = {}
+        component_mapping: dict[str, Any] = {}
 
         for edge in prev_edges:
-            input_config = edge.data.get("input_config", {})
+            inputs, components = self._validate_input_mapping(node, component, edge)
 
-            for target_param, source_path in input_config.items():
-                # Check target parameter exists
-                if target_param not in component.component_inputs:
-                    raise ValidationError(
-                        f"Parameter '{target_param}' is not a valid input for component '{node.name}'"
-                    )
-
-                # Check if already mapped
-                if target_param in component_mapping:
-                    raise ValidationError(
-                        f"Parameter '{target_param}' is already mapped for '{node.name}'"
-                    )
-
-                # Handle dot notation for output fields
-                if "." in source_path:
-                    source_component, output_field = source_path.split(".", 1)
-
-                    # Check source component exists
-                    if source_component not in self._nodes:
-                        raise ValidationError(
-                            f"Source component '{source_component}' does not exist"
-                        )
-
-                    # Check output field exists in source component
-                    source_node = self._nodes[source_component]
-                    if output_field not in source_node.component.component_outputs:
-                        raise ValidationError(
-                            f"Output field '{output_field}' does not exist in component '{source_component}'"
-                        )
-
-                    # Check types are compatible
-                    source_type = source_node.component.component_outputs[output_field][
-                        "annotation"
-                    ]
-                    target_type = component.component_inputs[target_param]["annotation"]
-
-                    if not self._check_type_compatibility(source_type, target_type):  # type: ignore
-                        raise ValidationError(
-                            f"Type mismatch: {source_component}.{output_field} ({source_type}) is not compatible with "
-                            f"{node.name}.{target_param} ({target_type})"
-                        )
-
-                    component_mapping[target_param] = {
-                        "component": source_component,
-                        "param": output_field,
-                    }
-                else:
-                    # Whole component result mapping
-                    source_component = source_path
-
-                    # Check source component exists
-                    if source_component not in self._nodes:
-                        raise ValidationError(
-                            f"Source component '{source_component}' does not exist"
-                        )
-
-                    component_mapping[target_param] = {"component": source_component}
-
-                provided_inputs.add(target_param)
+            provided_inputs = provided_inputs | inputs
+            component_mapping = component_mapping | components
 
         # Store the mapping for this component
         self.param_mapping[node.name] = component_mapping
@@ -247,6 +196,79 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
         # Check for missing required inputs
         missing = set(required_inputs.keys()) - provided_inputs
         self.missing_inputs[node.name] = list(missing)
+
+    def _validate_input_mapping(
+        self,
+        node: TaskNode,
+        component: Component,
+        edge: PipelineEdge,
+    ) -> tuple[set, dict]:
+        provided_inputs: set[str] = set()
+        component_mapping: dict[str, Any] = {}
+
+        input_config: dict[str, str] = edge.data.get("input_config", {})
+
+        for target_param, source_path in input_config.items():
+            # Check target parameter exists
+            if target_param not in component.component_inputs:
+                raise ValidationError(
+                    f"Parameter '{target_param}' is not a valid input for component '{node.name}'"
+                )
+
+            # Check if already mapped
+            if target_param in component_mapping:
+                raise ValidationError(
+                    f"Parameter '{target_param}' is already mapped for '{node.name}'"
+                )
+
+            # Handle dot notation for output fields
+            if "." in source_path:
+                source_component, output_field = source_path.split(".", 1)
+
+                # Check source component exists
+                if source_component not in self._nodes:
+                    raise ValidationError(
+                        f"Source component '{source_component}' does not exist"
+                    )
+
+                    # Check output field exists in source component
+                source_node = self._nodes[source_component]
+                if output_field not in source_node.component.component_outputs:
+                    raise ValidationError(
+                        f"Output field '{output_field}' does not exist in component '{source_component}'"
+                    )
+
+                    # Check types are compatible
+                source_type = source_node.component.component_outputs[output_field][
+                    "annotation"
+                ]
+                target_type = component.component_inputs[target_param]["annotation"]
+
+                if not self._check_type_compatibility(source_type, target_type):  # type: ignore
+                    raise ValidationError(
+                        f"Type mismatch: {source_component}.{output_field} ({source_type}) is not compatible with "
+                        f"{node.name}.{target_param} ({target_type})"
+                    )
+
+                component_mapping[target_param] = {
+                    "component": source_component,
+                    "param": output_field,
+                }
+            else:
+                # Whole component result mapping
+                source_component = source_path
+
+                # Check source component exists
+                if source_component not in self._nodes:
+                    raise ValidationError(
+                        f"Source component '{source_component}' does not exist"
+                    )
+
+                component_mapping[target_param] = {"component": source_component}
+
+            provided_inputs.add(target_param)
+
+        return provided_inputs, component_mapping
 
     def _check_type_compatibility(self, source_type: type, target_type: type) -> bool:
         """Check if the source type is compatible with the target type."""
@@ -289,7 +311,7 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
 
         # Generate run ID
         run_id = str(uuid.uuid4())
-        logger.info(f"Starting pipeline run {run_id}")
+        self.logger.info(f"Starting pipeline run {run_id}")
 
         # Initialize component statuses
         for node in self._nodes.values():
@@ -317,7 +339,7 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
     async def get_node_status(self, run_id: str, node_name: str) -> RunStatus:
         """Get the current status of a node in a specific run."""
         status_str = await self.store.get_status_for_component(run_id, node_name)
-        return RunStatus(status_str) if status_str else RunStatus.UNKNOWN
+        return RunStatus(status_str) if status_str else RunStatus.PENDING
 
     async def set_node_status(
         self, run_id: str, node_name: str, status: RunStatus
@@ -352,7 +374,7 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             return
 
         node = self._nodes[node_name]
-        logger.info(f"Executing node {node_name}")
+        self.logger.info(f"Executing node {node_name}")
 
         try:
             # Prepare inputs
@@ -385,12 +407,12 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
                         self._execute_node(run_id, edge.end, global_inputs)
                     )
             else:
-                logger.warning(
+                self.logger.warning(
                     f"Node {node_name} completed with status {run_result.status}"
                 )
 
         except Exception as e:
-            logger.exception(f"Error executing node {node_name}: {str(e)}")
+            self.logger.exception(f"Error executing node {node_name}: {str(e)}")
             await self.set_node_status(run_id, node_name, RunStatus.FAILED)
             # Store error information
             await self.store.add_result_for_component(

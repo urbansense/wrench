@@ -33,7 +33,7 @@ class SDDICatalogerComponent(Component):
         api_key: str,
         owner_org: str = "lehrstuhl-fur-geoinformatik",
     ):
-        """Wraps SensorThingsHarvester in a pipeline component."""
+        """Wraps SDDICataloger in a pipeline component."""
         self.cataloger = SDDICataloger(
             base_url=base_url,
             api_key=api_key,

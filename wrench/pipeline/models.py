@@ -41,19 +41,15 @@ class PipelineDefinition(BaseModel):
 class RunStatus(Enum):
     """Status of a pipeline component run."""
 
-    UNKNOWN = "UNKNOWN"
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     DONE = "DONE"
     FAILED = "FAILED"
-    SKIPPED = "SKIPPED"
 
     def possible_next_status(self) -> list["RunStatus"]:
         """Get possible next statuses from current."""
-        if self == RunStatus.UNKNOWN:
-            return [RunStatus.RUNNING, RunStatus.PENDING]
         if self == RunStatus.PENDING:
-            return [RunStatus.RUNNING, RunStatus.SKIPPED]
+            return [RunStatus.RUNNING]
         if self == RunStatus.RUNNING:
             return [RunStatus.DONE, RunStatus.FAILED]
         # terminal states cannot transition
