@@ -1,7 +1,7 @@
 from .cataloger import Cataloger
 from .grouper import Grouper
 from .harvester import Harvester
-from .metadata_builder import MetadataBuilder
+from .metadatabuilder import MetadataBuilder
 from .registry import ComponentRegistry, discover_components
 
 __all__ = [
