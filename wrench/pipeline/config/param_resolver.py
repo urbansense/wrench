@@ -32,6 +32,8 @@ class ParamFromKeyConfig(ParamToResolveConfig):
     def resolve(self, data: dict[str, Any]) -> Any:
         d = data
         for k in self.key_.split(self.KEY_SEP):
+            if not isinstance(d, dict):
+                raise AttributeError(f"Path component '{k}' refers to a non-dict value")
             d = d[k]
         return d
 
