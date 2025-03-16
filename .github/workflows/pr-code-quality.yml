@@ -51,4 +51,4 @@ jobs:
           uv sync --group lint
       - name: Run linting
         run: |
-          ruff check --output-format=github --target-version=py312
+          uv run ruff check --output-format=github --target-version=py312
