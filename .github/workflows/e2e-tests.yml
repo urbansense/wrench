@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  unit-tests:
+  e2e-tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -30,6 +30,6 @@ jobs:
         run: |
           uv sync --group test
           uv pip install -e ".[teleclass,sensorthings]"
-      - name: Run unit tests
+      - name: Run e2e tests
         run: |
           make test_e2e
