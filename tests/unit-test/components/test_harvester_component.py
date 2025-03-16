@@ -9,6 +9,7 @@ class MockBaseHarvester:
 
     def __init__(self, items=None):
         self.items = items if items is not None else []
+
     def return_items(self):
         return self.items
 
