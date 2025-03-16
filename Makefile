@@ -20,10 +20,10 @@ install: clean
 	uv pip install -e "."
 
 test:
-	pytest -v --cov-report=term-missing
+	uv run pytest -v --cov-report=term-missing
 
 test_github:
-	pytest --doctest-modules --junitxml="junit/test-results.xml" --cov=com --cov-report=xml --cov-report=html
+	uv run pytest --doctest-modules --junitxml="junit/test-results.xml" --cov=com --cov-report=xml --cov-report=html
 
 
 # Check source code
