@@ -109,7 +109,7 @@ class Group(BaseModel):
     """
 
     name: str = Field(description="Name of the group")
-    items: list[str] = Field(description="List of items belonging to this group")
+    items: list[dict] = Field(description="List of items belonging to this group")
     # optional only for hierarchical classification
     parent_classes: set[str] = Field(
         default=set(), description="Set of parent classes of this group"

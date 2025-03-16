@@ -86,7 +86,7 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
             metadata (CommonMetadata): CommonMetadata extracted
             from the groups
         """
-        things_in_group = [Thing.model_validate_json(thing) for thing in group.items]
+        things_in_group = [Thing.model_validate(thing) for thing in group.items]
 
         geographic_extent = self.group_spatial_calculator.calculate_extent(
             things_in_group

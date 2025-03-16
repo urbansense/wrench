@@ -22,9 +22,11 @@ install: clean
 test:
 	uv run pytest -v --cov-report=term-missing
 
-test_github:
-	uv run pytest --doctest-modules --junitxml="junit/test-results.xml" --cov=com --cov-report=xml --cov-report=html
+test_unit:
+	uv run pytest ./tests/unit-test --doctest-modules --junitxml="junit/test-results.xml" --cov=com --cov-report=xml --cov-report=html
 
+test_e2e:
+	uv run pytest ./tests/e2e --doctest-modules --junitxml="junit/test-results.xml" --cov=com --cov-report=xml --cov-report=html
 
 # Check source code
 lint_src:
