@@ -103,7 +103,7 @@ class Group(BaseModel):
 
     Attributes:
         name (str): Name of the group.
-        items (list[str]): List of items belonging to this group.
+        items (list[dict]): List of items belonging to this group.
         parent_classes (set[str], optional): Set of parent classes of this group, used
         for hierarchical classification. Defaults to an empty set.
     """

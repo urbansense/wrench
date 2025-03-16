@@ -33,7 +33,6 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
             base_url (str): Base SensorThings URL to harvest items from.
             title (str): Title of the entry in the catalog.
             description (str): Description of the entry in the catalog.
-            things (list[Thing]): List of things to extract metadata from.
             content_generator (ContentGenerator): Content generator for generating
                     name and description for device group metadata
         """

@@ -313,7 +313,7 @@ class TELEClassGrouper(BaseGrouper):
                 groups.append(
                     Group(
                         name=leaf_class,
-                        items=json.loads(class_docs),
+                        items=[json.loads(docs) for docs in class_docs],
                         parent_classes=self.taxonomy_manager.get_ancestors(leaf_class),
                     )
                 )
