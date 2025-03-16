@@ -1,4 +1,4 @@
-.PHONY: clean test install lint lint_src lint_tests lint_types help
+.PHONY: clean test test_github install lint lint_src lint_tests lint_types help
 
 setup:
 	rm -rf .venv/
@@ -21,6 +21,10 @@ install: clean
 
 test:
 	pytest -v --cov-report=term-missing
+
+test_github:
+	pytest --doctest-modules --junitxml="junit/test-results.xml" --cov=com --cov-report=xml --cov-report=html
+
 
 # Check source code
 lint_src:
