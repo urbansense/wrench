@@ -7,9 +7,8 @@ from wrench.components.types import Items
 class MockBaseHarvester:
     """Mock harvester for testing."""
 
-    def __init__(self, items=[]):
-        self.items = items
-
+    def __init__(self, items=None):
+        self.items = items if items is not None else []
     def return_items(self):
         return self.items
 
