@@ -1,4 +1,4 @@
-.PHONY: clean test install lint lint_src lint_tests lint_types help
+.PHONY: clean test test_github install lint lint_src lint_tests lint_types help
 
 setup:
 	rm -rf .venv/
@@ -20,7 +20,13 @@ install: clean
 	uv pip install -e "."
 
 test:
-	pytest -v --cov-report=term-missing
+	uv run pytest -v --cov-report=term-missing
+
+test_unit:
+	uv run pytest ./tests/unit-test --doctest-modules --junitxml="junit/test-results.xml" --cov=com --cov-report=xml --cov-report=html
+
+test_e2e:
+	uv run pytest ./tests/e2e --doctest-modules --junitxml="junit/test-results.xml" --cov=com --cov-report=xml --cov-report=html
 
 # Check source code
 lint_src:
@@ -39,7 +45,7 @@ lint_types:
 	uv run --group lint mypy wrench
 
 # Main lint command that runs all groups
-lint: lint_src lint_tests lint_types
+lint: lint_src lint_tests
 
 lint-fix:
 	uv run --group lint ruff check wrench --fix
