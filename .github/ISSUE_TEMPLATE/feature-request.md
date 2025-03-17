@@ -11,10 +11,10 @@ Please fill in as much of the template below as you're able.
 -->
 
 **Is your feature request related to a problem? Please describe.**
-Please describe the problem you are trying to solve.
+## Description
 
 **Describe the solution you'd like**
-Please describe the desired behavior.
+## Desired behavior
 
 **Describe alternatives you've considered**
-Please describe alternative solutions or features you have considered.
+## Alternative solutions considered
