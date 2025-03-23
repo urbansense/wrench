@@ -3,6 +3,7 @@ from typing import Any
 from wrench.pipeline.config.config_reader import ConfigReader
 from wrench.pipeline.config.pipeline_config import AbstractPipelineConfig
 from wrench.pipeline.pipeline import Pipeline
+from wrench.pipeline.stores import FileStore
 
 from .pipeline_config import PipelineConfig
 
@@ -12,7 +13,7 @@ class PipelineRunner:
 
     def __init__(self, pipeline_definition, config=None):
         """Initializes a pipeline runner."""
-        self.pipeline = Pipeline.from_definition(pipeline_definition)
+        self.pipeline = Pipeline.from_definition(pipeline_definition, FileStore())
         self.config = config
 
     @classmethod

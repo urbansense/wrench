@@ -5,7 +5,7 @@ from pydantic import validate_call
 from wrench.components.types import Metadata
 from wrench.metadatabuilder import BaseMetadataBuilder
 from wrench.models import Group
-from wrench.pipeline.models import Component
+from wrench.pipeline.types import Component
 
 
 class MetadataBuilder(Component):

@@ -2,7 +2,7 @@ from pydantic import validate_call
 
 from wrench.components.types import Items
 from wrench.harvester import BaseHarvester
-from wrench.pipeline.models import Component
+from wrench.pipeline.types import Component
 
 
 class Harvester(Component):

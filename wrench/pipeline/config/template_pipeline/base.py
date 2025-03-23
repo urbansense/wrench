@@ -2,7 +2,7 @@ from typing import Any, ClassVar
 
 from wrench.log import logger
 from wrench.pipeline.config.pipeline_config import AbstractPipelineConfig
-from wrench.pipeline.models import ComponentDefinition
+from wrench.pipeline.types import ComponentDefinition
 
 
 class TemplatePipelineConfig(AbstractPipelineConfig):

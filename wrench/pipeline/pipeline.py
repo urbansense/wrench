@@ -11,13 +11,13 @@ from .exceptions import (
     PipelineStatusUpdateError,
     ValidationError,
 )
-from .models import (
+from .pipeline_graph import PipelineEdge, PipelineGraph, PipelineNode, PipelineResult
+from .stores import InMemoryStore, ResultStore
+from .types import (
     PipelineDefinition,
     RunResult,
     RunStatus,
 )
-from .pipeline_graph import PipelineEdge, PipelineGraph, PipelineNode, PipelineResult
-from .stores import InMemoryStore, ResultStore
 
 
 class TaskNode(PipelineNode):
