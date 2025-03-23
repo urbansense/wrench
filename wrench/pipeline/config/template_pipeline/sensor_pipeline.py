@@ -4,7 +4,7 @@ from wrench.components import Cataloger, Grouper, Harvester, MetadataBuilder
 from wrench.pipeline.config.object_config import ComponentType
 from wrench.pipeline.config.template_pipeline.base import TemplatePipelineConfig
 from wrench.pipeline.config.types import PipelineType
-from wrench.pipeline.models import ConnectionDefinition
+from wrench.pipeline.types import ConnectionDefinition
 
 
 class SensorRegistrationPipelineConfig(TemplatePipelineConfig):

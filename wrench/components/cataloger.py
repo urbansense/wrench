@@ -4,7 +4,7 @@ from pydantic import validate_call
 
 from wrench.cataloger import BaseCataloger
 from wrench.models import CommonMetadata
-from wrench.pipeline.models import Component, DataModel
+from wrench.pipeline.types import Component, DataModel
 
 
 class CatalogerStatus(DataModel):

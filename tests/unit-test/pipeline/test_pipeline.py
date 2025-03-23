@@ -336,7 +336,7 @@ async def test_multiple_dependencies(pipeline):
 @pytest.mark.asyncio
 async def test_from_definition():
     """Test creating pipeline from definition."""
-    from wrench.pipeline.models import (
+    from wrench.pipeline.types import (
         ComponentDefinition,
         ConnectionDefinition,
         PipelineDefinition,
