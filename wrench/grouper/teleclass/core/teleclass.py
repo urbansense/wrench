@@ -314,7 +314,8 @@ class TELEClassGrouper(BaseGrouper):
                     Group(
                         name=leaf_class,
                         items=[
-                            Item(id=doc.id, content=doc.content) for doc in class_docs
+                            Item(id=doc.id, content=json.loads(doc.content))
+                            for doc in class_docs
                         ],
                         parent_classes=self.taxonomy_manager.get_ancestors(leaf_class),
                     )

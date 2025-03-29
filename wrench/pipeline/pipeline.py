@@ -1,5 +1,4 @@
 import asyncio
-import json
 import uuid
 from typing import Any, Optional
 
@@ -389,7 +388,7 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             # Store results
             if run_result.result is not None:
                 await self.store.add_result_for_component(
-                    run_id, node_name, run_result.result
+                    run_id, node_name, run_result.result.model_dump(mode="json")
                 )
 
             # Update status
@@ -435,8 +434,6 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             source_result = await self.store.get_result_for_component(
                 run_id, source_component
             )
-
-            source_result = json.loads(source_result)
 
             if source_result is None:
                 continue

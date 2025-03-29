@@ -1,8 +1,8 @@
 from typing import ClassVar, Literal
 
-from wrench.components import Cataloger, Grouper, Harvester, MetadataBuilder
-from wrench.components.grouper import IncrementalGrouper
-from wrench.components.harvester import IncrementalHarvester
+from wrench.components import Cataloger, MetadataBuilder
+from wrench.components.grouper import Grouper
+from wrench.components.harvester import Harvester
 from wrench.pipeline.config.object_config import ComponentType
 from wrench.pipeline.config.template_pipeline.base import TemplatePipelineConfig
 from wrench.pipeline.config.types import PipelineType
@@ -27,10 +27,10 @@ class SensorRegistrationPipelineConfig(TemplatePipelineConfig):
     template_: Literal[PipelineType.SENSOR_PIPELINE] = PipelineType.SENSOR_PIPELINE
 
     def _get_harvester(self) -> Harvester:
-        return IncrementalHarvester(harvester=self.get_default_harvester())
+        return Harvester(harvester=self.get_default_harvester())
 
     def _get_grouper(self) -> Grouper:
-        return IncrementalGrouper(grouper=self.get_default_grouper())
+        return Grouper(grouper=self.get_default_grouper())
 
     def _get_metadatabuilder(self) -> MetadataBuilder:
         return MetadataBuilder(metadatabuilder=self.get_default_metadatabuilder())

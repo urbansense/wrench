@@ -11,24 +11,6 @@ from wrench.pipeline.types import Operation, OperationType
 
 
 class Grouper(Component):
-    """
-    Component for creating grouper component from any grouper.
-
-    Args:
-        grouper (BaseGrouper): The grouper to use in the pipeline.
-    """
-
-    def __init__(self, grouper: BaseGrouper):
-        self._grouper = grouper
-
-    @validate_call()
-    async def run(self, devices: Sequence[Item]) -> Groups:
-        """Run the grouper and group Items."""
-        groups = self._grouper.group_items(devices)
-        return Groups(groups=groups)
-
-
-class IncrementalGrouper(Component):
     """Grouper that handles operations on Groups."""
 
     def __init__(self, grouper: BaseGrouper):

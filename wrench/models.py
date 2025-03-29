@@ -23,7 +23,7 @@ class Location(Protocol):
 class Item(BaseModel):
     model_config = {"extra": "allow"}
     id: str
-    content: str
+    content: dict[str, Any]
 
 
 class TimeFrame(BaseModel):

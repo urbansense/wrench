@@ -100,8 +100,10 @@ class ModelDocumentLoader:
         return [
             Document(
                 id=doc.id,
-                content=doc.content,
-                embeddings=encoder.encode(doc.content, convert_to_numpy=True),
+                content=json.dumps(doc.content),
+                embeddings=encoder.encode(
+                    json.dumps(doc.content), convert_to_numpy=True
+                ),
             )
             for id, doc in enumerate(self.documents)
         ]

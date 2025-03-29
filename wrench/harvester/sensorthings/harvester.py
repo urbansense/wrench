@@ -58,5 +58,6 @@ class SensorThingsHarvester(BaseHarvester):
     def return_items(self) -> list[Item]:
         """Returns things."""
         return [
-            Item(id=thing.id, content=thing.model_dump_json()) for thing in self.things
+            Item(id=thing.id, content=thing.model_dump(mode="json"))
+            for thing in self.things
         ]
