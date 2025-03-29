@@ -44,7 +44,7 @@ async def test_grouper_with_failing_base_grouper():
 
     # Should propagate the error
     with pytest.raises(ValueError, match="Failed to group items"):
-        await grouper_component.run(devices=devices)
+        await grouper_component.run(devices=devices, operations=[])
 
 
 @pytest.mark.asyncio
@@ -116,7 +116,7 @@ async def test_validate_call_validation():
     valid_items = [Item(id="1", content={"name": "Device 1"})]
 
     # This should work fine (proper Item list input)
-    await grouper_component.run(devices=valid_items)
+    await grouper_component.run(devices=valid_items, operations=[])
 
     # This should raise a validation error (wrong input type)
     with pytest.raises(Exception):
@@ -190,12 +190,13 @@ async def test_grouper_edge_cases():
     grouper_component = Grouper(grouper=EdgeCaseGrouper())
 
     # Test with empty list
-    result = await grouper_component.run(devices=[])
+    result = await grouper_component.run(devices=[], operations=[])
     assert len(result.groups) == 0
 
     # Test with single item
     single_item = [Item(id="1", content={"name": "Single Item"})]
-    result = await grouper_component.run(devices=single_item)
+    result = await grouper_component.run(devices=single_item, operations=[])
+    print(result)
     assert len(result.groups) == 1
     assert result.groups[0].name == "Group-1"
 
@@ -204,6 +205,13 @@ async def test_grouper_edge_cases():
         Item(id="dup", content={"name": "Duplicate 1"}),
         Item(id="dup", content={"name": "Duplicate 2"}),
     ]
-    result = await grouper_component.run(devices=duplicate_items)
+    result = await grouper_component.run(
+        devices=duplicate_items,
+        operations=[
+            Operation(type=OperationType.ADD, item_id=item.id, item=item)
+            for item in duplicate_items
+        ],
+    )
+    print(result)
     assert len(result.groups) == 1
     assert len(result.groups[0].items) == 2

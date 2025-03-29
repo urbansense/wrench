@@ -1,5 +1,3 @@
-import json
-
 import pytest
 
 from wrench.components.cataloger import Cataloger
@@ -29,7 +27,7 @@ class MockGrouper:
         """Group items by type from their content"""
         groups_dict = {}
         for item in items:
-            content = json.loads(item.content)
+            content = item.content
             group_name = content.get("type", "unknown")
 
             if group_name not in groups_dict:
@@ -92,7 +90,7 @@ async def test_complete_pipeline_e2e(mocker):
     mocker.patch.object(
         pipeline.store,
         "get_result_for_component",
-        return_value='{"success": true, "groups": ["sensor", "actuator"]}',
+        return_value={"success": True, "groups": ["sensor", "actuator"]},
     )
 
     # Add components with the incremental versions
@@ -140,7 +138,7 @@ async def test_complete_pipeline_e2e(mocker):
     async def mock_execute(run_id, node_name, global_inputs):
         if node_name == "cataloger":
             await pipeline.store.add_result_for_component(
-                run_id, node_name, '{"success": true, "groups": ["sensor", "actuator"]}'
+                run_id, node_name, {"success": True, "groups": ["sensor", "actuator"]}
             )
             await pipeline.set_node_status(run_id, node_name, RunStatus.DONE)
         else:
@@ -157,7 +155,7 @@ async def test_complete_pipeline_e2e(mocker):
     assert "cataloger" in result.results
 
     # Parse JSON results
-    cataloger_result = json.loads(result.results["cataloger"])
+    cataloger_result = result.results["cataloger"]
 
     # Check cataloger output
     assert cataloger_result["success"] is True
@@ -175,7 +173,7 @@ async def test_pipeline_partial_execution(mocker):
     mocker.patch.object(
         pipeline.store,
         "get_result_for_component",
-        return_value='{"groups": ["sensor", "actuator"]}',
+        return_value={"groups": ["sensor", "actuator"]},
     )
 
     # Add components with the incremental versions
@@ -198,7 +196,7 @@ async def test_pipeline_partial_execution(mocker):
     async def mock_execute(run_id, node_name, global_inputs):
         if node_name == "grouper":
             await pipeline.store.add_result_for_component(
-                run_id, node_name, '{"groups": ["sensor", "actuator"]}'
+                run_id, node_name, {"groups": ["sensor", "actuator"]}
             )
             await pipeline.set_node_status(run_id, node_name, RunStatus.DONE)
         else:
@@ -215,7 +213,7 @@ async def test_pipeline_partial_execution(mocker):
     assert "grouper" in result.results
 
     # Parse JSON results
-    grouper_result = json.loads(result.results["grouper"])
+    grouper_result = result.results["grouper"]
 
     assert len(grouper_result["groups"]) == 2
 
@@ -231,7 +229,10 @@ async def test_pipeline_with_custom_initial_data(mocker):
     mocker.patch.object(
         pipeline.store,
         "get_result_for_component",
-        return_value='{"service_metadata": {"title": "Mock Service"}, "group_metadata": [{"title": "Group: custom"}]}',
+        return_value={
+            "service_metadata": {"title": "Mock Service"},
+            "group_metadata": [{"title": "Group: custom"}],
+        },
     )
 
     # Add components (just grouper and metadata builder)
@@ -272,7 +273,10 @@ async def test_pipeline_with_custom_initial_data(mocker):
             await pipeline.store.add_result_for_component(
                 run_id,
                 node_name,
-                '{"service_metadata": {"title": "Mock Service"}, "group_metadata": [{"title": "Group: custom"}]}',
+                {
+                    "service_metadata": {"title": "Mock Service"},
+                    "group_metadata": [{"title": "Group: custom"}],
+                },
             )
             await pipeline.set_node_status(run_id, node_name, RunStatus.DONE)
         else:
@@ -303,7 +307,7 @@ async def test_pipeline_with_custom_initial_data(mocker):
     assert "metadatabuilder" in result.results
 
     # Parse JSON results
-    metadatabuilder_result = json.loads(result.results["metadatabuilder"])
+    metadatabuilder_result = result.results["metadatabuilder"]
 
     # Metadata should be generated for service and group
     assert metadatabuilder_result["service_metadata"]["title"] == "Mock Service"

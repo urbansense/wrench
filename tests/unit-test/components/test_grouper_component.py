@@ -1,5 +1,3 @@
-import json
-
 import pytest
 
 from wrench.components.grouper import Grouper
@@ -25,7 +23,7 @@ class MockBaseGrouper(BaseGrouper):
         groups_dict = {}
         for item in items:
             # Extract type from content JSON
-            content_data = json.loads(item.content)
+            content_data = item.content
             group_name = content_data.get("type", "unknown")
 
             # Initialize group if needed
@@ -60,7 +58,7 @@ async def test_grouper_component_basic():
     grouper_component = Grouper(grouper=mock_grouper)
 
     # Run component with devices
-    result = await grouper_component.run(devices=devices)
+    result = await grouper_component.run(devices=devices, operations=[])
 
     # Verify results
     assert result is not None
@@ -89,7 +87,7 @@ async def test_grouper_component_empty():
     grouper_component = Grouper(grouper=mock_grouper)
 
     # Run component
-    result = await grouper_component.run(devices=devices)
+    result = await grouper_component.run(devices=devices, operations=[])
 
     # Verify results
     assert result is not None
@@ -122,7 +120,7 @@ async def test_grouper_component_predefined_groups():
 
     # Run component with any items (they will be ignored)
     devices = [Item(id="3", content={"name": "Ignored"})]
-    result = await grouper_component.run(devices=devices)
+    result = await grouper_component.run(devices=devices, operations=[])
 
     # Verify results match predefined groups
     assert result is not None

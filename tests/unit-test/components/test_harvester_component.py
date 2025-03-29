@@ -45,7 +45,7 @@ async def test_harvester_component_basic():
     assert result is not None
     assert len(result.devices) == 1
     assert result.devices[0].id == "1"
-    assert "Test Device" in result.devices[0].content
+    assert "Test Device" in result.devices[0].content["name"]
 
 
 @pytest.mark.asyncio
@@ -90,8 +90,8 @@ async def test_harvester_component_multiple_items():
     assert result.devices[0].id == "1"
     assert result.devices[1].id == "2"
     assert result.devices[2].id == "3"
-    assert "sensor" in result.devices[0].content
-    assert "actuator" in result.devices[1].content
+    assert "sensor" in result.devices[0].content["type"]
+    assert "actuator" in result.devices[1].content["type"]
 
 
 @pytest.mark.asyncio
