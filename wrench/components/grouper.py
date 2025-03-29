@@ -23,104 +23,87 @@ class Grouper(Component):
     ) -> Groups:
         # Case 1: Incremental update - apply operations to existing groups
         if self._groups and operations:
-            # Get both the full updated list and just the modified groups
-            updated_groups, modified_groups = self._apply_operations(
+            # Apply operations and get only the affected groups
+            self._groups, affected_groups = self._apply_operations(
                 self._groups, operations
             )
-            # Store the complete group list internally
-            self._groups = updated_groups
-            # Return only the modified groups
-            return Groups(groups=modified_groups)
+            # Return only the affected groups
+            return Groups(groups=affected_groups)
 
-        # Case 2: No operations - return empty list
+        # Case 2: No operations and existing groups - return empty list (no changes)
         if self._groups and not operations:
             return Groups(groups=[])
 
-        # Case 2: First run or full rebuild - process all devices
-        # Update internal state and return all groups
+        # Case 3: First run or full rebuild - process all devices
         self._groups = self._grouper.group_items(devices)
         return Groups(groups=self._groups)
 
     def _apply_operations(
-        self, groups: list[Group], operations: list[Operation]
+        self, existing_groups: list[Group], operations: list[Operation]
     ) -> tuple[list[Group], list[Group]]:
         """
-        Apply operations to update groups.
+        Apply operations to existing groups and track which groups were affected.
 
         Args:
-            groups (list[Group]): List of existing groups to be updated.
-            operations (list[Operation]): List of operations to be performed.
+            existing_groups: The complete list of current groups
+            operations: Operations to apply (add/update/delete)
 
         Returns:
-            list[Group]: List of the final updated groups.
-            list[Group]: List; of only modified groups.
+            tuple: (all_groups, affected_groups)
+                - all_groups: Complete list of all groups after operations
+                - affected_groups: Only the groups that were changed
         """
-        # Make a deep copy to avoid modifying the stored state directly
-        updated_groups = copy.deepcopy(groups)
-        added_items: list[Item] = []
-        updated_items: list[Item] = []
-        deleted_items: list[Item] = []
+        # Make a deep copy to avoid modifying the original state
+        all_groups = copy.deepcopy(existing_groups)
+
+        # Sort operations by type for batch processing
+        items_to_add = []
+        items_to_update = []
+        items_to_delete = []
 
         for op in operations:
             if op.type == OperationType.ADD:
-                added_items.append(op.item)
+                items_to_add.append(op.item)
             elif op.type == OperationType.UPDATE:
-                updated_items.append(op.item)
+                items_to_update.append(op.item)
             elif op.type == OperationType.DELETE:
-                deleted_items.append(op.item)
+                items_to_delete.append(op.item)
 
-        modified_groups = self._process_groups(
-            updated_groups, added_items, updated_items, deleted_items
-        )
+        # Set to track which groups were affected
+        affected_group_names = set()
 
-        return updated_groups, modified_groups
+        # Step 1: Handle additions and updates
+        if items_to_add or items_to_update:
+            # Create new groups from added and updated items
+            new_groups = self._grouper.group_items(items_to_add + items_to_update)
+            # Track which groups were affected
+            affected_group_names.update(group.name for group in new_groups)
+            # Merge new groups into existing groups
+            self._merge_groups(all_groups, new_groups)
 
-    def _process_groups(
-        self,
-        updated_groups: list[Group],
-        added_items: list[Item],
-        updated_items: list[Item],
-        deleted_items: list[Item],
-    ) -> list[Group]:
-        """
-        Process groups by merging new groups with existing groups.
+        # Step 2: Handle deletions
+        if items_to_delete:
+            # Get names of groups affected by deletions
+            deleted_from_groups = self._remove_items(all_groups, items_to_delete)
+            affected_group_names.update(deleted_from_groups)
 
-        Args:
-            updated_groups: The current list of groups
-            added_items: Items that were added
-            updated_items: Items that were updated
-            deleted_items: Items that were deleted
-        """
-        modified_groups = []
-        # Merge new groups with existing groups if there are new items
-        # Adds these to updated_groups if there are new items
-        if added_items or updated_items:
-            # Generate new groups from added and updated items
-            modified_groups.append(
-                *self._grouper.group_items([*added_items, *updated_items])
-            )
-            self._merge_groups(updated_groups, modified_groups)
+        # Create list of affected groups (only return groups that still exist)
+        affected_groups = [
+            group for group in all_groups if group.name in affected_group_names
+        ]
 
-        # Delete items from existing groups if there are deleted items
-        if deleted_items:
-            modified_groups.extend(self._delete_items(updated_groups, deleted_items))
+        return all_groups, affected_groups
 
-        return modified_groups
-
-    def _merge_groups(self, existing_groups: list[Group], new_groups: list[Group]):
+    def _merge_groups(self, all_groups: list[Group], new_groups: list[Group]):
         """
         Merge new groups into existing groups.
 
-        Items in new groups will replace existing items with the same ID,
-        and new items will be added to existing groups.
-        New groups that don't exist in existing_groups will be added.
-
         Args:
-            existing_groups (list[Group]): List of existing Group objects
-            new_groups (list[Group]): List of new Group objects to merge in
+            all_groups: Complete list of all existing groups
+            new_groups: New groups to merge in
         """
         # Create a mapping of existing groups by name for faster lookup
-        existing_groups_by_name = {group.name: group for group in existing_groups}
+        existing_groups_by_name = {group.name: group for group in all_groups}
 
         for new_group in new_groups:
             if new_group.name in existing_groups_by_name:
@@ -128,48 +111,57 @@ class Grouper(Component):
                 existing_group = existing_groups_by_name[new_group.name]
 
                 # Create a mapping of existing items by ID
-                existing_items_by_id = {item.id: item for item in existing_group.items}
+                existing_items_by_id = {
+                    item.id: i for i, item in enumerate(existing_group.items)
+                }
 
                 # Update existing items and add new ones
                 for new_item in new_group.items:
                     item_id = new_item.id
                     if item_id in existing_items_by_id:
                         # Replace existing item
-                        idx = existing_group.items.index(existing_items_by_id[item_id])
+                        idx = existing_items_by_id[item_id]
                         existing_group.items[idx] = new_item
                     else:
                         # Add new item
                         existing_group.items.append(new_item)
 
-                # Update parent_classes if they exist in the model
+                # Update parent_classes if they exist
                 if hasattr(new_group, "parent_classes") and hasattr(
                     existing_group, "parent_classes"
                 ):
                     existing_group.parent_classes.update(new_group.parent_classes)
-
             else:
                 # Group doesn't exist, add it
-                existing_groups.append(new_group)
+                all_groups.append(new_group)
 
-    def _delete_items(
-        self, existing_groups: list[Group], deleted_items: list[Item]
-    ) -> list[Group]:
+    def _remove_items(
+        self, all_groups: list[Group], items_to_delete: list[Item]
+    ) -> set[str]:
         """
-        Deletes provided items from existing group.
+        Remove specified items from all groups.
 
         Args:
-            existing_groups (list[Group]): List of existing Group objects.
-            deleted_items (list[Item]): List of items to be deleted.
+            all_groups: Complete list of all groups
+            items_to_delete: Items to be removed
 
         Returns:
-            list[Group]: List of modified groups as a result of deleting its items.
+            set: Names of groups that were modified
         """
-        modified_groups: list[Group] = []
+        affected_group_names = set()
 
-        for group in existing_groups:
-            for item in deleted_items:
-                if item in group.items:
-                    group.items.remove(item)
-                    modified_groups.append(group)
+        # Create a set of IDs for faster lookup
+        delete_ids = {item.id for item in items_to_delete}
 
-        return modified_groups
+        for group in all_groups:
+            # Check if any items in this group need to be deleted
+            original_count = len(group.items)
+
+            # Filter out items to delete
+            group.items = [item for item in group.items if item.id not in delete_ids]
+
+            # If the count changed, this group was affected
+            if len(group.items) != original_count:
+                affected_group_names.add(group.name)
+
+        return affected_group_names
