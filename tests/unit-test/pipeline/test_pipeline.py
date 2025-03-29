@@ -295,7 +295,7 @@ async def test_pipeline_with_failing_component(mocker):
             await pipeline.set_node_status(run_id, node_name, RunStatus.FAILED)
             # Store error for source
             await pipeline.store.add_result_for_component(
-                run_id, node_name, json.dumps({"error": "Component execution failed"})
+                run_id, node_name, {"error": "Component execution failed"}
             )
 
     mocker.patch.object(pipeline, "_execute_node", side_effect=mock_execute)

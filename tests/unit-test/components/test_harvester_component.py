@@ -1,8 +1,6 @@
-import json
-
 import pytest
 
-from wrench.components.harvester import Harvester, IncrementalHarvester
+from wrench.components.harvester import Harvester
 from wrench.harvester.base import BaseHarvester
 from wrench.models import Item
 
@@ -24,8 +22,7 @@ class MockBaseHarvester(BaseHarvester):
             else:
                 # Convert dictionary to Item
                 item_id = str(item.get("id", ""))
-                content = json.dumps(item)
-                items.append(Item(id=item_id, content=content))
+                items.append(Item(id=item_id, content=item))
         return items
 
 
@@ -33,7 +30,7 @@ class MockBaseHarvester(BaseHarvester):
 async def test_harvester_component_basic():
     """Test the basic functionality of the Harvester component."""
     # Create test data with proper Item objects
-    test_item = Item(id="1", content=json.dumps({"name": "Test Device"}))
+    test_item = Item(id="1", content={"name": "Test Device"})
 
     # Create mock base harvester
     mock_harvester = MockBaseHarvester(items=[test_item])
@@ -73,9 +70,9 @@ async def test_harvester_component_multiple_items():
     """Test harvester component with multiple items."""
     # Create mock data with multiple items
     mock_items = [
-        Item(id="1", content=json.dumps({"name": "Device 1", "type": "sensor"})),
-        Item(id="2", content=json.dumps({"name": "Device 2", "type": "actuator"})),
-        Item(id="3", content=json.dumps({"name": "Device 3", "type": "sensor"})),
+        Item(id="1", content={"name": "Device 1", "type": "sensor"}),
+        Item(id="2", content={"name": "Device 2", "type": "actuator"}),
+        Item(id="3", content={"name": "Device 3", "type": "sensor"}),
     ]
 
     # Create mock base harvester
@@ -102,15 +99,15 @@ async def test_incremental_harvester_component():
     """Test the incremental harvester component."""
     # Create test data with proper Item objects
     mock_items = [
-        Item(id="1", content=json.dumps({"name": "Device 1", "type": "sensor"})),
-        Item(id="2", content=json.dumps({"name": "Device 2", "type": "actuator"})),
+        Item(id="1", content={"name": "Device 1", "type": "sensor"}),
+        Item(id="2", content={"name": "Device 2", "type": "actuator"}),
     ]
 
     # Create mock base harvester
     mock_harvester = MockBaseHarvester(items=mock_items)
 
     # Create incremental component
-    incremental_harvester = IncrementalHarvester(harvester=mock_harvester)
+    incremental_harvester = Harvester(harvester=mock_harvester)
 
     # First run should create ADD operations for all items
     result = await incremental_harvester.run()

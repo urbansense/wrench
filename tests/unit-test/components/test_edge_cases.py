@@ -1,11 +1,10 @@
-import json
 from unittest.mock import Mock
 
 import pytest
 
 from wrench.components.cataloger import Cataloger
 from wrench.components.grouper import Grouper
-from wrench.components.harvester import Harvester, IncrementalHarvester
+from wrench.components.harvester import Harvester
 from wrench.components.metadatabuilder import MetadataBuilder
 from wrench.models import CommonMetadata, Group, Item
 from wrench.pipeline.types import Operation, OperationType
@@ -41,7 +40,7 @@ async def test_grouper_with_failing_base_grouper():
     grouper_component = Grouper(grouper=FailingMockGrouper())
 
     # Create valid Item objects to test with
-    devices = [Item(id="1", content=json.dumps({"name": "Device 1"}))]
+    devices = [Item(id="1", content={"name": "Device 1"})]
 
     # Should propagate the error
     with pytest.raises(ValueError, match="Failed to group items"):
@@ -76,7 +75,7 @@ async def test_metadatabuilder_with_empty_inputs():
     metadata_builder_component = MetadataBuilder(metadatabuilder=TestMetadataBuilder())
 
     # Test with empty operations (should return None for service_metadata)
-    devices = [Item(id="1", content=json.dumps({"name": "Device 1"}))]
+    devices = [Item(id="1", content={"name": "Device 1"})]
     empty_ops_result = await metadata_builder_component.run(
         devices=devices, operations=[], groups=[]
     )
@@ -114,7 +113,7 @@ async def test_validate_call_validation():
     grouper_component = Grouper(grouper=mock_grouper)
 
     # Valid Items list
-    valid_items = [Item(id="1", content=json.dumps({"name": "Device 1"}))]
+    valid_items = [Item(id="1", content={"name": "Device 1"})]
 
     # This should work fine (proper Item list input)
     await grouper_component.run(devices=valid_items)
@@ -163,7 +162,7 @@ async def test_incremental_harvester_empty_results():
             return []
 
     # Create component
-    incremental_harvester = IncrementalHarvester(harvester=EmptyHarvester())
+    incremental_harvester = Harvester(harvester=EmptyHarvester())
 
     # Should return empty results without error
     result = await incremental_harvester.run()
@@ -195,15 +194,15 @@ async def test_grouper_edge_cases():
     assert len(result.groups) == 0
 
     # Test with single item
-    single_item = [Item(id="1", content=json.dumps({"name": "Single Item"}))]
+    single_item = [Item(id="1", content={"name": "Single Item"})]
     result = await grouper_component.run(devices=single_item)
     assert len(result.groups) == 1
     assert result.groups[0].name == "Group-1"
 
     # Test with duplicate IDs (should be grouped together)
     duplicate_items = [
-        Item(id="dup", content=json.dumps({"name": "Duplicate 1"})),
-        Item(id="dup", content=json.dumps({"name": "Duplicate 2"})),
+        Item(id="dup", content={"name": "Duplicate 1"}),
+        Item(id="dup", content={"name": "Duplicate 2"}),
     ]
     result = await grouper_component.run(devices=duplicate_items)
     assert len(result.groups) == 1

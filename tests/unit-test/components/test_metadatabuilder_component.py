@@ -1,5 +1,3 @@
-import json
-
 import pytest
 
 from wrench.components.metadatabuilder import MetadataBuilder
@@ -37,8 +35,8 @@ async def test_metadatabuilder_component_basic():
     """Test the basic functionality of the MetadataBuilder component."""
     # Create test data with proper Item objects instead of dictionaries
     devices = [
-        Item(id="1", content=json.dumps({"name": "Device 1"})),
-        Item(id="2", content=json.dumps({"name": "Device 2"})),
+        Item(id="1", content={"name": "Device 1"}),
+        Item(id="2", content={"name": "Device 2"}),
     ]
 
     # Create operations for these items
@@ -76,7 +74,7 @@ async def test_metadatabuilder_component_basic():
 async def test_metadatabuilder_component_empty_groups():
     """Test metadata builder with empty group list."""
     # Create test data with proper Item objects
-    devices = [Item(id="1", content=json.dumps({"name": "Device 1"}))]
+    devices = [Item(id="1", content={"name": "Device 1"})]
 
     # Create operations for the items
     operations = [
@@ -107,7 +105,7 @@ async def test_metadatabuilder_component_empty_groups():
 async def test_metadatabuilder_component_custom_metadata():
     """Test metadata builder with custom metadata."""
     # Create test data with proper Item objects
-    devices = [Item(id="1", content=json.dumps({"name": "Device 1"}))]
+    devices = [Item(id="1", content={"name": "Device 1"})]
 
     # Create operations for the items
     operations = [

@@ -3,8 +3,8 @@ import json
 import pytest
 
 from wrench.components.cataloger import Cataloger
-from wrench.components.grouper import IncrementalGrouper
-from wrench.components.harvester import IncrementalHarvester
+from wrench.components.grouper import Grouper
+from wrench.components.harvester import Harvester
 from wrench.components.metadatabuilder import MetadataBuilder
 from wrench.models import CommonMetadata, Group, Item
 from wrench.pipeline.pipeline import Pipeline
@@ -14,9 +14,9 @@ from wrench.pipeline.types import Operation, OperationType
 class MockHarvester:
     def __init__(self):
         self.items = [
-            Item(id="1", content=json.dumps({"name": "Device 1", "type": "sensor"})),
-            Item(id="2", content=json.dumps({"name": "Device 2", "type": "actuator"})),
-            Item(id="3", content=json.dumps({"name": "Device 3", "type": "sensor"})),
+            Item(id="1", content={"name": "Device 1", "type": "sensor"}),
+            Item(id="2", content={"name": "Device 2", "type": "actuator"}),
+            Item(id="3", content={"name": "Device 3", "type": "sensor"}),
         ]
 
     def return_items(self):
@@ -96,8 +96,8 @@ async def test_complete_pipeline_e2e(mocker):
     )
 
     # Add components with the incremental versions
-    pipeline.add_component("harvester", IncrementalHarvester(harvester=mock_harvester))
-    pipeline.add_component("grouper", IncrementalGrouper(grouper=mock_grouper))
+    pipeline.add_component("harvester", Harvester(harvester=mock_harvester))
+    pipeline.add_component("grouper", Grouper(grouper=mock_grouper))
     pipeline.add_component(
         "metadatabuilder", MetadataBuilder(metadatabuilder=mock_metadata_builder)
     )
@@ -179,8 +179,8 @@ async def test_pipeline_partial_execution(mocker):
     )
 
     # Add components with the incremental versions
-    pipeline.add_component("harvester", IncrementalHarvester(harvester=MockHarvester()))
-    pipeline.add_component("grouper", IncrementalGrouper(grouper=MockGrouper()))
+    pipeline.add_component("harvester", Harvester(harvester=MockHarvester()))
+    pipeline.add_component("grouper", Grouper(grouper=MockGrouper()))
 
     # Connect components - include operations
     pipeline.connect(
@@ -235,8 +235,8 @@ async def test_pipeline_with_custom_initial_data(mocker):
     )
 
     # Add components (just grouper and metadata builder)
-    pipeline.add_component("harvester", IncrementalHarvester(harvester=MockHarvester()))
-    pipeline.add_component("grouper", IncrementalGrouper(grouper=MockGrouper()))
+    pipeline.add_component("harvester", Harvester(harvester=MockHarvester()))
+    pipeline.add_component("grouper", Grouper(grouper=MockGrouper()))
     pipeline.add_component(
         "metadatabuilder", MetadataBuilder(metadatabuilder=MockMetadataBuilder())
     )
@@ -283,9 +283,7 @@ async def test_pipeline_with_custom_initial_data(mocker):
     mocker.patch.object(pipeline, "_execute_node", side_effect=mock_execute)
 
     # Custom initial data with operations
-    custom_items = [
-        Item(id="100", content=json.dumps({"name": "Custom Device", "type": "custom"}))
-    ]
+    custom_items = [Item(id="100", content={"name": "Custom Device", "type": "custom"})]
 
     # Create operations for the items
     operations = [
@@ -318,7 +316,7 @@ async def test_incremental_harvester_operations():
     """Test that IncrementalHarvester properly generates operations."""
     # Create a harvester with initial items
     mock_harvester = MockHarvester()
-    incremental_harvester = IncrementalHarvester(harvester=mock_harvester)
+    incremental_harvester = Harvester(harvester=mock_harvester)
 
     # First run should create ADD operations for all items
     result = await incremental_harvester.run()
@@ -331,12 +329,12 @@ async def test_incremental_harvester_operations():
 
     # Update an item
     mock_harvester.items[0] = Item(
-        id="1", content=json.dumps({"name": "Updated Device 1", "type": "sensor"})
+        id="1", content={"name": "Updated Device 1", "type": "sensor"}
     )
 
     # Add a new item
     mock_harvester.items.append(
-        Item(id="4", content=json.dumps({"name": "New Device", "type": "other"}))
+        Item(id="4", content={"name": "New Device", "type": "other"})
     )
 
     # Remove an item - keep a copy for the DELETE operation detection
@@ -364,12 +362,12 @@ async def test_incremental_grouper_operations():
     """Test that IncrementalGrouper properly handles operations."""
     # Create a grouper
     mock_grouper = MockGrouper()
-    incremental_grouper = IncrementalGrouper(grouper=mock_grouper)
+    incremental_grouper = Grouper(grouper=mock_grouper)
 
     # Initial items
     items = [
-        Item(id="1", content=json.dumps({"name": "Device 1", "type": "sensor"})),
-        Item(id="2", content=json.dumps({"name": "Device 2", "type": "actuator"})),
+        Item(id="1", content={"name": "Device 1", "type": "sensor"}),
+        Item(id="2", content={"name": "Device 2", "type": "actuator"}),
     ]
 
     # Initial run with ADD operations
@@ -383,9 +381,7 @@ async def test_incremental_grouper_operations():
     assert len(result.groups) == 2
 
     # Now test with an update that changes the group of an item
-    updated_item = Item(
-        id="1", content=json.dumps({"name": "Device 1", "type": "actuator"})
-    )
+    updated_item = Item(id="1", content={"name": "Device 1", "type": "actuator"})
 
     update_operations = [
         Operation(type=OperationType.UPDATE, item_id="1", item=updated_item)

@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from wrench.components.grouper import Grouper, IncrementalGrouper
+from wrench.components.grouper import Grouper
 from wrench.grouper.base import BaseGrouper
 from wrench.models import Group, Item
 from wrench.pipeline.types import Operation, OperationType
@@ -46,9 +46,9 @@ async def test_grouper_component_basic():
     """Test the basic functionality of the Grouper component."""
     # Create test data with proper Item objects
     devices = [
-        Item(id="1", content=json.dumps({"name": "Device 1", "type": "sensor"})),
-        Item(id="2", content=json.dumps({"name": "Device 2", "type": "actuator"})),
-        Item(id="3", content=json.dumps({"name": "Device 3", "type": "sensor"})),
+        Item(id="1", content={"name": "Device 1", "type": "sensor"}),
+        Item(id="2", content={"name": "Device 2", "type": "actuator"}),
+        Item(id="3", content={"name": "Device 3", "type": "sensor"}),
     ]
 
     # Note: Regular Grouper doesn't need operations, only IncrementalGrouper does
@@ -100,8 +100,8 @@ async def test_grouper_component_empty():
 async def test_grouper_component_predefined_groups():
     """Test grouper component with predefined groups."""
     # Create predefined groups with proper Item objects
-    items1 = [Item(id="1", content=json.dumps({"name": "Test 1"}))]
-    items2 = [Item(id="2", content=json.dumps({"name": "Test 2"}))]
+    items1 = [Item(id="1", content={"name": "Test 1"})]
+    items2 = [Item(id="2", content={"name": "Test 2"})]
 
     predefined_groups = [
         Group(name="test_group", items=items1),
@@ -121,7 +121,7 @@ async def test_grouper_component_predefined_groups():
     grouper_component = Grouper(grouper=mock_grouper)
 
     # Run component with any items (they will be ignored)
-    devices = [Item(id="3", content=json.dumps({"name": "Ignored"}))]
+    devices = [Item(id="3", content={"name": "Ignored"})]
     result = await grouper_component.run(devices=devices)
 
     # Verify results match predefined groups
@@ -140,8 +140,8 @@ async def test_incremental_grouper_component():
     """Test the incremental grouper component."""
     # Create test data with proper Item objects
     devices = [
-        Item(id="1", content=json.dumps({"name": "Device 1", "type": "sensor"})),
-        Item(id="2", content=json.dumps({"name": "Device 2", "type": "actuator"})),
+        Item(id="1", content={"name": "Device 1", "type": "sensor"}),
+        Item(id="2", content={"name": "Device 2", "type": "actuator"}),
     ]
 
     # Create operations for the devices
@@ -154,7 +154,7 @@ async def test_incremental_grouper_component():
     mock_grouper = MockBaseGrouper()
 
     # Create incremental component
-    incremental_grouper = IncrementalGrouper(grouper=mock_grouper)
+    incremental_grouper = Grouper(grouper=mock_grouper)
 
     # Run component with devices and operations
     result = await incremental_grouper.run(devices=devices, operations=operations)
@@ -168,9 +168,7 @@ async def test_incremental_grouper_component():
     assert len(result.groups) == 0
 
     # Run with a new device and an update operation
-    new_device = Item(
-        id="3", content=json.dumps({"name": "Device 3", "type": "sensor"})
-    )
+    new_device = Item(id="3", content={"name": "Device 3", "type": "sensor"})
     update_operations = [
         Operation(type=OperationType.ADD, item_id=new_device.id, item=new_device)
     ]

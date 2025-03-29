@@ -1,8 +1,6 @@
-import json
-
 import pytest
 
-from wrench.components.grouper import IncrementalGrouper
+from wrench.components.grouper import Grouper
 from wrench.grouper.base import BaseGrouper
 from wrench.models import Group, Item
 from wrench.pipeline.types import Operation, OperationType
@@ -29,8 +27,8 @@ class MockBaseGrouper(BaseGrouper):
 async def test_incremental_grouper_first_run():
     """Test the first run with no existing groups."""
     # Create test items
-    item1 = Item(id="1", content=json.dumps({"value": "data1"}))
-    item2 = Item(id="2", content=json.dumps({"value": "data2"}))
+    item1 = Item(id="1", content={"value": "data1"})
+    item2 = Item(id="2", content={"value": "data2"})
 
     # Define groups to be returned by the mock grouper
     group1 = Group(name="Group1", items=[item1])
@@ -41,7 +39,7 @@ async def test_incremental_grouper_first_run():
         return [group1, group2]
 
     mock_grouper = MockBaseGrouper(group_mapping=mock_group_items)
-    incremental_grouper = IncrementalGrouper(grouper=mock_grouper)
+    incremental_grouper = Grouper(grouper=mock_grouper)
 
     # Run grouper for the first time
     result = await incremental_grouper.run([item1, item2], [])
@@ -56,9 +54,9 @@ async def test_incremental_grouper_first_run():
 async def test_incremental_grouper_add_operation():
     """Test applying an ADD operation to existing groups."""
     # Create test items
-    item1 = Item(id="1", content=json.dumps({"value": "data1"}))
-    item2 = Item(id="2", content=json.dumps({"value": "data2"}))
-    item3 = Item(id="3", content=json.dumps({"value": "data3"}))
+    item1 = Item(id="1", content={"value": "data1"})
+    item2 = Item(id="2", content={"value": "data2"})
+    item3 = Item(id="3", content={"value": "data3"})
 
     # Define groups for initial state
     group1 = Group(name="Group1", items=[item1])
@@ -74,7 +72,7 @@ async def test_incremental_grouper_add_operation():
         return [group1, group2]
 
     mock_grouper = MockBaseGrouper(group_mapping=mock_group_items)
-    incremental_grouper = IncrementalGrouper(grouper=mock_grouper)
+    incremental_grouper = Grouper(grouper=mock_grouper)
 
     # First run to establish baseline
     await incremental_grouper.run([item1, item2], [])
@@ -104,11 +102,11 @@ async def test_incremental_grouper_add_operation():
 async def test_incremental_grouper_update_operation():
     """Test applying an UPDATE operation to existing groups."""
     # Create test items
-    item1 = Item(id="1", content=json.dumps({"value": "data1"}))
-    item2 = Item(id="2", content=json.dumps({"value": "data2"}))
+    item1 = Item(id="1", content={"value": "data1"})
+    item2 = Item(id="2", content={"value": "data2"})
 
     # Create updated item
-    item2_updated = Item(id="2", content=json.dumps({"value": "data2_updated"}))
+    item2_updated = Item(id="2", content={"value": "data2_updated"})
 
     # Define groups
     group1 = Group(name="Group1", items=[item1])
@@ -120,14 +118,14 @@ async def test_incremental_grouper_update_operation():
     # Create a mock grouper with dynamic behavior
     def mock_group_items(items):
         if any(
-            item.id == "2" and item.content == json.dumps({"value": "data2_updated"})
+            item.id == "2" and item.content == {"value": "data2_updated"}
             for item in items
         ):
             return [group2_updated]
         return [group1, group2]
 
     mock_grouper = MockBaseGrouper(group_mapping=mock_group_items)
-    incremental_grouper = IncrementalGrouper(grouper=mock_grouper)
+    incremental_grouper = Grouper(grouper=mock_grouper)
 
     # First run to establish baseline
     await incremental_grouper.run([item1, item2], [])
@@ -146,15 +144,15 @@ async def test_incremental_grouper_update_operation():
     updated_group = result.groups[0]
     assert len(updated_group.items) == 1
     assert updated_group.items[0].id == "2"
-    assert updated_group.items[0].content == json.dumps({"value": "data2_updated"})
+    assert updated_group.items[0].content == {"value": "data2_updated"}
 
 
 @pytest.mark.asyncio
 async def test_incremental_grouper_delete_operation():
     """Test applying a DELETE operation to existing groups."""
     # Create test items
-    item1 = Item(id="1", content=json.dumps({"value": "data1"}))
-    item2 = Item(id="2", content=json.dumps({"value": "data2"}))
+    item1 = Item(id="1", content={"value": "data1"})
+    item2 = Item(id="2", content={"value": "data2"})
 
     # Define groups
     group1 = Group(name="Group1", items=[item1, item2])
@@ -164,7 +162,7 @@ async def test_incremental_grouper_delete_operation():
         return [group1]
 
     mock_grouper = MockBaseGrouper(group_mapping=mock_group_items)
-    incremental_grouper = IncrementalGrouper(grouper=mock_grouper)
+    incremental_grouper = Grouper(grouper=mock_grouper)
 
     # First run to establish baseline
     await incremental_grouper.run([item1, item2], [])
@@ -188,9 +186,9 @@ async def test_incremental_grouper_delete_operation():
 async def test_incremental_grouper_multiple_operations():
     """Test applying multiple operations in one run."""
     # Create test items
-    item1 = Item(id="1", content=json.dumps({"value": "data1"}))
-    item2 = Item(id="2", content=json.dumps({"value": "data2"}))
-    item3 = Item(id="3", content=json.dumps({"value": "data3"}))
+    item1 = Item(id="1", content={"value": "data1"})
+    item2 = Item(id="2", content={"value": "data2"})
+    item3 = Item(id="3", content={"value": "data3"})
 
     # Define groups
     group1 = Group(name="Group1", items=[item1, item2])
@@ -203,7 +201,7 @@ async def test_incremental_grouper_multiple_operations():
         return [group1]
 
     mock_grouper = MockBaseGrouper(group_mapping=mock_group_items)
-    incremental_grouper = IncrementalGrouper(grouper=mock_grouper)
+    incremental_grouper = Grouper(grouper=mock_grouper)
 
     # First run to establish baseline
     await incremental_grouper.run([item1, item2], [])
@@ -237,8 +235,8 @@ async def test_incremental_grouper_multiple_operations():
 async def test_incremental_grouper_no_operations():
     """Test running with no operations after initial state is set."""
     # Create test items
-    item1 = Item(id="1", content=json.dumps({"value": "data1"}))
-    item2 = Item(id="2", content=json.dumps({"value": "data2"}))
+    item1 = Item(id="1", content={"value": "data1"})
+    item2 = Item(id="2", content={"value": "data2"})
 
     # Define groups
     group1 = Group(name="Group1", items=[item1])
@@ -249,7 +247,7 @@ async def test_incremental_grouper_no_operations():
         return [group1, group2]
 
     mock_grouper = MockBaseGrouper(group_mapping=mock_group_items)
-    incremental_grouper = IncrementalGrouper(grouper=mock_grouper)
+    incremental_grouper = Grouper(grouper=mock_grouper)
 
     # First run to establish baseline
     await incremental_grouper.run([item1, item2], [])
