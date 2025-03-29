@@ -1,12 +1,14 @@
-from unittest.mock import Mock, patch
+import json
+from unittest.mock import Mock
 
 import pytest
 
 from wrench.components.cataloger import Cataloger
 from wrench.components.grouper import Grouper
-from wrench.components.harvester import Harvester
+from wrench.components.harvester import Harvester, IncrementalHarvester
 from wrench.components.metadatabuilder import MetadataBuilder
-from wrench.models import CommonMetadata
+from wrench.models import CommonMetadata, Group, Item
+from wrench.pipeline.types import Operation, OperationType
 
 
 @pytest.mark.asyncio
@@ -38,16 +40,20 @@ async def test_grouper_with_failing_base_grouper():
     # Create component
     grouper_component = Grouper(grouper=FailingMockGrouper())
 
+    # Create valid Item objects to test with
+    devices = [Item(id="1", content=json.dumps({"name": "Device 1"}))]
+
     # Should propagate the error
     with pytest.raises(ValueError, match="Failed to group items"):
-        await grouper_component.run([{"id": 1}])
+        await grouper_component.run(devices=devices)
 
 
 @pytest.mark.asyncio
 async def test_metadatabuilder_with_empty_inputs():
     """Test metadata builder with empty inputs."""
 
-    class MinimalMockMetadataBuilder:
+    # Create a metadata builder that returns valid metadata
+    class TestMetadataBuilder:
         def build_service_metadata(self, devices):
             return CommonMetadata(
                 endpoint_url="http://test-url.com/",
@@ -59,7 +65,7 @@ async def test_metadatabuilder_with_empty_inputs():
 
         def build_group_metadata(self, group):
             return CommonMetadata(
-                endpoint_url="http://test-url.com/",
+                endpoint_url=f"http://test-url.com/group/{group.name}",
                 source_type="mock-source",
                 title=f"Empty Group {group.name}",
                 description="Empty group",
@@ -67,14 +73,26 @@ async def test_metadatabuilder_with_empty_inputs():
             )
 
     # Create component
-    metadata_builder_component = MetadataBuilder(
-        metadatabuilder=MinimalMockMetadataBuilder()
+    metadata_builder_component = MetadataBuilder(metadatabuilder=TestMetadataBuilder())
+
+    # Test with empty operations (should return None for service_metadata)
+    devices = [Item(id="1", content=json.dumps({"name": "Device 1"}))]
+    empty_ops_result = await metadata_builder_component.run(
+        devices=devices, operations=[], groups=[]
     )
 
-    # Test with empty inputs
-    result = await metadata_builder_component.run([], [])
+    # Verify early return behavior with empty operations
+    assert empty_ops_result.service_metadata is None
+    assert len(empty_ops_result.group_metadata) == 0
 
-    # Should still produce service metadata but no group metadata
+    # Test with non-empty operations (should call the builder methods)
+    operations = [Operation(type=OperationType.ADD, item_id="1", item=devices[0])]
+    result = await metadata_builder_component.run(
+        devices=devices, operations=operations, groups=[]
+    )
+
+    # Verify normal behavior with operations
+    assert result.service_metadata is not None
     assert result.service_metadata.title == "Empty Service"
     assert len(result.group_metadata) == 0
 
@@ -83,23 +101,27 @@ async def test_metadatabuilder_with_empty_inputs():
 async def test_validate_call_validation():
     """Test that @validate_call validation works correctly."""
     # Create a component with a mock harvester
-    harvester_component = Harvester(harvester=Mock())
+    mock_harvester = Mock()
+    mock_harvester.return_items.return_value = []
+    harvester_component = Harvester(harvester=mock_harvester)
 
-    # Patch the run method to check validation
-    with patch.object(harvester_component._harvester, "return_items", return_value=[]):
-        # This should work fine
-        await harvester_component.run()
+    # This should work fine
+    await harvester_component.run()
 
     # Create a component with a mock grouper
-    grouper_component = Grouper(grouper=Mock())
-    grouper_component._grouper.group_items.return_value = []
+    mock_grouper = Mock()
+    mock_grouper.group_items.return_value = []
+    grouper_component = Grouper(grouper=mock_grouper)
 
-    # This should work fine (list input)
-    await grouper_component.run([])
+    # Valid Items list
+    valid_items = [Item(id="1", content=json.dumps({"name": "Device 1"}))]
+
+    # This should work fine (proper Item list input)
+    await grouper_component.run(devices=valid_items)
 
     # This should raise a validation error (wrong input type)
     with pytest.raises(Exception):
-        await grouper_component.run("not a list")
+        await grouper_component.run(devices="not a list")
 
 
 @pytest.mark.asyncio
@@ -118,10 +140,71 @@ async def test_cataloger_with_invalid_inputs():
     )
 
     # This should work (empty list)
-    result = await cataloger_component.run(service_metadata, [])
+    result = await cataloger_component.run(
+        service_metadata=service_metadata, group_metadata=[]
+    )
     assert result.success is True
     assert len(result.groups) == 0
 
     # But None instead of list should raise validation error
     with pytest.raises(Exception):
-        await cataloger_component.run(service_metadata, None)
+        await cataloger_component.run(
+            service_metadata=service_metadata, group_metadata=None
+        )
+
+
+@pytest.mark.asyncio
+async def test_incremental_harvester_empty_results():
+    """Test IncrementalHarvester when base harvester returns empty results."""
+
+    # Create a mock harvester that returns an empty list
+    class EmptyHarvester:
+        def return_items(self):
+            return []
+
+    # Create component
+    incremental_harvester = IncrementalHarvester(harvester=EmptyHarvester())
+
+    # Should return empty results without error
+    result = await incremental_harvester.run()
+    assert len(result.devices) == 0
+    assert len(result.operations) == 0
+
+
+@pytest.mark.asyncio
+async def test_grouper_edge_cases():
+    """Test grouper with various edge cases."""
+
+    # Create a mock grouper
+    class EdgeCaseGrouper:
+        def group_items(self, items):
+            # Group by ID for simplicity
+            groups = {}
+            for item in items:
+                group_name = f"Group-{item.id}"
+                if group_name not in groups:
+                    groups[group_name] = Group(name=group_name, items=[])
+                groups[group_name].items.append(item)
+            return list(groups.values())
+
+    # Create component
+    grouper_component = Grouper(grouper=EdgeCaseGrouper())
+
+    # Test with empty list
+    result = await grouper_component.run(devices=[])
+    assert len(result.groups) == 0
+
+    # Test with single item
+    single_item = [Item(id="1", content=json.dumps({"name": "Single Item"}))]
+    result = await grouper_component.run(devices=single_item)
+    assert len(result.groups) == 1
+    assert result.groups[0].name == "Group-1"
+
+    # Test with duplicate IDs (should be grouped together)
+    duplicate_items = [
+        Item(id="dup", content=json.dumps({"name": "Duplicate 1"})),
+        Item(id="dup", content=json.dumps({"name": "Duplicate 2"})),
+    ]
+    result = await grouper_component.run(devices=duplicate_items)
+    assert len(result.groups) == 1
+    assert len(result.groups[0].items) == 2
