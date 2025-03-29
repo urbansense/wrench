@@ -6,6 +6,7 @@ from wrench.components.cataloger import Cataloger
 from wrench.components.grouper import Grouper
 from wrench.components.harvester import Harvester
 from wrench.components.metadatabuilder import MetadataBuilder
+from wrench.exceptions import HarvesterError
 from wrench.models import CommonMetadata, Group, Item
 from wrench.pipeline.types import Operation, OperationType
 
@@ -23,7 +24,7 @@ async def test_harvester_with_failing_base_harvester():
     harvester_component = Harvester(harvester=FailingMockHarvester())
 
     # Should propagate the error
-    with pytest.raises(ValueError, match="Failed to harvest items"):
+    with pytest.raises(HarvesterError, match="Failed to harvest items"):
         await harvester_component.run()
 
 

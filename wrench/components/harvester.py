@@ -1,9 +1,13 @@
+import hashlib
+import json
 from typing import Sequence
 
 from pydantic import validate_call
 
 from wrench.components.types import Items
+from wrench.exceptions import HarvesterError
 from wrench.harvester import BaseHarvester
+from wrench.log import logger
 from wrench.models import Item
 from wrench.pipeline.types import Component, Operation, OperationType
 
@@ -14,40 +18,98 @@ class Harvester(Component):
     def __init__(self, harvester: BaseHarvester):
         self._harvester = harvester
         self._previous_items = None  # will be stored between runs
+        self.logger = logger.getChild(self.__class__.__name__)
 
     @validate_call
     async def run(self) -> Items:
-        current_items = self._harvester.return_items()
+        """
+        Run the harvester and detect changes compared to previous run.
 
-        if self._previous_items:
-            operations = self._detect_operations(self._previous_items, current_items)
-        else:
-            operations = [
-                Operation(type=OperationType.ADD, item_id=item.id, item=item)
-                for item in current_items
-            ]
+        Returns:
+            Items: Current devices and operations (add/update/delete) since last run
 
-        self._previous_items = current_items
+        Raises:
+            HarvesterError: If there's an issue retrieving items from the harvester
+        """
+        try:
+            # Fetch current items from the harvester
+            current_items = self._harvester.return_items()
 
-        return Items(devices=current_items, operations=operations)
+            # Generate operations based on differences from previous run
+            if self._previous_items:
+                self.logger.debug(
+                    f"""Comparing current state ({len(current_items)} items)
+                    with previous state ({len(self._previous_items)} items)"""
+                )
+                operations = self._detect_operations(
+                    self._previous_items, current_items
+                )
+                self.logger.info(f"Detected {len(operations)} changes: ")
+            else:
+                # First run - treat all as new additions
+                self.logger.info(
+                    f"First run, treating all {len(current_items)} items as new"
+                )
+                operations = [
+                    Operation(type=OperationType.ADD, item_id=item.id, item=item)
+                    for item in current_items
+                ]
+
+            # Update state for next run
+            self._previous_items = current_items
+
+            return Items(devices=current_items, operations=operations)
+
+        except Exception as e:
+            self.logger.error(f"Error during harvester run: {e}")
+            raise HarvesterError(
+                f"Failed to retrieve or process items: {str(e)}"
+            ) from e
 
     def _detect_operations(
         self, previous: Sequence[Item], current: Sequence[Item]
     ) -> list[Operation]:
+        """
+        Detect changes between previous and current item sets.
+
+        Identifies items that were added, updated, or deleted by comparing
+        the two datasets using item IDs and content hashes.
+
+        Args:
+            previous: Items from the previous run
+            current: Items from the current run
+
+        Returns:
+            list[Operation]: List of operations representing changes
+        """
         operations = []
+
+        # Create maps for faster lookups
         prev_map = {item.id: item for item in previous}
         curr_map = {item.id: item for item in current}
 
+        # Create content hashes for more efficient comparisons
+        prev_hashes = {
+            item_id: self._hash_content(item.content)
+            for item_id, item in prev_map.items()
+        }
+
+        # Find additions and updates
         for item_id, item in curr_map.items():
             if item_id not in prev_map:
+                # Item is new
                 operations.append(
                     Operation(type=OperationType.ADD, item_id=item_id, item=item)
                 )
-            elif item.content != prev_map[item_id].content:
+            elif self._is_item_changed(
+                prev_map[item_id], item, prev_hashes.get(item_id)
+            ):
+                # Item exists but was updated
                 operations.append(
                     Operation(type=OperationType.UPDATE, item_id=item_id, item=item)
                 )
 
+        # Find deletions
         for item_id, item in prev_map.items():
             if item_id not in curr_map:
                 operations.append(
@@ -55,3 +117,50 @@ class Harvester(Component):
                 )
 
         return operations
+
+    def _is_item_changed(
+        self, prev_item: Item, curr_item: Item, prev_hash: str | None = None
+    ) -> bool:
+        """
+        Determine if an item has changed by comparing content.
+
+        This method uses content hashing for more efficient comparisons when available.
+
+        Args:
+            prev_item: Item from previous run
+            curr_item: Corresponding item from current run
+            prev_hash: Optional pre-computed hash of previous item content
+
+        Returns:
+            bool: True if the item's content has changed, False otherwise
+        """
+        # If we have a pre-computed hash, use it for comparison
+        if prev_hash is not None:
+            curr_hash = self._hash_content(curr_item.content)
+            return prev_hash != curr_hash
+
+        # Fall back to direct content comparison if no hash provided
+        return prev_item.content != curr_item.content
+
+    def _hash_content(self, content: dict) -> str:
+        """
+        Create a hash of item content for efficient change detection.
+
+        Args:
+            content: The content to hash
+
+        Returns:
+            str: Hash string representing the content
+        """
+        try:
+            # For dictionary or complex content
+            if isinstance(content, dict):
+                # Sort keys for consistent hashing
+                content_str = json.dumps(content, sort_keys=True)
+            else:
+                content_str = str(content)
+
+            return hashlib.md5(content_str.encode("utf-8")).hexdigest()
+        except Exception:
+            # If hashing fails, fall back to string representation
+            return str(content)
