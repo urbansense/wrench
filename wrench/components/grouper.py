@@ -103,7 +103,7 @@ class Grouper(Component):
 
         # Delete items from existing groups if there are deleted items
         if deleted_items:
-            modified_groups.append(*self._delete_items(updated_groups, deleted_items))
+            modified_groups.extend(self._delete_items(updated_groups, deleted_items))
 
         return modified_groups
 
