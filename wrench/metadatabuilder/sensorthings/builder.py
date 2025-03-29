@@ -1,15 +1,14 @@
 from datetime import datetime, timezone
-from functools import reduce
-from operator import __or__
 from typing import Sequence
 
 from wrench.harvester.sensorthings.models import Thing
 from wrench.metadatabuilder.base import BaseMetadataBuilder
 from wrench.metadatabuilder.sensorthings.querybuilder import (
-    FilterExpression,
+    CombinedFilter,
+    FilterOperator,
     ThingQuery,
 )
-from wrench.models import CommonMetadata, Group, TimeFrame
+from wrench.models import CommonMetadata, Group, Item, TimeFrame
 from wrench.utils import ContentGenerator
 
 from .spatial import (
@@ -43,7 +42,7 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
         self.service_spatial_calculator = PolygonalExtentCalculator()
         self.group_spatial_calculator = GeometryCollector()
 
-    def build_service_metadata(self, things_dict: Sequence[dict]) -> CommonMetadata:
+    def build_service_metadata(self, items: Sequence[Item]) -> CommonMetadata:
         """
         Retrieves metadata for the SensorThings data.
 
@@ -56,7 +55,7 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
                             identifier, description, spatial extent, temporal extent,
                             source type, and last updated time.
         """
-        things = [Thing.model_validate(thing) for thing in things_dict]
+        things = [Thing.model_validate(item.content) for item in items]
 
         geographic_extent = self.service_spatial_calculator.calculate_extent(things)
         timeframe = self._calculate_timeframe(things)
@@ -85,7 +84,7 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
             metadata (CommonMetadata): CommonMetadata extracted
             from the groups
         """
-        things_in_group = [Thing.model_validate(thing) for thing in group.items]
+        things_in_group = [Thing.model_validate(item.content) for item in group.items]
 
         geographic_extent = self.group_spatial_calculator.calculate_extent(
             things_in_group
@@ -171,12 +170,13 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
         Returns:
             url (str): The resource URL with the ID of Things filtered
         """
-        filters: list[FilterExpression] = []
+        if not things:
+            raise ValueError("Things list is empty, cannot build URL")
 
-        for thing in things:
-            filters.append(ThingQuery.property("@iot.id").eq(thing.id))
+        filters = [ThingQuery.property("@iot.id").eq(thing.id) for thing in things]
+
         if filters:
-            filter_expression = reduce(__or__, filters)
+            filter_expression = CombinedFilter(FilterOperator.OR, filters)
         else:
             raise ValueError("Filters is empty, check if @iot.id exists")
 
