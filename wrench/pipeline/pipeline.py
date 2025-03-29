@@ -389,7 +389,7 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             # Store results
             if run_result.result is not None:
                 await self.store.add_result_for_component(
-                    run_id, node_name, run_result.result.model_dump_json()
+                    run_id, node_name, run_result.result
                 )
 
             # Update status

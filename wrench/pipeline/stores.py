@@ -5,6 +5,8 @@ import json
 import os
 from typing import Any, Generic, Optional, TypeVar
 
+from pydantic import BaseModel
+
 T = TypeVar("T")
 
 
@@ -123,7 +125,10 @@ class FileStore(ResultStore):
                 raise KeyError(f"Key '{key}' already exists and overwrite is False")
 
             with open(file_path, "w") as f:
-                json.dump(value, f)
+                if isinstance(value, BaseModel):
+                    json.dumps(value.model_dump_json(), f)
+                else:
+                    json.dump(value, f)
 
     async def get(self, key: str) -> Optional[Any]:
         file_path = self._get_file_path(key)

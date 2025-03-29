@@ -22,9 +22,9 @@ class Grouper(Component):
         self._grouper = grouper
 
     @validate_call()
-    async def run(self, items: Sequence[Item]) -> Groups:
+    async def run(self, devices: Sequence[Item]) -> Groups:
         """Run the grouper and group Items."""
-        groups = self._grouper.group_items(items)
+        groups = self._grouper.group_items(devices)
         return Groups(groups=groups)
 
 
