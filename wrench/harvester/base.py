@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel
 
 from wrench.log import logger
+from wrench.models import Item
 
 
 class BaseHarvester(ABC):
@@ -11,7 +12,7 @@ class BaseHarvester(ABC):
         self.logger = logger.getChild(self.__class__.__name__)
 
     @abstractmethod
-    def return_items(self) -> list:
+    def return_items(self) -> list[Item]:
         pass
 
 

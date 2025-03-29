@@ -25,10 +25,14 @@ class Cataloger(Component):
 
     @validate_call
     async def run(
-        self, service_metadata: CommonMetadata, group_metadata: Sequence[CommonMetadata]
+        self,
+        service_metadata: CommonMetadata | None,
+        group_metadata: Sequence[CommonMetadata],
     ) -> CatalogerStatus:
         """Run the cataloger and register metadata."""
         try:
+            if service_metadata is None:
+                return CatalogerStatus(success=True, groups=[])
             # Directly get items from the harvester
             self._cataloger.register(service=service_metadata, groups=group_metadata)
             return CatalogerStatus(

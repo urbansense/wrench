@@ -1,6 +1,8 @@
 from typing import ClassVar, Literal
 
 from wrench.components import Cataloger, Grouper, Harvester, MetadataBuilder
+from wrench.components.grouper import IncrementalGrouper
+from wrench.components.harvester import IncrementalHarvester
 from wrench.pipeline.config.object_config import ComponentType
 from wrench.pipeline.config.template_pipeline.base import TemplatePipelineConfig
 from wrench.pipeline.config.types import PipelineType
@@ -25,10 +27,10 @@ class SensorRegistrationPipelineConfig(TemplatePipelineConfig):
     template_: Literal[PipelineType.SENSOR_PIPELINE] = PipelineType.SENSOR_PIPELINE
 
     def _get_harvester(self) -> Harvester:
-        return Harvester(harvester=self.get_default_harvester())
+        return IncrementalHarvester(harvester=self.get_default_harvester())
 
     def _get_grouper(self) -> Grouper:
-        return Grouper(grouper=self.get_default_grouper())
+        return IncrementalGrouper(grouper=self.get_default_grouper())
 
     def _get_metadatabuilder(self) -> MetadataBuilder:
         return MetadataBuilder(metadatabuilder=self.get_default_metadatabuilder())
@@ -42,14 +44,20 @@ class SensorRegistrationPipelineConfig(TemplatePipelineConfig):
             ConnectionDefinition(
                 start="harvester",
                 end="grouper",
-                input_config={"devices": "harvester.devices"},
+                input_config={
+                    "devices": "harvester.devices",
+                    "operations": "harvester.operations",
+                },
             )
         )
         connections.append(
             ConnectionDefinition(
                 start="harvester",
                 end="metadatabuilder",
-                input_config={"devices": "harvester.devices"},
+                input_config={
+                    "devices": "harvester.devices",
+                    "operations": "harvester.operations",
+                },
             )
         )
         connections.append(

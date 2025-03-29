@@ -1,4 +1,5 @@
 from wrench.harvester.base import BaseHarvester, TranslationService
+from wrench.models import Item
 
 from .client import SensorThingsClient
 from .config import PaginationConfig
@@ -54,7 +55,8 @@ class SensorThingsHarvester(BaseHarvester):
 
         return [self.translator.translate(thing) for thing in things]
 
-    def return_items(self) -> list[dict]:
+    def return_items(self) -> list[Item]:
         """Returns things."""
-        things_dict = [thing.model_dump() for thing in self.things]
-        return things_dict
+        return [
+            Item(id=thing.id, content=thing.model_dump_json()) for thing in self.things
+        ]

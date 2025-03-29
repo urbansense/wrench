@@ -4,6 +4,8 @@ from typing import Any, ClassVar, Literal, Optional, Union
 from pydantic import field_validator
 
 from wrench.cataloger import BaseCataloger
+from wrench.components.grouper import IncrementalGrouper
+from wrench.components.harvester import IncrementalHarvester
 from wrench.grouper import BaseGrouper
 from wrench.harvester import BaseHarvester
 from wrench.metadatabuilder import BaseMetadataBuilder
@@ -171,24 +173,25 @@ class AbstractPipelineConfig(AbstractConfig):
             logger.debug(f"PIPELINE_CONFIG: closing driver {driver_name}: {driver}")
             driver.close()
 
-    def get_harvester_by_name(self, name: str) -> BaseHarvester:
-        harvesters: dict[str, BaseHarvester] = self._global_data.get(
+    def get_harvester_by_name(self, name: str) -> IncrementalHarvester:
+        harvesters: dict[str, IncrementalHarvester] = self._global_data.get(
             "harvester_config", {}
         )
         return harvesters[name]
 
-    def get_default_harvester(self) -> BaseHarvester:
+    def get_default_harvester(self) -> IncrementalHarvester:
         return self.get_harvester_by_name(self.DEFAULT_NAME)
 
-    def get_grouper_by_name(self, name: str) -> BaseGrouper:
-        llms: dict[str, BaseGrouper] = self._global_data.get("grouper_config", {})
+    def get_grouper_by_name(self, name: str) -> IncrementalGrouper:
+        llms: dict[str, IncrementalGrouper] = self._global_data.get(
+            "grouper_config", {}
+        )
         return llms[name]
 
-    def get_default_grouper(self) -> BaseGrouper:
+    def get_default_grouper(self) -> IncrementalGrouper:
         return self.get_grouper_by_name(self.DEFAULT_NAME)
 
     def get_metadatabuilder_by_name(self, name: str) -> BaseMetadataBuilder:
-        print(self._global_data)
         metadatabuilder: dict[str, BaseMetadataBuilder] = self._global_data.get(
             "metadatabuilder_config", {}
         )
