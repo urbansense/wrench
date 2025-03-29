@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Sequence
 
-from wrench.models import Group
+from wrench.models import Group, Item
 
 
 class BaseGrouper(ABC):
     @abstractmethod
-    def group_items(self, items: Sequence[dict]) -> list[Group]:
+    def group_items(self, items: Sequence[Item]) -> list[Group]:
         """
         Groups the given list of items into a list of Group objects.
 

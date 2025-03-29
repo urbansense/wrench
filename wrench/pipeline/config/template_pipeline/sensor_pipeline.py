@@ -1,6 +1,8 @@
 from typing import ClassVar, Literal
 
-from wrench.components import Cataloger, Grouper, Harvester, MetadataBuilder
+from wrench.components import Cataloger, MetadataBuilder
+from wrench.components.grouper import Grouper
+from wrench.components.harvester import Harvester
 from wrench.pipeline.config.object_config import ComponentType
 from wrench.pipeline.config.template_pipeline.base import TemplatePipelineConfig
 from wrench.pipeline.config.types import PipelineType
@@ -42,14 +44,20 @@ class SensorRegistrationPipelineConfig(TemplatePipelineConfig):
             ConnectionDefinition(
                 start="harvester",
                 end="grouper",
-                input_config={"devices": "harvester.devices"},
+                input_config={
+                    "devices": "harvester.devices",
+                    "operations": "harvester.operations",
+                },
             )
         )
         connections.append(
             ConnectionDefinition(
                 start="harvester",
                 end="metadatabuilder",
-                input_config={"devices": "harvester.devices"},
+                input_config={
+                    "devices": "harvester.devices",
+                    "operations": "harvester.operations",
+                },
             )
         )
         connections.append(

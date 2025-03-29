@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 from wrench.log import logger
 
-from .component import Component, DataModel
+from .component import Component
 from .exceptions import (
     ComponentNotFoundError,
     PipelineDefinitionError,
@@ -387,14 +387,9 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
 
             # Store results
             if run_result.result is not None:
-                if isinstance(run_result.result, DataModel):
-                    await self.store.add_result_for_component(
-                        run_id, node_name, run_result.result.model_dump()
-                    )
-                else:
-                    await self.store.add_result_for_component(
-                        run_id, node_name, run_result.result
-                    )
+                await self.store.add_result_for_component(
+                    run_id, node_name, run_result.result.model_dump(mode="json")
+                )
 
             # Update status
             await self.set_node_status(run_id, node_name, run_result.status)
@@ -450,5 +445,4 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             else:
                 # Map entire result
                 node_inputs[param_name] = source_result
-
         return node_inputs

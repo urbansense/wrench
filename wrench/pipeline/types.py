@@ -5,6 +5,7 @@ from typing import Any, Awaitable, Protocol, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from wrench.models import Item
 from wrench.pipeline.component import Component, DataModel
 
 
@@ -45,6 +46,7 @@ class RunStatus(Enum):
     RUNNING = "RUNNING"
     DONE = "DONE"
     FAILED = "FAILED"
+    SKIPPED = "SKIPPED"
 
     def possible_next_status(self) -> list["RunStatus"]:
         """Get possible next statuses from current."""
@@ -117,3 +119,19 @@ RelationInputType = Union[str, dict[str, Union[str, list[dict[str, str]]]]]
 - str (for label and description)
 - list[dict[str, str]] (for properties)
 """
+
+
+class OperationType(str, Enum):
+    ADD = "add"
+    UPDATE = "update"
+    DELETE = "delete"
+
+
+class Operation(BaseModel):
+    """Represents and operation on a data item."""
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    type: OperationType
+    item_id: str
+    item: Item

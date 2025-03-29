@@ -188,7 +188,6 @@ class AbstractPipelineConfig(AbstractConfig):
         return self.get_grouper_by_name(self.DEFAULT_NAME)
 
     def get_metadatabuilder_by_name(self, name: str) -> BaseMetadataBuilder:
-        print(self._global_data)
         metadatabuilder: dict[str, BaseMetadataBuilder] = self._global_data.get(
             "metadatabuilder_config", {}
         )

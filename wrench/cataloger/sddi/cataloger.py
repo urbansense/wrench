@@ -42,18 +42,25 @@ class SDDICataloger(BaseCataloger):
         self.ckan_server = RemoteCKAN(address=self.endpoint, apikey=self.api_key)
         self.owner_org = owner_org
 
+        self._registries: set[str] = set()
+
     def register(self, service: CommonMetadata, groups: Sequence[CommonMetadata]):
         online_service = self._create_online_service(service)
         device_groups = self._create_device_groups(groups)
 
         try:
+            if online_service.name in self._registries:
+                self._update_api_service(online_service)
             self._register_api_service(online_service)
 
             self.logger.info("Successfully registered API Service")
 
             if groups:
-                self._register_device_groups(device_groups)
                 for d in device_groups:
+                    if d.name in self._registries:
+                        self._update_device_group(d)
+                    self._register_device_group(d)
+
                     self.logger.info(
                         "Creating relationships for device_group %s", d.name
                     )
@@ -67,18 +74,30 @@ class SDDICataloger(BaseCataloger):
             raise
 
     def _register_api_service(self, api_service: OnlineService):
+        self._registries.add(api_service.name)
         pkg = self.ckan_server.call_action(
             action="package_create", data_dict=api_service.model_dump()
         )
         return pkg
 
-    def _register_device_groups(self, device_groups: list[DeviceGroup]):
-        for device_group in device_groups:
-            pkg = self.ckan_server.call_action(
-                action="package_create",
-                data_dict=device_group.model_dump(),
-            )
+    def _register_device_group(self, device_group: DeviceGroup):
+        self._registries.add(device_group.name)
+        pkg = self.ckan_server.call_action(
+            action="package_create",
+            data_dict=device_group.model_dump(),
+        )
+        return pkg
 
+    def _update_api_service(self, api_service: OnlineService):
+        pkg = self.ckan_server.call_action(
+            action="package_patch", data_dict=api_service.model_dump()
+        )
+        return pkg
+
+    def _update_device_group(self, device_group: DeviceGroup):
+        pkg = self.ckan_server.call_action(
+            action="package_patch", data_dict=device_group.model_dump()
+        )
         return pkg
 
     def _register_relationship(self, api_service_name: str, device_group_name: str):

@@ -1,6 +1,7 @@
 from typing import Any
 
 import geojson
+import xxhash
 from geojson import Feature, FeatureCollection
 from geojson.geometry import Geometry
 from geojson.utils import coords
@@ -113,3 +114,12 @@ class Thing(SensorThingsBase):
             str: A JSON string representation of the model.
         """
         return self.model_dump_json(by_alias=True, exclude_none=True)
+
+    def __hash__(self):
+        """
+        Make comparison between Things easier by hashing the contents.
+
+        Returns:
+            str: A hash string created from the Thing content.
+        """
+        return xxhash.xxh32(str(self)).hexdigest()
