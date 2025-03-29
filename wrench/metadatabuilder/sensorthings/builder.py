@@ -55,7 +55,7 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
                             identifier, description, spatial extent, temporal extent,
                             source type, and last updated time.
         """
-        things = [Thing.model_validate_json(item.content) for item in items]
+        things = [Thing.model_validate(item.content) for item in items]
 
         geographic_extent = self.service_spatial_calculator.calculate_extent(things)
         timeframe = self._calculate_timeframe(things)
@@ -84,9 +84,7 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
             metadata (CommonMetadata): CommonMetadata extracted
             from the groups
         """
-        things_in_group = [
-            Thing.model_validate_json(item.content) for item in group.items
-        ]
+        things_in_group = [Thing.model_validate(item.content) for item in group.items]
 
         geographic_extent = self.group_spatial_calculator.calculate_extent(
             things_in_group
