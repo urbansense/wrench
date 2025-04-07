@@ -327,25 +327,24 @@ async def test_incremental_harvester_operations():
     assert len(result.operations) == 3
     assert all(op.type == OperationType.ADD for op in result.operations)
 
-    # Modify the underlying items to test UPDATE and DELETE operations
-    # Make a copy of previous items for comparison
-    incremental_harvester._previous_items = mock_harvester.items.copy()
+    # Store the current items as previous_items in the state
+    previous_items = [item.model_dump() for item in mock_harvester.items]
+    state = {"previous_items": previous_items}
 
+    # Modify the underlying items to test UPDATE and DELETE operations
     # Update an item
     mock_harvester.items[0] = Item(
         id="1", content={"name": "Updated Device 1", "type": "sensor"}
     )
-
     # Add a new item
     mock_harvester.items.append(
         Item(id="4", content={"name": "New Device", "type": "other"})
     )
-
-    # Remove an item - keep a copy for the DELETE operation detection
+    # Remove an item
     mock_harvester.items.pop(1)  # Remove item with id=2
 
-    # Second run should detect the changes
-    result = await incremental_harvester.run()
+    # Second run should detect the changes - pass the state with previous_items
+    result = await incremental_harvester.run(state=state)
 
     # Check that we have operations
     assert len(result.operations) > 0
@@ -357,8 +356,8 @@ async def test_incremental_harvester_operations():
 
     # Check that we have the expected operations
     assert any(op.item_id == "1" for op in updates), "Should have update for item 1"
-    assert any(op.item_id == "4" for op in adds), "Should have addition for item 4"
-    assert any(op.item_id == "2" for op in deletes), "Should have deletion for item 2"
+    assert any(op.item_id == "4" for op in adds), "Should have add for item 4"
+    assert any(op.item_id == "2" for op in deletes), "Should have delete for item 2"
 
 
 @pytest.mark.asyncio
@@ -379,26 +378,39 @@ async def test_incremental_grouper_operations():
         Operation(type=OperationType.ADD, item_id=item.id, item=item) for item in items
     ]
 
-    result = await incremental_grouper.run(devices=items, operations=operations)
+    # First run with empty state
+    result = await incremental_grouper.run(
+        devices=items, operations=operations, state={}
+    )
 
     # Should have initial groups
     assert len(result.groups) == 2
 
+    # Store state from first run
+    # Save the previous groups in the state
+    previous_groups = [group.model_dump() for group in result.groups]
+    state = {"previous_groups": previous_groups}
+
     # Now test with an update that changes the group of an item
     updated_item = Item(id="1", content={"name": "Device 1", "type": "actuator"})
-
     update_operations = [
         Operation(type=OperationType.UPDATE, item_id="1", item=updated_item)
     ]
 
-    # Run with the update
+    # Run with the update and pass the previous state
     result = await incremental_grouper.run(
-        devices=[updated_item, items[1]], operations=update_operations
+        devices=[updated_item, items[1]], operations=update_operations, state=state
     )
 
     # Should have updated the groups
     assert len(result.groups) > 0
 
+    # Update state for third run
+    previous_groups = [group.model_dump() for group in result.groups]
+    state = {"previous_groups": previous_groups}
+
     # Let's check for a run with no operations (should return empty groups)
-    result = await incremental_grouper.run(devices=items, operations=[])
+    result = await incremental_grouper.run(devices=items, operations=[], state=state)
+
+    # With no operations, should return empty groups
     assert len(result.groups) == 0

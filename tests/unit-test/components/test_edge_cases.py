@@ -197,7 +197,6 @@ async def test_grouper_edge_cases():
     # Test with single item
     single_item = [Item(id="1", content={"name": "Single Item"})]
     result = await grouper_component.run(devices=single_item, operations=[])
-    print(result)
     assert len(result.groups) == 1
     assert result.groups[0].name == "Group-1"
 
@@ -213,6 +212,5 @@ async def test_grouper_edge_cases():
             for item in duplicate_items
         ],
     )
-    print(result)
     assert len(result.groups) == 1
     assert len(result.groups[0].items) == 2

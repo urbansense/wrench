@@ -133,7 +133,10 @@ class FileStore(ResultStore):
                 return None
 
             with open(file_path, "r") as f:
-                return json.load(f)
+                content = f.read().strip()
+                if not content:  # Handle empty file
+                    return None
+                return json.loads(content)
 
     async def delete(self, key: str) -> None:
         file_path = self._get_file_path(key)

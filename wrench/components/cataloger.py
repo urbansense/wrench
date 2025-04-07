@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 from pydantic import validate_call
 
@@ -28,6 +28,7 @@ class Cataloger(Component):
         self,
         service_metadata: CommonMetadata | None,
         group_metadata: Sequence[CommonMetadata],
+        state: dict[str, Any] = {},
     ) -> CatalogerStatus:
         """Run the cataloger and register metadata."""
         try:

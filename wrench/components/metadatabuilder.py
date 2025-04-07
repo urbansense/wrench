@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 from pydantic import validate_call
 
@@ -26,6 +26,7 @@ class MetadataBuilder(Component):
         devices: Sequence[Item],
         operations: Sequence[Operation],
         groups: Sequence[Group],
+        state: dict[str, Any] = {},
     ) -> Metadata:
         """Run the metadata builder."""
         if not operations:

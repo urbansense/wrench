@@ -47,7 +47,7 @@ async def test_incremental_grouper_first_run():
     # Verify results
     assert len(result.groups) == 2
     assert {group.name for group in result.groups} == {"Group1", "Group2"}
-    assert incremental_grouper._groups == [group1, group2]
+    assert result.groups == [group1, group2]
 
 
 @pytest.mark.asyncio
@@ -75,27 +75,21 @@ async def test_incremental_grouper_add_operation():
     incremental_grouper = Grouper(grouper=mock_grouper)
 
     # First run to establish baseline
-    await incremental_grouper.run([item1, item2], [])
+    groups = await incremental_grouper.run([item1, item2], [])
 
     # Create ADD operation
     add_op = Operation(type=OperationType.ADD, item_id="3", item=item3)
 
     # Run with ADD operation
-    result = await incremental_grouper.run([], [add_op])
+    result = await incremental_grouper.run(
+        [], [add_op], state={"previous_groups": groups.groups}
+    )
 
     # Verify results
     assert len(result.groups) == 1
     assert result.groups[0].name == "Group3"
     assert len(result.groups[0].items) == 1
     assert result.groups[0].items[0].id == "3"
-
-    # Verify internal state
-    assert len(incremental_grouper._groups) == 3  # Original 2 + new 1
-    assert {group.name for group in incremental_grouper._groups} == {
-        "Group1",
-        "Group2",
-        "Group3",
-    }
 
 
 @pytest.mark.asyncio
@@ -128,13 +122,15 @@ async def test_incremental_grouper_update_operation():
     incremental_grouper = Grouper(grouper=mock_grouper)
 
     # First run to establish baseline
-    await incremental_grouper.run([item1, item2], [])
+    result = await incremental_grouper.run([item1, item2], [])
 
     # Create UPDATE operation
     update_op = Operation(type=OperationType.UPDATE, item_id="2", item=item2_updated)
 
     # Run with UPDATE operation
-    result = await incremental_grouper.run([], [update_op])
+    result = await incremental_grouper.run(
+        [], [update_op], {"previous_groups": result.groups}
+    )
 
     # Verify results
     assert len(result.groups) == 1
@@ -165,13 +161,15 @@ async def test_incremental_grouper_delete_operation():
     incremental_grouper = Grouper(grouper=mock_grouper)
 
     # First run to establish baseline
-    await incremental_grouper.run([item1, item2], [])
+    result = await incremental_grouper.run([item1, item2], [])
 
     # Create DELETE operation
     delete_op = Operation(type=OperationType.DELETE, item_id="2", item=item2)
 
     # Run with DELETE operation
-    result = await incremental_grouper.run([], [delete_op])
+    result = await incremental_grouper.run(
+        [], [delete_op], {"previous_groups": result.groups}
+    )
 
     # Verify results
     assert len(result.groups) == 1
@@ -204,14 +202,16 @@ async def test_incremental_grouper_multiple_operations():
     incremental_grouper = Grouper(grouper=mock_grouper)
 
     # First run to establish baseline
-    await incremental_grouper.run([item1, item2], [])
+    result = await incremental_grouper.run([item1, item2], [])
 
     # Create operations
     add_op = Operation(type=OperationType.ADD, item_id="3", item=item3)
     delete_op = Operation(type=OperationType.DELETE, item_id="2", item=item2)
 
     # Run with multiple operations
-    result = await incremental_grouper.run([], [add_op, delete_op])
+    result = await incremental_grouper.run(
+        [], [add_op, delete_op], {"previous_groups": result.groups}
+    )
 
     # Verify results - should return both modified groups
     assert len(result.groups) == 2
@@ -250,14 +250,9 @@ async def test_incremental_grouper_no_operations():
     incremental_grouper = Grouper(grouper=mock_grouper)
 
     # First run to establish baseline
-    await incremental_grouper.run([item1, item2], [])
-    print("Before second run")
+    result = await incremental_grouper.run([item1, item2], [])
     # Run with no operations
-    result = await incremental_grouper.run([], [])
+    result = await incremental_grouper.run([], [], {"previous_groups": result.groups})
 
     # Verify no groups were modified
     assert len(result.groups) == 0
-
-    # Verify internal state remains unchanged
-    assert len(incremental_grouper._groups) == 2
-    assert {group.name for group in incremental_grouper._groups} == {"Group1", "Group2"}

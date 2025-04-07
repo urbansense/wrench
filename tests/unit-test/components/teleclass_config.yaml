@@ -1,0 +1,37 @@
+llm:
+  host: "http://10.162.246.130:11434"
+  model: "llama3.3:70b-instruct-q4_K_M"
+
+embedding:
+  model_name: "all-mpnet-base-v2"
+
+taxonomy_metadata:
+  name: "domain"
+  description: "SDDI Domain for Sensor Groups"
+
+taxonomy:
+  - name: "mobility"
+    description: "Urban mobility and transportation monitoring systems for smart city traffic optimization and public transport efficiency"
+    children:
+      - name: "public transport"
+        description: "Sensors for monitoring public transportation systems, including bus location tracking, passenger counting, and schedule adherence monitoring"
+      - name: "shared mobility"
+        description: "Monitoring systems for shared mobility services like bike-sharing, car-sharing, and e-scooters, tracking vehicle locations and usage patterns"
+      - name: "traffic management"
+        description: "Real-time traffic flow monitoring, congestion detection, and adaptive traffic signal control systems for optimizing urban traffic patterns"
+      - name: "vehicle infrastructure"
+        description: "Smart infrastructure components including parking sensors, charging stations, and vehicle-to-infrastructure communication systems"
+
+  - name: "environment"
+    description: "Environmental monitoring systems for tracking and analyzing urban environmental conditions and resource management"
+    children:
+      - name: "weather monitoring"
+        description: "Urban meteorological stations measuring temperature, humidity, precipitation, wind speed and direction for local climate analysis"
+      - name: "air quality monitoring"
+        description: "Sensor networks measuring urban air pollutants including particulate matter, NOx, CO, O3, and other harmful substances"
+      - name: "water quality monitoring"
+        description: "Sensors measuring water quality parameters in urban water bodies, including pH, dissolved oxygen, turbidity, and chemical contaminants"
+      - name: "water level monitoring"
+        description: "Monitoring systems for urban water infrastructure, including flood detection, reservoir levels, and stormwater management"
+      - name: "soil moisture monitoring"
+        description: "Sensors tracking soil moisture levels in urban green spaces, parks, and urban agriculture areas for optimal irrigation management"

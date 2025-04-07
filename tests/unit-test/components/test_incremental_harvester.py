@@ -51,13 +51,13 @@ async def test_incremental_harvester_detect_add():
     incremental_harvester = Harvester(harvester=mock_harvester)
 
     # First run to establish baseline
-    await incremental_harvester.run()
+    result = await incremental_harvester.run()
 
     # Change harvester to return additional item
     mock_harvester.items = [item1, item2]
 
     # Second run should detect the added item
-    result = await incremental_harvester.run()
+    result = await incremental_harvester.run({"previous_items": result.devices})
 
     # Verify results
     assert len(result.operations) == 1
@@ -77,14 +77,14 @@ async def test_incremental_harvester_detect_update():
     incremental_harvester = Harvester(harvester=mock_harvester)
 
     # First run to establish baseline
-    await incremental_harvester.run()
+    result = await incremental_harvester.run()
 
     # Update an item
     item2_updated = Item(id="2", content={"value": "data2_updated"})
     mock_harvester.items = [item1, item2_updated]
 
     # Second run should detect the updated item
-    result = await incremental_harvester.run()
+    result = await incremental_harvester.run({"previous_items": result.devices})
 
     # Verify results
     assert len(result.operations) == 1
@@ -105,13 +105,13 @@ async def test_incremental_harvester_detect_delete():
     incremental_harvester = Harvester(harvester=mock_harvester)
 
     # First run to establish baseline
-    await incremental_harvester.run()
+    result = await incremental_harvester.run()
 
     # Remove an item
     mock_harvester.items = [item1]
 
     # Second run should detect the deleted item
-    result = await incremental_harvester.run()
+    result = await incremental_harvester.run({"previous_items": result.devices})
 
     # Verify results
     assert len(result.operations) == 1
@@ -131,7 +131,7 @@ async def test_incremental_harvester_multiple_operations():
     incremental_harvester = Harvester(harvester=mock_harvester)
 
     # First run to establish baseline
-    await incremental_harvester.run()
+    result = await incremental_harvester.run()
 
     # Make multiple changes:
     # - Update item1
@@ -142,7 +142,7 @@ async def test_incremental_harvester_multiple_operations():
     mock_harvester.items = [item1_updated, item3]
 
     # Next run should detect all changes
-    result = await incremental_harvester.run()
+    result = await incremental_harvester.run({"previous_items": result.devices})
 
     # Verify results
     assert len(result.operations) == 3

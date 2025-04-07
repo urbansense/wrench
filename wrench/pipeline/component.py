@@ -11,6 +11,7 @@ from .exceptions import PipelineDefinitionError
 class DataModel(BaseModel):
     """Input or Output data model for Components."""
 
+    state: dict[str, Any] | None = None
     pass
 
 
@@ -66,5 +67,7 @@ class Component(ABC, metaclass=ComponentMeta):
     component_outputs: dict[str, dict[str, str | bool | type]]
 
     @abstractmethod
-    async def run(*args: Any, **kwargs: Any) -> DataModel:
+    async def run(
+        self, state: dict[str, Any] = {}, *args: Any, **kwargs: Any
+    ) -> DataModel:
         pass

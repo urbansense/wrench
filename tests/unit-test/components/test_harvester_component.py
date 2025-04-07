@@ -119,7 +119,7 @@ async def test_incremental_harvester_component():
     assert all(op.type.value == "add" for op in result.operations)
 
     # Second run with the same items should not create operations
-    result = await incremental_harvester.run()
+    result = await incremental_harvester.run(state={"previous_items": result.devices})
 
     # Verify results - devices present but no operations
     assert result is not None

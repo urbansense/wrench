@@ -1,6 +1,6 @@
 import hashlib
 import json
-from typing import Sequence
+from typing import Any, Sequence
 
 from pydantic import validate_call
 
@@ -17,11 +17,10 @@ class Harvester(Component):
 
     def __init__(self, harvester: BaseHarvester):
         self._harvester = harvester
-        self._previous_items = None  # will be stored between runs
         self.logger = logger.getChild(self.__class__.__name__)
 
     @validate_call
-    async def run(self) -> Items:
+    async def run(self, state: dict[str, Any] = {}) -> Items:
         """
         Run the harvester and detect changes compared to previous run.
 
@@ -31,19 +30,21 @@ class Harvester(Component):
         Raises:
             HarvesterError: If there's an issue retrieving items from the harvester
         """
+        previous_items: Sequence[dict[str, Any]] = state.get("previous_items")
+
         try:
             # Fetch current items from the harvester
             current_items = self._harvester.return_items()
 
             # Generate operations based on differences from previous run
-            if self._previous_items:
+            if previous_items:
+                previous_items = [Item.model_validate(item) for item in previous_items]
+
                 self.logger.debug(
                     f"""Comparing current state ({len(current_items)} items)
-                    with previous state ({len(self._previous_items)} items)"""
+                    with previous state ({len(previous_items)} items)"""
                 )
-                operations = self._detect_operations(
-                    self._previous_items, current_items
-                )
+                operations = self._detect_operations(previous_items, current_items)
                 self.logger.info(f"Detected {len(operations)} changes: ")
             else:
                 # First run - treat all as new additions
@@ -55,10 +56,11 @@ class Harvester(Component):
                     for item in current_items
                 ]
 
-            # Update state for next run
-            self._previous_items = current_items
-
-            return Items(devices=current_items, operations=operations)
+            return Items(
+                devices=current_items,
+                operations=operations,
+                state={"previous_items": current_items},
+            )
 
         except Exception as e:
             self.logger.error(f"Error during harvester run: {e}")

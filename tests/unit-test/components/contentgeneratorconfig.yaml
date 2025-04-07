@@ -1,0 +1,2 @@
+llm_host: "http://10.162.246.130:11434/"
+model: "llama3.3:70b-instruct-q4_K_M"

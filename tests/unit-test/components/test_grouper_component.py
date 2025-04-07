@@ -162,7 +162,9 @@ async def test_incremental_grouper_component():
     assert len(result.groups) == 2
 
     # Second run with no operations should return empty groups
-    result = await incremental_grouper.run(devices=devices, operations=[])
+    result = await incremental_grouper.run(
+        devices=devices, operations=[], state={"previous_groups": result.groups}
+    )
     assert len(result.groups) == 0
 
     # Run with a new device and an update operation

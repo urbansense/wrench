@@ -1,5 +1,5 @@
 import copy
-from typing import Sequence
+from typing import Any, Sequence
 
 from pydantic import validate_call
 
@@ -15,28 +15,36 @@ class Grouper(Component):
 
     def __init__(self, grouper: BaseGrouper):
         self._grouper = grouper
-        self._groups = None
 
     @validate_call(config={"extra": "allow"})
     async def run(
-        self, devices: Sequence[Item], operations: Sequence[Operation]
+        self,
+        devices: Sequence[Item],
+        operations: Sequence[Operation],
+        state: dict[str, Any] = {},
     ) -> Groups:
         # Case 1: Incremental update - apply operations to existing groups
-        if self._groups and operations:
-            # Apply operations and get only the affected groups
-            self._groups, affected_groups = self._apply_operations(
-                self._groups, operations
-            )
-            # Return only the affected groups
-            return Groups(groups=affected_groups)
-
-        # Case 2: No operations and existing groups - return empty list (no changes)
-        if self._groups and not operations:
-            return Groups(groups=[])
+        previous_groups = state.get("previous_groups")
+        if previous_groups:
+            previous_groups = [
+                Group.model_validate(groups) for groups in previous_groups
+            ]
+            if operations:
+                # Apply operations and get only the affected groups
+                current_groups, affected_groups = self._apply_operations(
+                    previous_groups, operations
+                )
+                # Return only the affected groups
+                return Groups(
+                    groups=affected_groups, state={"previous_groups": current_groups}
+                )
+            # Case 2: No operations and existing groups - return empty list (no changes)
+            else:
+                return Groups(groups=[], state={"previous_groups": previous_groups})
 
         # Case 3: First run or full rebuild - process all devices
-        self._groups = self._grouper.group_items(devices)
-        return Groups(groups=self._groups)
+        groups = self._grouper.group_items(devices)
+        return Groups(groups=groups, state={"previous_groups": groups})
 
     def _apply_operations(
         self, existing_groups: list[Group], operations: list[Operation]

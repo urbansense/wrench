@@ -3,11 +3,13 @@ import uuid
 from typing import Any, Optional
 
 from wrench.log import logger
+from wrench.pipeline import PipelineRunTracker, PipelineStateManager
 
 from .component import Component
 from .exceptions import (
     ComponentNotFoundError,
     PipelineDefinitionError,
+    PipelineError,
     PipelineStatusUpdateError,
     ValidationError,
 )
@@ -65,6 +67,8 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
         """
         super().__init__()
         self.store = store or InMemoryStore()  # default store
+        self.run_tracker = PipelineRunTracker(self.store)
+        self.state_manager = PipelineStateManager(self.store)
         self.final_results = InMemoryStore()  # For storing leaf node results
         self.is_validated = False
         self.param_mapping: dict[str, dict[str, dict[str, str]]] = {}
@@ -299,42 +303,63 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
 
         Args:
             inputs: Input data for components
-
         Returns:
             dict containing results from leaf components
         """
         inputs = inputs or {}
-
         # Validate pipeline and inputs
         self.validate()
         self.validate_run_inputs(inputs)
+
+        await self.state_manager.initialize()
 
         # Generate run ID
         run_id = str(uuid.uuid4())
         self.logger.info(f"Starting pipeline run {run_id}")
 
-        # Initialize component statuses
-        for node in self._nodes.values():
-            await self.store.add_status_for_component(
-                run_id, node.name, RunStatus.PENDING.value
-            )
+        await self.state_manager.prepare_new_version(run_id)
+        await self.run_tracker.record_run_start(run_id, inputs)
 
-        # Start from root nodes
-        root_nodes = self.roots()
-        await asyncio.gather(
-            *[self._execute_node(run_id, node.name, inputs) for node in root_nodes]
-        )
+        try:
+            # Initialize component statuses
+            for node in self._nodes.values():
+                await self.store.add_status_for_component(
+                    run_id, node.name, RunStatus.PENDING.value
+                )
 
-        # Collect results from leaf nodes
-        final_results = {}
-        for node in self.leaves():
-            result = await self.store.get_result_for_component(run_id, node.name)
-            if result:
-                final_results[node.name] = result
+            async with asyncio.TaskGroup() as tg:
+                # Start root tasks
+                for node in self.roots():
+                    tg.create_task(self._execute_node(run_id, node.name, inputs, tg))
 
-        # Store and return final results
-        await self.final_results.add(run_id, final_results)
-        return PipelineResult(run_id=run_id, results=final_results)
+            # Check for any failed nodes
+            for node_name in self._nodes:
+                status = await self.get_node_status(run_id, node_name)
+                if status == RunStatus.FAILED:
+                    raise PipelineError(f"Component {node_name} failed")
+
+            # Commit the new state version
+            await self.state_manager.commit_version()
+            # Record run completion
+            await self.run_tracker.record_run_completion(run_id)
+
+        except Exception as e:
+            await self.state_manager.discard_pending()
+            await self.run_tracker.record_run_failure(run_id, str(e))
+
+            self.logger.error("Pipeline run %s failed: %s", run_id, str(e))
+
+        finally:
+            # Collect results from leaf nodes
+            final_results = {}
+            for node in self.leaves():
+                result = await self.store.get_result_for_component(run_id, node.name)
+                if result:
+                    final_results[node.name] = result
+
+            # Store and return final results
+            await self.final_results.add(run_id, final_results)
+            return PipelineResult(run_id=run_id, results=final_results)
 
     async def get_node_status(self, run_id: str, node_name: str) -> RunStatus:
         """Get the current status of a node in a specific run."""
@@ -356,10 +381,13 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
         await self.store.add_status_for_component(run_id, node_name, status.value)
 
     async def _execute_node(
-        self, run_id: str, node_name: str, global_inputs: dict[str, Any]
+        self,
+        run_id: str,
+        node_name: str,
+        global_inputs: dict[str, Any],
+        tg: asyncio.TaskGroup,
     ) -> None:
-        """Execute a single node in the pipeline."""
-        # Check if all dependencies are complete
+        # Check dependencies
         for edge in self.previous_edges(node_name):
             dep_status = await self.get_node_status(run_id, edge.start)
             if dep_status != RunStatus.DONE:
@@ -382,6 +410,10 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
                 run_id, node_name, global_inputs
             )
 
+            # Load component state
+            component_state = await self.state_manager.get_component_state(node_name)
+            node_inputs["state"] = component_state
+
             # Run the component
             run_result = await node.run(**node_inputs)
 
@@ -391,15 +423,23 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
                     run_id, node_name, run_result.result.model_dump(mode="json")
                 )
 
+            # Stage component state if provided
+            if (
+                hasattr(run_result.result, "state")
+                and run_result.result.state is not None
+            ):
+                await self.state_manager.stage_component_state(
+                    node_name, run_result.result.model_dump(mode="json")["state"]
+                )
+
             # Update status
             await self.set_node_status(run_id, node_name, run_result.status)
 
             # If successful, schedule child nodes
             if run_result.status == RunStatus.DONE:
-                # Schedule all children
                 for edge in self.next_edges(node_name):
-                    asyncio.create_task(
-                        self._execute_node(run_id, edge.end, global_inputs)
+                    tg.create_task(
+                        self._execute_node(run_id, edge.end, global_inputs, tg)
                     )
             else:
                 self.logger.warning(
@@ -407,12 +447,13 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
                 )
 
         except Exception as e:
+            # Handle failure
             self.logger.exception(f"Error executing node {node_name}: {str(e)}")
             await self.set_node_status(run_id, node_name, RunStatus.FAILED)
-            # Store error information
             await self.store.add_result_for_component(
                 run_id, node_name, {"error": str(e)}
             )
+            raise
 
     async def _prepare_node_inputs(
         self, run_id: str, node_name: str, global_inputs: dict[str, Any]
