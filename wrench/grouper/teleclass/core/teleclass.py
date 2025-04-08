@@ -26,7 +26,7 @@ from wrench.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from wrench.grouper.teleclass.enrichment.corpus import CorpusEnricher
 from wrench.grouper.teleclass.enrichment.llm import LLMEnricher
 from wrench.log import logger
-from wrench.models import Group
+from wrench.models import Group, Item
 
 
 class TELEClassGrouper(BaseGrouper):
@@ -86,7 +86,7 @@ class TELEClassGrouper(BaseGrouper):
 
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def _load_items(self, source: Union[str, Path, Sequence[dict]]) -> list[Document]:
+    def _load_items(self, source: Union[str, Path, Sequence[Item]]) -> list[Document]:
         """Loads and processes documents from various input sources.
 
         Args:
@@ -274,7 +274,7 @@ class TELEClassGrouper(BaseGrouper):
 
         return self.classifier_manager.predict(text)
 
-    def group_items(self, items: Sequence[dict]) -> list[Group]:
+    def group_items(self, items: Sequence[Item]) -> list[Group]:
         """
         Groups a collection of documents into predefined categories.
 
@@ -298,7 +298,7 @@ class TELEClassGrouper(BaseGrouper):
                 self.run(docs)
 
             leaf_nodes = self.taxonomy_manager.get_leaf_nodes()
-            leaf_classifications = defaultdict(list)
+            leaf_classifications: dict[str, list[Document]] = defaultdict(list)
 
             for d in docs:
                 self.logger.debug("Processing document %s", d.id)
@@ -306,14 +306,17 @@ class TELEClassGrouper(BaseGrouper):
                 self.logger.debug("Predicted classes: %s", classes)
                 leaf_predictions = classes & leaf_nodes
                 for leaf_class in leaf_predictions:
-                    leaf_classifications[leaf_class].append(d.content)
+                    leaf_classifications[leaf_class].append(d)
 
             groups = []
             for leaf_class, class_docs in leaf_classifications.items():
                 groups.append(
                     Group(
                         name=leaf_class,
-                        items=[json.loads(docs) for docs in class_docs],
+                        items=[
+                            Item(id=doc.id, content=json.loads(doc.content))
+                            for doc in class_docs
+                        ],
                         parent_classes=self.taxonomy_manager.get_ancestors(leaf_class),
                     )
                 )

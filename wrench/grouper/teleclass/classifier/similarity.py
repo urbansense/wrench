@@ -51,10 +51,6 @@ class SimilarityClassifier:
         class_map: dict[str, np.ndarray] = {}
         for ec in self.enriched_classes:
             if ec.embeddings is not None:
-                # Use pre-computed embeddings
-                self.logger.debug(
-                    "using existing class embeddings",
-                )
                 class_map[ec.class_name] = ec.embeddings
             else:
                 # Create embedding from class terms

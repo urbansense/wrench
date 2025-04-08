@@ -5,6 +5,7 @@ from typing import Protocol, Sequence, Union
 from sentence_transformers import SentenceTransformer
 
 from wrench.grouper.teleclass.core.models import Document
+from wrench.models import Item
 
 
 class DocumentLoader(Protocol):
@@ -76,31 +77,33 @@ class ModelDocumentLoader:
             and returns a list of DocumentMeta instances.
     """
 
-    def __init__(self, documents: Sequence[dict]):
+    def __init__(self, documents: Sequence[Item]):
         """
-        Initialize the DocumentLoader with a list of documents.
+        Initialize the DocumentLoader with a list of items.
 
         Args:
-            documents (Sequence[dict]): A list of dicts.
+            documents (Sequence[Item]): A list of items.
 
         Raises:
             TypeError: If documents is not a list or if any element
-                       in documents is not an instance of dict.
+                       in documents is not an instance of item.
         """
         if not isinstance(documents, list) or not all(
-            isinstance(doc, dict) for doc in documents
+            isinstance(doc, Item) for doc in documents
         ):
             raise TypeError(
-                f"documents must be a list of dict instances, got list of {type(documents)}"
+                f"""documents must be a list of Item instances, got list of {type(documents)}"""
             )
         self.documents = documents
 
     def load(self, encoder: SentenceTransformer) -> list[Document]:
         return [
             Document(
-                id=str(id),
-                content=json.dumps(doc),
-                embeddings=encoder.encode(json.dumps(doc), convert_to_numpy=True),
+                id=doc.id,
+                content=json.dumps(doc.content),
+                embeddings=encoder.encode(
+                    json.dumps(doc.content), convert_to_numpy=True
+                ),
             )
             for id, doc in enumerate(self.documents)
         ]

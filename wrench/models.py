@@ -20,6 +20,12 @@ class Location(Protocol):
         pass
 
 
+class Item(BaseModel):
+    model_config = {"extra": "allow"}
+    id: str
+    content: dict[str, Any]
+
+
 class TimeFrame(BaseModel):
     start_time: datetime
     latest_time: datetime
@@ -103,13 +109,15 @@ class Group(BaseModel):
 
     Attributes:
         name (str): Name of the group.
-        items (list[dict]): List of items belonging to this group.
+        items (list[Item]): List of items belonging to this group.
         parent_classes (set[str], optional): Set of parent classes of this group, used
         for hierarchical classification. Defaults to an empty set.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     name: str = Field(description="Name of the group")
-    items: list[dict] = Field(description="List of items belonging to this group")
+    items: list[Item] = Field(description="List of items belonging to this group")
     # optional only for hierarchical classification
     parent_classes: set[str] = Field(
         default=set(), description="Set of parent classes of this group"

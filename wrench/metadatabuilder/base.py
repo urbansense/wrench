@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Sequence
 
-from wrench.models import CommonMetadata, Group
+from wrench.models import CommonMetadata, Group, Item
 
 
 class BaseMetadataBuilder(ABC):
     @abstractmethod
-    def build_service_metadata(self, source_data: Sequence) -> CommonMetadata:
+    def build_service_metadata(self, source_data: Sequence[Item]) -> CommonMetadata:
         """
         Retrieves metadata for service endpoint.
 
