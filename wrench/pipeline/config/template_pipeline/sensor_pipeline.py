@@ -1,8 +1,9 @@
 from typing import ClassVar, Literal
 
-from wrench.components import Cataloger, MetadataBuilder
+from wrench.components.cataloger import Cataloger
 from wrench.components.grouper import Grouper
 from wrench.components.harvester import Harvester
+from wrench.components.metadatabuilder import MetadataBuilder
 from wrench.pipeline.config.object_config import ComponentType
 from wrench.pipeline.config.template_pipeline.base import TemplatePipelineConfig
 from wrench.pipeline.config.types import PipelineType

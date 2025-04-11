@@ -3,13 +3,13 @@ import uuid
 from typing import Any, Optional
 
 from wrench.log import logger
-from wrench.pipeline import PipelineRunTracker, PipelineStateManager
+from wrench.pipeline.run_tracker import PipelineRunStatus, PipelineRunTracker
+from wrench.pipeline.state_manager import PipelineStateManager
 
 from .component import Component
 from .exceptions import (
     ComponentNotFoundError,
     PipelineDefinitionError,
-    PipelineError,
     PipelineStatusUpdateError,
     ValidationError,
 )
@@ -41,6 +41,8 @@ class TaskNode(PipelineNode):
         """Execute the component with the given inputs."""
         try:
             result = await self.component.run(**inputs)
+            if result.stop_pipeline:
+                return RunResult(status=RunStatus.STOP_PIPELINE, result=result)
             return RunResult(status=RunStatus.DONE, result=result)
         except Exception as e:
             self.logger.exception(f"Error executing component {self.name}: {str(e)}")
@@ -69,7 +71,6 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
         self.store = store or InMemoryStore()  # default store
         self.run_tracker = PipelineRunTracker(self.store)
         self.state_manager = PipelineStateManager(self.store)
-        self.final_results = InMemoryStore()  # For storing leaf node results
         self.is_validated = False
         self.param_mapping: dict[str, dict[str, dict[str, str]]] = {}
         self.missing_inputs: dict[str, list[str]] = {}
@@ -298,68 +299,48 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
                     )
 
     async def run(self, inputs: dict[str, Any] | None = None) -> PipelineResult:
-        """
-        Execute the pipeline.
-
-        Args:
-            inputs: Input data for components
-        Returns:
-            dict containing results from leaf components
-        """
+        """Execute the pipeline."""
         inputs = inputs or {}
-        # Validate pipeline and inputs
-        self.validate()
-        self.validate_run_inputs(inputs)
-
-        await self.state_manager.initialize()
-
-        # Generate run ID
         run_id = str(uuid.uuid4())
-        self.logger.info(f"Starting pipeline run {run_id}")
 
-        await self.state_manager.prepare_new_version(run_id)
-        await self.run_tracker.record_run_start(run_id, inputs)
+        # Initialization phase
+        await self._initialize_run(run_id, inputs)
 
-        try:
-            # Initialize component statuses
-            for node in self._nodes.values():
-                await self.store.add_status_for_component(
-                    run_id, node.name, RunStatus.PENDING.value
-                )
+        # Execution phase
+        run_status = await self._execute_pipeline(run_id, inputs)
 
-            async with asyncio.TaskGroup() as tg:
-                # Start root tasks
-                for node in self.roots():
-                    tg.create_task(self._execute_node(run_id, node.name, inputs, tg))
-
-            # Check for any failed nodes
-            for node_name in self._nodes:
-                status = await self.get_node_status(run_id, node_name)
-                if status == RunStatus.FAILED:
-                    raise PipelineError(f"Component {node_name} failed")
-
-            # Commit the new state version
+        # Completion phase based on run status
+        if run_status == PipelineRunStatus.COMPLETED:
+            # Normal successful completion - commit state changes
+            self.logger.info(f"Pipeline run {run_id} completed successfully")
             await self.state_manager.commit_version()
-            # Record run completion
             await self.run_tracker.record_run_completion(run_id)
-
-        except Exception as e:
+        elif run_status == PipelineRunStatus.STOPPED:
+            # Early termination - discard state but record completion
+            self.logger.info(f"Pipeline run {run_id} stopped early (requested)")
             await self.state_manager.discard_pending()
-            await self.run_tracker.record_run_failure(run_id, str(e))
+            await self.run_tracker.record_run_completion(run_id, stopped_early=True)
+        else:  # PipelineRunStatus.FAILED
+            # Failure - discard state and record failure
+            self.logger.error(f"Pipeline run {run_id} failed")
+            await self.state_manager.discard_pending()
+            await self.run_tracker.record_run_failure(
+                run_id, "One or more components failed"
+            )
 
-            self.logger.error("Pipeline run %s failed: %s", run_id, str(e))
+        # Result collection phase (always happens)
+        final_results = await self._collect_results(run_id)
 
-        finally:
-            # Collect results from leaf nodes
-            final_results = {}
-            for node in self.leaves():
-                result = await self.store.get_result_for_component(run_id, node.name)
-                if result:
-                    final_results[node.name] = result
+        # Include success flag based on status
+        success = run_status in (PipelineRunStatus.COMPLETED, PipelineRunStatus.STOPPED)
 
-            # Store and return final results
-            await self.final_results.add(run_id, final_results)
-            return PipelineResult(run_id=run_id, results=final_results)
+        return PipelineResult(
+            run_id=run_id,
+            results=final_results,
+            success=success,
+            stopped_early=(run_status == PipelineRunStatus.STOPPED),
+            status=run_status,
+        )
 
     async def get_node_status(self, run_id: str, node_name: str) -> RunStatus:
         """Get the current status of a node in a specific run."""
@@ -379,6 +360,61 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             )
 
         await self.store.add_status_for_component(run_id, node_name, status.value)
+
+    async def _initialize_run(self, run_id: str, inputs: dict[str, Any]) -> None:
+        """Initialize pipeline run."""
+        self.validate()
+        self.validate_run_inputs(inputs)
+
+        self.logger.info(f"Starting pipeline run {run_id}")
+        await self.state_manager.initialize()
+        await self.state_manager.prepare_new_version(run_id)
+        await self.run_tracker.record_run_start(run_id, inputs)
+
+        # Initialize component statuses
+        for node in self._nodes.values():
+            await self.store.add_status_for_component(
+                run_id, node.name, RunStatus.PENDING.value
+            )
+
+    async def _execute_pipeline(
+        self, run_id: str, inputs: dict[str, Any]
+    ) -> PipelineRunStatus:
+        """
+        Execute pipeline components and return status.
+
+        Returns:
+            PipelineRunStatus: Status of the pipeline run
+        """
+        try:
+            async with asyncio.TaskGroup() as tg:
+                # Start root tasks
+                for node in self.roots():
+                    tg.create_task(self._execute_node(run_id, node.name, inputs, tg))
+
+            for node_name in self._nodes:
+                status = await self.get_node_status(run_id, node_name)
+                if status == RunStatus.FAILED:
+                    self.logger.error(f"Component {node_name} failed")
+                    return PipelineRunStatus.FAILED
+                elif status == RunStatus.STOP_PIPELINE:
+                    self.logger.info(f"Pipeline stopped by component {node_name}")
+                    return PipelineRunStatus.STOPPED
+
+            return PipelineRunStatus.COMPLETED
+
+        except Exception as e:
+            self.logger.error(f"Pipeline execution error: {str(e)}")
+            return PipelineRunStatus.FAILED
+
+    async def _collect_results(self, run_id: str) -> dict[str, Any]:
+        """Collect results from leaf nodes."""
+        final_results = {}
+        for node in self.leaves():
+            result = await self.store.get_result_for_component(run_id, node.name)
+            if result:
+                final_results[node.name] = result
+        return final_results
 
     async def _execute_node(
         self,
@@ -441,6 +477,8 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
                     tg.create_task(
                         self._execute_node(run_id, edge.end, global_inputs, tg)
                     )
+            elif run_result.status == RunStatus.STOP_PIPELINE:
+                self.logger.info(f"Node {node_name} requested pipeline stop")
             else:
                 self.logger.warning(
                     f"Node {node_name} completed with status {run_result.status}"
