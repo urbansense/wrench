@@ -12,7 +12,7 @@ class MockBaseCataloger:
         self.registered_service = None
         self.registered_groups = None
 
-    def register(self, service, groups):
+    def register(self, service, groups, managed_entries: list[str]) -> list[str]:
         if self.fail:
             raise Exception("Registration failed")
         self.registered_service = service
