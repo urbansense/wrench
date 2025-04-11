@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Any
 
+from wrench.pipeline.run_tracker import PipelineRunStatus
+
 
 class PipelineNode:
     def __init__(self, name: str, data: dict[str, Any] | None = None) -> None:
@@ -28,11 +30,21 @@ class PipelineEdge:
 class PipelineResult:
     """Container for pipeline execution results."""
 
-    def __init__(self, run_id: str, results: dict[str, Any]):
-        """Initializes a result with id."""
+    def __init__(
+        self,
+        run_id: str,
+        results: dict[str, Any],
+        success: bool = True,
+        stopped_early: bool = False,
+        status: PipelineRunStatus = PipelineRunStatus.COMPLETED,
+    ):
+        """Initializes a result with id and status information."""
         self.run_id = run_id
         self.results = results
         self.timestamp = datetime.now()
+        self.success = success
+        self.stopped_early = stopped_early
+        self.status = status
 
 
 class PipelineGraph[GenericNode: PipelineNode, GenericEdge: PipelineEdge]:

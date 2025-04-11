@@ -46,14 +46,14 @@ class RunStatus(Enum):
     RUNNING = "RUNNING"
     DONE = "DONE"
     FAILED = "FAILED"
-    SKIPPED = "SKIPPED"
+    STOP_PIPELINE = "STOP_PIPELINE"
 
     def possible_next_status(self) -> list["RunStatus"]:
         """Get possible next statuses from current."""
         if self == RunStatus.PENDING:
             return [RunStatus.RUNNING]
         if self == RunStatus.RUNNING:
-            return [RunStatus.DONE, RunStatus.FAILED]
+            return [RunStatus.DONE, RunStatus.FAILED, RunStatus.STOP_PIPELINE]
         # terminal states cannot transition
         return []
 

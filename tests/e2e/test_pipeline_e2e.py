@@ -5,7 +5,7 @@ from wrench.components.grouper import Grouper
 from wrench.components.harvester import Harvester
 from wrench.components.metadatabuilder import MetadataBuilder
 from wrench.models import CommonMetadata, Group, Item
-from wrench.pipeline.pipeline import Pipeline
+from wrench.pipeline import Pipeline
 from wrench.pipeline.types import Operation, OperationType
 
 

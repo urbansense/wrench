@@ -12,6 +12,7 @@ class PipelineRunStatus(str, Enum):
     STARTED = "started"
     COMPLETED = "completed"
     FAILED = "failed"
+    STOPPED = "stopped"
 
 
 class RunRecord(BaseModel):
@@ -80,11 +81,17 @@ class PipelineRunTracker:
         await self._save_history()
         return record
 
-    async def record_run_completion(self, run_id: str) -> RunRecord:
+    async def record_run_completion(
+        self, run_id: str, stopped_early: bool = False
+    ) -> RunRecord:
         """Record successful completion of a run."""
         record = await self._find_run_record(run_id)
         if record:
-            record.status = PipelineRunStatus.COMPLETED
+            if stopped_early:
+                record.status = PipelineRunStatus.STOPPED
+            else:
+                record.status = PipelineRunStatus.COMPLETED
+
             record.end_time = datetime.now()
 
             # Collect final component statuses

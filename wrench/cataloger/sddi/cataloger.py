@@ -41,33 +41,47 @@ class SDDICataloger(BaseCataloger):
 
         self.ckan_server = RemoteCKAN(address=self.endpoint, apikey=self.api_key)
         self.owner_org = owner_org
+        self._registries = set()
 
-        self._registries: set[str] = set()
-
-    def register(self, service: CommonMetadata, groups: Sequence[CommonMetadata]):
+    def register(
+        self,
+        service: CommonMetadata,
+        groups: Sequence[CommonMetadata],
+        managed_entries: list[str] | None,
+    ) -> list[str]:
         online_service = self._create_online_service(service)
         device_groups = self._create_device_groups(groups)
+        if managed_entries:
+            self._registries = set(managed_entries)
 
         try:
             if online_service.name in self._registries:
                 self._update_api_service(online_service)
-            self._register_api_service(online_service)
-
-            self.logger.info("Successfully registered API Service")
+                self.logger.info("Successfully updated API Service")
+            else:
+                self._register_api_service(online_service)
+                self.logger.info("Successfully registered API Service")
 
             if groups:
                 for d in device_groups:
                     if d.name in self._registries:
                         self._update_device_group(d)
-                    self._register_device_group(d)
-
-                    self.logger.info(
-                        "Creating relationships for device_group %s", d.name
-                    )
-                    self._register_relationship(
-                        api_service_name=online_service.name,
-                        device_group_name=d.name,
-                    )
+                        self.logger.debug(
+                            "Successfully updated Device Group: %s", d.name
+                        )
+                    else:
+                        self._register_device_group(d)
+                        self.logger.debug(
+                            "Successfully registered Device Group: %s", d.name
+                        )
+                        self._register_relationship(
+                            api_service_name=online_service.name,
+                            device_group_name=d.name,
+                        )
+                        self.logger.info(
+                            "Created relationships for device_group %s", d.name
+                        )
+            return list(self._registries)
 
         except Exception as e:
             self.logger.error("Failed to register: %s", e)
@@ -90,13 +104,15 @@ class SDDICataloger(BaseCataloger):
 
     def _update_api_service(self, api_service: OnlineService):
         pkg = self.ckan_server.call_action(
-            action="package_patch", data_dict=api_service.model_dump()
+            action="package_patch",
+            data_dict={**api_service.model_dump(), "id": api_service.name},
         )
         return pkg
 
     def _update_device_group(self, device_group: DeviceGroup):
         pkg = self.ckan_server.call_action(
-            action="package_patch", data_dict=device_group.model_dump()
+            action="package_patch",
+            data_dict={**device_group.model_dump(), "id": device_group.name},
         )
         return pkg
 

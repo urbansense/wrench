@@ -12,6 +12,7 @@ class DataModel(BaseModel):
     """Input or Output data model for Components."""
 
     state: dict[str, Any] | None = None
+    stop_pipeline: bool = False
     pass
 
 

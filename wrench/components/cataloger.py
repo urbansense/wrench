@@ -10,6 +10,7 @@ from wrench.pipeline.types import Component, DataModel
 class CatalogerStatus(DataModel):
     success: bool = False
     groups: list[str]
+    state: dict[str, Any] = {}
 
 
 class Cataloger(Component):
@@ -31,13 +32,20 @@ class Cataloger(Component):
         state: dict[str, Any] = {},
     ) -> CatalogerStatus:
         """Run the cataloger and register metadata."""
+        previous_registries = state.get("previous_registries")
         try:
             if service_metadata is None:
                 return CatalogerStatus(success=True, groups=[])
             # Directly get items from the harvester
-            self._cataloger.register(service=service_metadata, groups=group_metadata)
+            current_registries = self._cataloger.register(
+                service=service_metadata,
+                groups=group_metadata,
+                managed_entries=previous_registries,
+            )
             return CatalogerStatus(
-                success=True, groups=[group.identifier for group in group_metadata]
+                success=True,
+                groups=[group.identifier for group in group_metadata],
+                state={"previous_registries": current_registries},
             )
         except Exception:
             # Re-raise to ensure pipeline knows this component failed

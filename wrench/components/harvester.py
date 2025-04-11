@@ -9,7 +9,11 @@ from wrench.exceptions import HarvesterError
 from wrench.harvester import BaseHarvester
 from wrench.log import logger
 from wrench.models import Item
-from wrench.pipeline.types import Component, Operation, OperationType
+from wrench.pipeline.types import (
+    Component,
+    Operation,
+    OperationType,
+)
 
 
 class Harvester(Component):
@@ -41,11 +45,21 @@ class Harvester(Component):
                 previous_items = [Item.model_validate(item) for item in previous_items]
 
                 self.logger.debug(
-                    f"""Comparing current state ({len(current_items)} items)
-                    with previous state ({len(previous_items)} items)"""
+                    """Comparing current state (%s items)
+                    with previous state (%s items)""",
+                    len(current_items),
+                    len(previous_items),
                 )
                 operations = self._detect_operations(previous_items, current_items)
-                self.logger.info(f"Detected {len(operations)} changes: ")
+                self.logger.info("Detected %s changes: ", len(operations))
+                self.logger.debug("Object IDs: %s", [op.item_id for op in operations])
+                if len(operations) == 0:
+                    self.logger.info(
+                        "No new or updated items are discovered, stopping pipeline"
+                    )
+                    return Items(
+                        devices=current_items, operations=operations, stop_pipeline=True
+                    )
             else:
                 # First run - treat all as new additions
                 self.logger.info(
