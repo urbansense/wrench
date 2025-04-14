@@ -42,7 +42,7 @@ class SensorRegistrationPipeline:
 
         self.scheduler = None
         if scheduler_config:
-            self.scheduler = scheduler_config.create_scheduler(runner=self.runner)
+            self.scheduler = scheduler_config.type.create_scheduler(runner=self.runner)
 
         self.logger = logger.getChild(self.__class__.__name__)
 

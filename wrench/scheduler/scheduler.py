@@ -1,23 +1,11 @@
 from datetime import datetime
-from enum import Enum
 from typing import Any
 
 from apscheduler.schedulers.base import BaseScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from pydantic import BaseModel
 
 from wrench.pipeline.config.runner import PipelineRunner
-
-
-class SchedulerType(Enum):
-    CRON = "cron"
-    INTERVAL = "interval"
-
-
-class ScheduleConfig(BaseModel):
-    type: SchedulerType
-    interval: dict[str, Any]
 
 
 class CronScheduler:
