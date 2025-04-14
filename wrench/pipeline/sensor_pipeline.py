@@ -1,8 +1,12 @@
+import asyncio
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pydantic import ValidationError
 
 from wrench.cataloger import BaseCataloger
 from wrench.grouper import BaseGrouper
 from wrench.harvester import BaseHarvester
+from wrench.log import logger
 from wrench.metadatabuilder import BaseMetadataBuilder
 from wrench.pipeline.config import (
     PipelineRunner,
@@ -10,6 +14,7 @@ from wrench.pipeline.config import (
 )
 from wrench.pipeline.exceptions import PipelineDefinitionError
 from wrench.pipeline.pipeline_graph import PipelineResult
+from wrench.scheduler.scheduler import IntervalScheduler
 
 
 class SensorRegistrationPipeline:
@@ -21,6 +26,7 @@ class SensorRegistrationPipeline:
         grouper: BaseGrouper,
         metadatabuilder: BaseMetadataBuilder,
         cataloger: BaseCataloger,
+        schedule: str | None = None,
     ):
         try:
             config = SensorRegistrationPipelineConfig(
@@ -34,6 +40,12 @@ class SensorRegistrationPipeline:
             raise PipelineDefinitionError() from e
 
         self.runner = PipelineRunner.from_config(config)
+        if schedule:
+            self.scheduler = IntervalScheduler(
+                self.runner, scheduler=AsyncIOScheduler(), interval=schedule
+            )
+
+        self.logger = logger.getChild(self.__class__.__name__)
 
     async def run_async(self) -> PipelineResult:
         """
@@ -42,4 +54,12 @@ class SensorRegistrationPipeline:
         Returns:
             PipelineResult: The result of the pipeline execution.
         """
-        return await self.runner.run({})
+        if not hasattr(self, "scheduler"):
+            return await self.runner.run({})
+
+        try:
+            self.scheduler.start()
+            self.logger.info("Started Scheduler")
+            await asyncio.Event().wait()
+        except (KeyboardInterrupt, SystemExit):
+            self.scheduler.shutdown()
