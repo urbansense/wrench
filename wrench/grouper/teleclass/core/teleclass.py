@@ -287,9 +287,7 @@ class TELEClassGrouper(BaseGrouper):
             list[Group]: A list of Groups containing information about documents
                          classified and group parent classes
         """
-        self.logger.debug(
-            "Starting document classification with input type: %s", type(items)
-        )
+        self.logger.debug("Starting document classification")
 
         try:
             docs = self._load_items(items)

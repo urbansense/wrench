@@ -1,6 +1,5 @@
 import asyncio
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pydantic import ValidationError
 
 from wrench.cataloger import BaseCataloger
@@ -14,7 +13,7 @@ from wrench.pipeline.config import (
 )
 from wrench.pipeline.exceptions import PipelineDefinitionError
 from wrench.pipeline.pipeline_graph import PipelineResult
-from wrench.scheduler.scheduler import IntervalScheduler
+from wrench.scheduler.config import SchedulerConfig
 
 
 class SensorRegistrationPipeline:
@@ -26,7 +25,7 @@ class SensorRegistrationPipeline:
         grouper: BaseGrouper,
         metadatabuilder: BaseMetadataBuilder,
         cataloger: BaseCataloger,
-        schedule: str | None = None,
+        scheduler_config: SchedulerConfig | None = None,
     ):
         try:
             config = SensorRegistrationPipelineConfig(
@@ -40,10 +39,10 @@ class SensorRegistrationPipeline:
             raise PipelineDefinitionError() from e
 
         self.runner = PipelineRunner.from_config(config)
-        if schedule:
-            self.scheduler = IntervalScheduler(
-                self.runner, scheduler=AsyncIOScheduler(), interval=schedule
-            )
+
+        self.scheduler = None
+        if scheduler_config:
+            self.scheduler = scheduler_config.create_scheduler(runner=self.runner)
 
         self.logger = logger.getChild(self.__class__.__name__)
 
