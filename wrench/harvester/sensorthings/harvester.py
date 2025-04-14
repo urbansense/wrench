@@ -38,8 +38,6 @@ class SensorThingsHarvester(BaseHarvester):
 
         self.translator = translator
 
-        self.things = self.fetch_items()
-
     def fetch_items(self) -> list[Thing]:
         """
         Fetches items with optional translation.
@@ -57,7 +55,7 @@ class SensorThingsHarvester(BaseHarvester):
 
     def return_items(self) -> list[Item]:
         """Returns things."""
+        things = self.fetch_items()
         return [
-            Item(id=thing.id, content=thing.model_dump(mode="json"))
-            for thing in self.things
+            Item(id=thing.id, content=thing.model_dump(mode="json")) for thing in things
         ]
