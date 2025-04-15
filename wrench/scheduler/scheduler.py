@@ -42,7 +42,6 @@ class CronScheduler:
                 hour,
                 minute,
                 second,
-                start_date=datetime.datetime.now(),
             )
 
         self.scheduler.add_job(
