@@ -10,7 +10,7 @@ class HarvesterError(WrenchError):
     pass
 
 
-class ClassifierError(WrenchError):
+class GrouperError(WrenchError):
     """Raised when classification operations fail."""
 
     pass

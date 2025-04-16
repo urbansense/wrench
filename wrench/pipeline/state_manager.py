@@ -24,6 +24,7 @@ class PipelineStateManager:
         if not hasattr(self, "current_version") or not self.current_version:
             return {}
 
+        self.logger.debug("Getting state from version: %s", self.current_version)
         key = f"state:v{self.current_version}:{component_name}"
         return await self.store.get(key) or {}
 

@@ -451,6 +451,7 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             node_inputs["state"] = component_state
 
             # Run the component
+            self.logger.debug("Running component %s", node_name)
             run_result = await node.run(**node_inputs)
 
             # Store results
