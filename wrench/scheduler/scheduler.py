@@ -45,6 +45,10 @@ class CronScheduler:
             )
         else:
             raise ValueError(
+                "Either a valid cron_expression or at least one time parameter (e.g., year, month, day, etc.) must be provided."
+            )
+        else:
+            raise ValueError(
                 """Either a valid cron_expression or at least one time
                 parameter (e.g., year, month, day, etc.) must be provided."""
             )
