@@ -53,7 +53,7 @@ class SensorRegistrationPipeline:
         Returns:
             PipelineResult: The result of the pipeline execution.
         """
-        if not hasattr(self, "scheduler"):
+        if not self.scheduler:
             return await self.runner.run({})
 
         try:
