@@ -16,22 +16,6 @@ class ConfigReader:
     - .json
     - .yaml, .yml
 
-    Example:
-
-    .. code-block:: python
-
-        from pathlib import Path
-        from neo4j_graphrag.experimental.pipeline.config.reader import ConfigReader
-        reader = ConfigReader()
-        reader.read(Path("my_file.json"))
-
-    If reading a file with a different extension but still in JSON or YAML format,
-    it is possible to call directly the `read_json` or `read_yaml` methods:
-
-    .. code-block:: python
-
-        reader.read_yaml(Path("my_file.txt"))
-
     """
 
     def __init__(self, fs: Optional[fsspec.AbstractFileSystem] = None) -> None:

@@ -104,8 +104,8 @@ class AbstractPipelineConfig(AbstractConfig):
         """
         Global data contains data that can be referenced in other parts of the config.
 
-        Typically, neo4j drivers, LLMs and embedders can be referenced in component
-         input parameters.
+        Typically, harvesters, groupers, metadatabuilders, and catalogers can be
+        referenced in component input parameters.
         """
         # 'extras' parameters can be referenced in other configs,
         # that's why they are parsed before the others
@@ -165,7 +165,7 @@ class AbstractPipelineConfig(AbstractConfig):
         return user_input
 
     async def close(self) -> None:
-        drivers = self._global_data.get("neo4j_config", {})
+        drivers = self._global_data.get("wrench_config", {})
         for driver_name in drivers:
             driver = drivers[driver_name]
             logger.debug(f"PIPELINE_CONFIG: closing driver {driver_name}: {driver}")
