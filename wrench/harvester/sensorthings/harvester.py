@@ -27,8 +27,6 @@ class SensorThingsHarvester(BaseHarvester):
             base_url (str): Base SensorThings URL to harvest items from.
             title (str): Title of the entry in the catalog.
             description (str): Description of the entry in the catalog.
-            content_generator (ContentGenerator): Content generator for generating
-                    name and description for device group metadata
             pagination_config (PaginationConfig | None): Pagination config
                 for fetching items.
             translator (TranslationService | None): Optional translator.
