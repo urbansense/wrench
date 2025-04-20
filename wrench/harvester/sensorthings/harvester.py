@@ -44,7 +44,9 @@ class SensorThingsHarvester(BaseHarvester):
             if isinstance(translator_config, dict):
                 translator_config = TranslatorConfig.model_validate(translator_config)
 
-        self.translator = TranslationService.from_config(translator_config)
+            self.translator = TranslationService.from_config(translator_config)
+        else:
+            self.translator = None
 
     def fetch_items(self) -> list[Thing]:
         """
