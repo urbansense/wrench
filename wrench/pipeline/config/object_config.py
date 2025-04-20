@@ -14,6 +14,7 @@ from typing import (
 from pydantic import (
     ConfigDict,
     Field,
+    PrivateAttr,
     RootModel,
     field_validator,
 )
@@ -71,9 +72,12 @@ class ObjectConfig(AbstractConfig, Generic[T]):
     REQUIRED_PARAMS: ClassVar[list[str]] = []
     """List of required parameters for this object constructor."""
 
+    # Declare the logger as a private attribute
+    _logger = PrivateAttr()
+
     def __init__(self, **data):
         super().__init__(**data)
-        self.logger = logger.getChild(self.__class__.__name__)
+        self._logger = logger.getChild(self.__class__.__name__)
 
     @field_validator("params_")
     @classmethod
@@ -127,7 +131,7 @@ class ObjectConfig(AbstractConfig, Generic[T]):
     def parse(self, resolved_data: dict[str, Any] | None = None) -> T:
         """Import `class_`, resolve `params_` and instantiate object."""
         self._global_data = resolved_data or {}
-        self.logger.debug(f"OBJECT_CONFIG: parsing {self} using {resolved_data}")
+        self._logger.debug(f"OBJECT_CONFIG: parsing {self} using {resolved_data}")
 
         if self.class_ is None:
             raise ValueError(f"`class_` is required to parse object {self}")
@@ -140,7 +144,7 @@ class ObjectConfig(AbstractConfig, Generic[T]):
         try:
             obj = klass(**params)
         except TypeError as e:
-            self.logger.error(
+            self._logger.error(
                 "OBJECT_CONFIG: failed to instantiate object due to improperly configured parameters"
             )
             raise e

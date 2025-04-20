@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -17,6 +18,9 @@ class PaginationConfig(BaseModel):
 class TranslatorConfig(BaseModel):
     """Configuration for translation service."""
 
+    translator_type: Literal["libre_translate"] = Field(
+        description="Type of translator to use"
+    )
     url: str = Field(description="Base URL for the translation service")
     source_lang: str | None = Field(default=None, description="Source language code")
 

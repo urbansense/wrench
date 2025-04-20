@@ -1,8 +1,11 @@
-from wrench.harvester.base import BaseHarvester, TranslationService
+from typing import Any
+
+from wrench.harvester.base import BaseHarvester
+from wrench.harvester.sensorthings.translator import TranslationService
 from wrench.models import Item
 
 from .client import SensorThingsClient
-from .config import PaginationConfig
+from .config import PaginationConfig, TranslatorConfig
 from .models import Thing
 
 
@@ -17,8 +20,8 @@ class SensorThingsHarvester(BaseHarvester):
     def __init__(
         self,
         base_url: str,
-        pagination_config: PaginationConfig | None = None,
-        translator: TranslationService | None = None,
+        pagination_config: PaginationConfig | dict[str, Any] = {},
+        translator_config: TranslatorConfig | dict[str, Any] = {},
     ):
         """
         Initialize the harvester.
@@ -27,16 +30,23 @@ class SensorThingsHarvester(BaseHarvester):
             base_url (str): Base SensorThings URL to harvest items from.
             title (str): Title of the entry in the catalog.
             description (str): Description of the entry in the catalog.
-            content_generator (ContentGenerator): Content generator for generating
-                    name and description for device group metadata
-            pagination_config (PaginationConfig | None): Pagination config
+            pagination_config (PaginationConfig | dict[str, Any]): Pagination config
                 for fetching items.
-            translator (TranslationService | None): Optional translator.
+            translator_config (TranslationConfig | None): Optional translator config.
         """
-        # Set up translator if configured
+        if pagination_config:
+            if isinstance(pagination_config, dict):
+                pagination_config = PaginationConfig.model_validate(pagination_config)
+
         self.client = SensorThingsClient(base_url=base_url, config=pagination_config)
 
-        self.translator = translator
+        if translator_config:
+            if isinstance(translator_config, dict):
+                translator_config = TranslatorConfig.model_validate(translator_config)
+
+            self.translator = TranslationService.from_config(translator_config)
+        else:
+            self.translator = None
 
     def fetch_items(self) -> list[Thing]:
         """

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Sequence
+from typing import Any, Sequence
 
 from wrench.harvester.sensorthings.models import Thing
 from wrench.metadatabuilder.base import BaseMetadataBuilder
@@ -9,7 +9,7 @@ from wrench.metadatabuilder.sensorthings.querybuilder import (
     ThingQuery,
 )
 from wrench.models import CommonMetadata, Group, Item, TimeFrame
-from wrench.utils import ContentGenerator
+from wrench.utils.generator import ContentGenerator, GeneratorConfig
 
 from .spatial import (
     GeometryCollector,
@@ -23,7 +23,7 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
         base_url: str,
         title: str,
         description: str,
-        content_generator: ContentGenerator,
+        generator_config: GeneratorConfig | dict[str, Any],
     ):
         """
         Builds metadata for SensorThings API entries.
@@ -32,13 +32,17 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
             base_url (str): Base SensorThings URL to harvest items from.
             title (str): Title of the entry in the catalog.
             description (str): Description of the entry in the catalog.
-            content_generator (ContentGenerator): Content generator for generating
-                    name and description for device group metadata
+            generator_config (dict[str, Any]): Config for content generator for
+            generating name and description for device group metadata
         """
         self.base_url = base_url
         self.title = title
         self.description = description
-        self.content_generator = content_generator
+
+        if isinstance(generator_config, dict):
+            generator_config = GeneratorConfig.model_validate(generator_config)
+
+        self.content_generator = ContentGenerator(generator_config)
         self.service_spatial_calculator = PolygonalExtentCalculator()
         self.group_spatial_calculator = GeometryCollector()
 

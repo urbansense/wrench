@@ -7,7 +7,7 @@ from .models import (
     Sensor,
     Thing,
 )
-from .translator import LibreTranslateService
+from .translator import LibreTranslateService, TranslationService
 
 __all__ = [
     "SensorThingsHarvester",
@@ -20,5 +20,6 @@ __all__ = [
     "Sensor",
     "ObservedProperty",
     "Location",
+    "TranslationService",
     "LibreTranslateService",
 ]
