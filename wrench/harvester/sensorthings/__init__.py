@@ -22,5 +22,4 @@ __all__ = [
     "Location",
     "TranslationService",
     "LibreTranslateService",
-    "Tran",
 ]
