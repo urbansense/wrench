@@ -1,9 +1,40 @@
-import requests
+from abc import ABC, abstractmethod
 
-from wrench.harvester.base import TranslationService
+import requests
+from pydantic import BaseModel
+
+from wrench.harvester.sensorthings.config import TranslatorConfig
 from wrench.log import logger
 
 from .models import Thing
+
+
+class TranslationService[T: BaseModel](ABC):
+    url: str
+
+    @abstractmethod
+    def translate(self, obj: T) -> T:
+        """
+        Translates the given object.
+
+        This function takes an object of type T,which must be a
+        subclass of BaseModel, and returns an object of the same type.
+
+        Args:
+            obj (T): The object to be translated.
+
+        Returns:
+            T: The translated object.
+        """
+        pass
+
+    @classmethod
+    def from_config(cls, config: TranslatorConfig):
+        if config.translator_type == "libre_translate":
+            return LibreTranslateService(
+                url=config.url,
+                source_lang=config.source_lang if config.source_lang else "auto",
+            )
 
 
 class LibreTranslateService(TranslationService):
@@ -26,7 +57,7 @@ class LibreTranslateService(TranslationService):
             Translates text from `source_lang` into English using the API.
     """
 
-    def __init__(self, url: str, source_lang):
+    def __init__(self, url: str, source_lang="auto"):
         """
         Initializes the Translator object with the given URL and source language.
 
@@ -42,7 +73,7 @@ class LibreTranslateService(TranslationService):
             logger (Logger): The logger instance for this class.
         """
         self.url = url
-        self.source_lang = "auto" if not source_lang else source_lang
+        self.source_lang = source_lang
         self.headers = {"Content-Type": "application/json"}
         self.logger = logger.getChild(self.__class__.__name__)
 
