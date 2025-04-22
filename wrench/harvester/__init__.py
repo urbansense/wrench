@@ -1,17 +1,15 @@
 from .base import BaseHarvester
 from .sensorthings import (
-    Location,
-    SensorThingsConfig,
+    PaginationConfig,
     SensorThingsHarvester,
-    Thing,
     TranslationService,
+    TranslatorConfig,
 )
 
 __all__ = [
     "BaseHarvester",
     "TranslationService",
     "SensorThingsHarvester",
-    "SensorThingsConfig",
-    "Thing",
-    "Location",
+    "TranslatorConfig",
+    "PaginationConfig",
 ]

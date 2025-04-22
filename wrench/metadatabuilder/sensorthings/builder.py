@@ -30,10 +30,10 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
 
         Args:
             base_url (str): Base SensorThings URL to harvest items from.
-            title (str): Title of the entry in the catalog.
-            description (str): Description of the entry in the catalog.
+            title (str): Title to use for generating entries in the catalog.
+            description (str): Description to use for generating entries in the catalog.
             generator_config (dict[str, Any]): Config for content generator for
-            generating name and description for device group metadata
+                generating name and description for device group metadata
         """
         self.base_url = base_url
         self.title = title
@@ -86,7 +86,7 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
 
         Returns:
             metadata (CommonMetadata): CommonMetadata extracted
-            from the groups
+                from the groups
         """
         things_in_group = [Thing.model_validate(item.content) for item in group.items]
 

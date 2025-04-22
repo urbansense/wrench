@@ -1,4 +1,4 @@
-from .config import PaginationConfig, SensorThingsConfig, TranslatorConfig
+from .config import PaginationConfig, TranslatorConfig
 from .harvester import SensorThingsHarvester
 from .models import (
     Datastream,
@@ -11,7 +11,6 @@ from .translator import LibreTranslateService, TranslationService
 
 __all__ = [
     "SensorThingsHarvester",
-    "SensorThingsConfig",
     "PaginationConfig",
     "TranslatorConfig",
     "Thing",

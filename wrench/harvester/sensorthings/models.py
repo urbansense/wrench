@@ -17,8 +17,6 @@ model_config = ConfigDict(
 
 
 class SensorThingsBase(BaseModel):
-    """Base mixin for common fields for relevant SensorThings API Entities."""
-
     model_config = model_config
     id: str = Field(validation_alias="@iot.id", serialization_alias="@iot.id")
     name: str
@@ -55,7 +53,6 @@ class Location(SensorThingsBase):
     @field_validator("location", mode="before")
     @classmethod
     def validate_geojson(cls, v):
-        """Validate that the location is proper GeoJSON."""
         if isinstance(v, (Feature, FeatureCollection, Geometry)):
             return v
 
@@ -83,13 +80,6 @@ class Location(SensorThingsBase):
         raise ValueError("Location must be a valid GeoJSON object")
 
     def get_coordinates(self) -> list[tuple[float, float]]:
-        """
-        Retrieves the coordinates of the location.
-
-        Returns:
-            list[tuple[float, float]]: List of tuples with latitude and longitude
-            of the location.
-        """
         return list(coords(self.location))
 
 
@@ -103,23 +93,8 @@ class Thing(SensorThingsBase):
         alias="Locations",
     )
 
-    def __str__(self):
-        """
-        Returns a JSON string representation of the model.
-
-        The JSON string is generated using the `model_dump_json` method with
-        `by_alias` set to True and `exclude_none` set to True.
-
-        Returns:
-            str: A JSON string representation of the model.
-        """
+    def __str__(self) -> str:
         return self.model_dump_json(by_alias=True, exclude_none=True)
 
-    def __hash__(self):
-        """
-        Make comparison between Things easier by hashing the contents.
-
-        Returns:
-            str: A hash string created from the Thing content.
-        """
+    def __hash__(self) -> str:
         return xxhash.xxh32(str(self)).hexdigest()

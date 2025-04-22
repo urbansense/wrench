@@ -31,25 +31,6 @@ class TimeFrame(BaseModel):
     latest_time: datetime
 
 
-class Device(BaseModel):
-    """
-    Device model representing an entity with an ID.
-
-    Attributes:
-        id (str): The unique identifier for the item.
-    """
-
-    id: str
-    name: str
-    description: str
-    location: Location
-    sensor_name: str
-
-    properties: dict[str, Any]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
 class CommonMetadata(BaseModel):
     """
     Extensible common metadata format.
