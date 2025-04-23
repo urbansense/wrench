@@ -65,6 +65,7 @@ async def run_pipeline():
 You can also define the pipeline from a configuration file such as YAML.
 
 ```yaml
+# pipeline_config.yaml
 template_: SensorPipeline
 harvester_config:
   class_: sensorthings.SensorThingsHarvester
@@ -101,7 +102,20 @@ cataloger_config:
 
 ```
 
-and you can also schedule this pipeline by creating an instance of scheduler and passing in the `run` method to the scheduler
+and you can also schedule it by creating an instance of scheduler and passing in the runner to the scheduler
 
 ```python
+pipeline_runner = PipelineRunner.from_config_file(
+    ".//pipeline_config.yaml"
+)
+
+config = IntervalSchedulerConfig(interval="PT10M")
+
+scheduler = config.create_scheduler(pipeline_runner)
+
+try:
+    scheduler.start()
+    await asyncio.Event().wait()
+except (KeyboardInterrupt, SystemExit):
+    scheduler.shutdown()
 ```
