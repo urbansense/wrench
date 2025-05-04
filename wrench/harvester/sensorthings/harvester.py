@@ -28,8 +28,6 @@ class SensorThingsHarvester(BaseHarvester):
 
         Args:
             base_url (str): Base SensorThings URL to harvest items from.
-            title (str): Title of the entry in the catalog.
-            description (str): Description of the entry in the catalog.
             pagination_config (PaginationConfig | dict[str, Any]): Pagination config
                 for fetching items.
             translator_config (TranslationConfig | None): Optional translator config.

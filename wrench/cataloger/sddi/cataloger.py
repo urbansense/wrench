@@ -34,7 +34,7 @@ class SDDICataloger(BaseCataloger):
 
         Raises:
             ValueError: If the provided configuration path is invalid or the
-            configuration file cannot be loaded.
+                configuration file cannot be loaded.
 
         """
         super().__init__(endpoint=base_url, api_key=api_key)

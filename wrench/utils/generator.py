@@ -10,8 +10,6 @@ from wrench.models import Group
 
 
 class Content(BaseModel):
-    """Represents generated content with name and description."""
-
     name: str
     description: str
 

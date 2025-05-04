@@ -46,6 +46,8 @@ lint = [
 ]
 dev = [
     "mkdocs-material>=9.6.11",
+    "mkdocstrings[python]>=0.29.1",
+    "pymdown-extensions>=10.14.3",
 ]
 
 [build-system]
@@ -74,6 +76,7 @@ ignore = [
     "D101",  # missing docstring in public class
     "D104",  # missing docstring in public package
     "D102",  # missing docstring in public method
+    "D105",  # missing docstring in magic method
     "D107",  # Missing docstring in __init__ method
     "E501",  # line too long,
 ]

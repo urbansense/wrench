@@ -141,11 +141,11 @@ class LibreTranslateService(TranslationService):
             value (str, list, dict): The value to be translated.
 
         Returns:
-            The translated value. If the input is a string, it returns
-            the translated string. If the input is a list, it returns
-            a list with each item translated. If the input is a dict,
-            it returns a dict with translated keys and values.If the
-            input is of any other type, it returns the input value unchanged.
+            (str, list, dict): The translated value. If the input is a string,
+                it returns the translated string. If the input is a list, it returns
+                a list with each item translated. If the input is a dict,
+                it returns a dict with translated keys and values.If the
+                input is of any other type, it returns the input value unchanged.
         """
         if isinstance(value, str):
             return self.translate_text(value)
@@ -158,7 +158,7 @@ class LibreTranslateService(TranslationService):
             }
         return value
 
-    def translate_text(self, text: str):
+    def translate_text(self, text: str) -> str:
         """
         Translates text into English with the LibreTranslate API.
 
@@ -169,8 +169,7 @@ class LibreTranslateService(TranslationService):
             str: The translated text in English.
 
         Raises:
-            requests.exceptions.RequestException:
-            If there is an issue with the API request.
+            requests.exceptions.RequestException: If there is an issue with the API request.
         """
         payload = {"q": text, "source": self.source_lang, "target": "en"}
 

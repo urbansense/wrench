@@ -1,3 +1,3 @@
-from .generator import Content, ContentGenerator, GeneratorConfig
+from .generator import ContentGenerator, GeneratorConfig
 
-__all__ = ["Content", "ContentGenerator", "GeneratorConfig"]
+__all__ = ["ContentGenerator", "GeneratorConfig"]
