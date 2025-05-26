@@ -5,7 +5,7 @@ from pydantic import validate_call
 
 from wrench.components.types import Groups
 from wrench.grouper import BaseGrouper
-from wrench.models import Group, Item
+from wrench.models import Device, Group
 from wrench.pipeline.component import Component
 from wrench.pipeline.types import Operation, OperationType
 
@@ -16,10 +16,10 @@ class Grouper(Component):
     def __init__(self, grouper: BaseGrouper):
         self._grouper = grouper
 
-    @validate_call(config={"extra": "allow"})
+    @validate_call(config={"extra": "allow", "arbitrary_types_allowed": True})
     async def run(
         self,
-        devices: Sequence[Item],
+        devices: Sequence[Device],
         operations: Sequence[Operation],
         state: dict[str, Any] = {},
     ) -> Groups:
@@ -34,6 +34,7 @@ class Grouper(Component):
                 current_groups, affected_groups = self._apply_operations(
                     previous_groups, operations
                 )
+
                 # Return only the affected groups
                 return Groups(
                     groups=affected_groups, state={"previous_groups": current_groups}
@@ -47,7 +48,7 @@ class Grouper(Component):
         return Groups(groups=groups, state={"previous_groups": groups})
 
     def _apply_operations(
-        self, existing_groups: list[Group], operations: list[Operation]
+        self, existing_groups: Sequence[Group], operations: Sequence[Operation]
     ) -> tuple[list[Group], list[Group]]:
         """
         Apply operations to existing groups and track which groups were affected.
@@ -61,38 +62,38 @@ class Grouper(Component):
                 - all_groups: Complete list of all groups after operations
                 - affected_groups: Only the groups that were changed
         """
-        # Make a deep copy to avoid modifying the original state
-        all_groups = copy.deepcopy(existing_groups)
+        # Make a list deep copy to avoid modifying the original state
+        all_groups = list(copy.deepcopy(existing_groups))
 
         # Sort operations by type for batch processing
-        items_to_add = []
-        items_to_update = []
-        items_to_delete = []
+        devices_to_add: list[Device] = []
+        devices_to_update: list[Device] = []
+        devices_to_delete: list[Device] = []
 
         for op in operations:
             if op.type == OperationType.ADD:
-                items_to_add.append(op.item)
+                devices_to_add.append(op.device)
             elif op.type == OperationType.UPDATE:
-                items_to_update.append(op.item)
+                devices_to_update.append(op.device)
             elif op.type == OperationType.DELETE:
-                items_to_delete.append(op.item)
+                devices_to_delete.append(op.device)
 
         # Set to track which groups were affected
         affected_group_names = set()
 
         # Step 1: Handle additions and updates
-        if items_to_add or items_to_update:
+        if devices_to_add or devices_to_update:
             # Create new groups from added and updated items
-            new_groups = self._grouper.group_items(items_to_add + items_to_update)
+            new_groups = self._grouper.group_items(devices_to_add + devices_to_update)
             # Track which groups were affected
             affected_group_names.update(group.name for group in new_groups)
             # Merge new groups into existing groups
             self._merge_groups(all_groups, new_groups)
 
         # Step 2: Handle deletions
-        if items_to_delete:
+        if devices_to_delete:
             # Get names of groups affected by deletions
-            deleted_from_groups = self._remove_items(all_groups, items_to_delete)
+            deleted_from_groups = self._remove_items(all_groups, devices_to_delete)
             affected_group_names.update(deleted_from_groups)
 
         # Create list of affected groups (only return groups that still exist)
@@ -119,20 +120,20 @@ class Grouper(Component):
                 existing_group = existing_groups_by_name[new_group.name]
 
                 # Create a mapping of existing items by ID
-                existing_items_by_id = {
-                    item.id: i for i, item in enumerate(existing_group.items)
+                existing_devices_by_id = {
+                    device.id: i for i, device in enumerate(existing_group.devices)
                 }
 
                 # Update existing items and add new ones
-                for new_item in new_group.items:
-                    item_id = new_item.id
-                    if item_id in existing_items_by_id:
+                for new_device in new_group.devices:
+                    device_id = new_device.id
+                    if device_id in existing_devices_by_id:
                         # Replace existing item
-                        idx = existing_items_by_id[item_id]
-                        existing_group.items[idx] = new_item
+                        idx = existing_devices_by_id[device_id]
+                        existing_group.devices[idx] = new_device
                     else:
                         # Add new item
-                        existing_group.items.append(new_item)
+                        existing_group.devices.append(new_device)
 
                 # Update parent_classes if they exist
                 if hasattr(new_group, "parent_classes") and hasattr(
@@ -144,14 +145,14 @@ class Grouper(Component):
                 all_groups.append(new_group)
 
     def _remove_items(
-        self, all_groups: list[Group], items_to_delete: list[Item]
+        self, all_groups: list[Group], devices_to_delete: list[Device]
     ) -> set[str]:
         """
         Remove specified items from all groups.
 
         Args:
             all_groups: Complete list of all groups
-            items_to_delete: Items to be removed
+            devices_to_delete: Items to be removed
 
         Returns:
             set: Names of groups that were modified
@@ -159,17 +160,19 @@ class Grouper(Component):
         affected_group_names = set()
 
         # Create a set of IDs for faster lookup
-        delete_ids = {item.id for item in items_to_delete}
+        delete_ids = {device.id for device in devices_to_delete}
 
         for group in all_groups:
-            # Check if any items in this group need to be deleted
-            original_count = len(group.items)
+            # Check if any devices in this group need to be deleted
+            original_count = len(group.devices)
 
-            # Filter out items to delete
-            group.items = [item for item in group.items if item.id not in delete_ids]
+            # Filter out devices to delete
+            group.devices = [
+                device for device in group.devices if device.id not in delete_ids
+            ]
 
             # If the count changed, this group was affected
-            if len(group.items) != original_count:
+            if len(group.devices) != original_count:
                 affected_group_names.add(group.name)
 
         return affected_group_names

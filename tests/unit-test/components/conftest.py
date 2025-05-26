@@ -22,12 +22,12 @@ def sample_groups(sample_devices):
         Group(
             name="sensors",
             description="Group of sensors",
-            items=[d for d in sample_devices if d["type"] == "sensor"],
+            devices=[d for d in sample_devices if d["type"] == "sensor"],
         ),
         Group(
             name="actuators",
             description="Group of actuators",
-            items=[d for d in sample_devices if d["type"] == "actuator"],
+            devices=[d for d in sample_devices if d["type"] == "actuator"],
         ),
     ]
     return groups
@@ -80,8 +80,8 @@ def mock_base_grouper():
     """Mock base grouper."""
     grouper = Mock()
     grouper.group_items.return_value = [
-        Group(name="group1", description="Group 1", items=[{"id": 1}]),
-        Group(name="group2", description="Group 2", items=[{"id": 2}]),
+        Group(name="group1", description="Group 1", devices=[{"id": 1}]),
+        Group(name="group2", description="Group 2", devices=[{"id": 2}]),
     ]
     return grouper
 

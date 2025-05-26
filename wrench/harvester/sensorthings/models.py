@@ -1,12 +1,10 @@
 from typing import Any
 
-import geojson
 import xxhash
-from geojson import Feature, FeatureCollection
-from geojson.geometry import Geometry
-from geojson.utils import coords
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+
+from wrench.models import Location as WrenchLocation
 
 model_config = ConfigDict(
     alias_generator=to_camel,
@@ -43,44 +41,8 @@ class Datastream(SensorThingsBase):
     )
 
 
-class Location(SensorThingsBase):
-    encoding_type: str
-    location: Feature | FeatureCollection | Geometry = Field(
-        description="GeoJSON location data as Feature, FeatureCollection, or Geometry"
-    )
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @field_validator("location", mode="before")
-    @classmethod
-    def validate_geojson(cls, v):
-        if isinstance(v, (Feature, FeatureCollection, Geometry)):
-            return v
-
-        # If it's a dict, convert to a Feature object regardless of type
-        if isinstance(v, dict):
-            if not v.get("type"):
-                raise ValueError("GeoJSON object must have a 'type' field")
-
-            # If already a Feature, use as is, otherwise wrap it as a Feature
-            if v.get("type") == "Feature":
-                return geojson.GeoJSON.to_instance(v)
-            elif v.get("type") in [
-                "Point",
-                "LineString",
-                "Polygon",
-                "MultiPoint",
-                "MultiLineString",
-                "MultiPolygon",
-                "GeometryCollection",
-            ]:
-                # Create a Feature with this geometry
-                feature_dict = {"type": "Feature", "geometry": v, "properties": {}}
-                return geojson.GeoJSON.to_instance(feature_dict)
-
-        raise ValueError("Location must be a valid GeoJSON object")
-
-    def get_coordinates(self) -> list[tuple[float, float]]:
-        return list(coords(self.location))
+class Location(SensorThingsBase, WrenchLocation):
+    pass
 
 
 class Thing(SensorThingsBase):

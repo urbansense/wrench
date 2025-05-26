@@ -1,8 +1,9 @@
+from datetime import datetime
 from typing import Any
 
 from wrench.harvester.base import BaseHarvester
 from wrench.harvester.sensorthings.translator import TranslationService
-from wrench.models import Item
+from wrench.models import Device, TimeFrame
 
 from .client import SensorThingsClient
 from .config import PaginationConfig, TranslatorConfig
@@ -30,21 +31,18 @@ class SensorThingsHarvester(BaseHarvester):
             base_url (str): Base SensorThings URL to harvest items from.
             pagination_config (PaginationConfig | dict[str, Any]): Pagination config
                 for fetching items.
-            translator_config (TranslationConfig | None): Optional translator config.
+            translator_config (TranslationConfig | dict[str, Any]): Optional translator config.
         """
-        if pagination_config:
-            if isinstance(pagination_config, dict):
-                pagination_config = PaginationConfig.model_validate(pagination_config)
+        super().__init__()
+        if isinstance(pagination_config, dict):
+            pagination_config = PaginationConfig.model_validate(pagination_config)
 
         self.client = SensorThingsClient(base_url=base_url, config=pagination_config)
 
-        if translator_config:
-            if isinstance(translator_config, dict):
-                translator_config = TranslatorConfig.model_validate(translator_config)
+        if isinstance(translator_config, dict):
+            translator_config = TranslatorConfig.model_validate(translator_config)
 
-            self.translator = TranslationService.from_config(translator_config)
-        else:
-            self.translator = None
+        self.translator = TranslationService.from_config(translator_config)
 
     def fetch_items(self) -> list[Thing]:
         """
@@ -54,16 +52,44 @@ class SensorThingsHarvester(BaseHarvester):
             things (list[Thing]) : List of things, translated if translation
                 is configured.
         """
-        things = self.client.fetch_items(limit=20)
+        things = self.client.fetch_things()
 
         if not self.translator:
             return things
 
         return [self.translator.translate(thing) for thing in things]
 
-    def return_items(self) -> list[Item]:
+    def return_items(self) -> list[Device]:
         """Returns things."""
         things = self.fetch_items()
-        return [
-            Item(id=thing.id, content=thing.model_dump(mode="json")) for thing in things
-        ]
+
+        devices = []
+
+        for thing in things:
+            time_frame = None
+            for ds in thing.datastreams:
+                if ds.phenomenon_time:
+                    start_time = datetime.fromisoformat(
+                        ds.phenomenon_time.split("/")[0]
+                    )
+                    latest_time = datetime.fromisoformat(
+                        ds.phenomenon_time.split("/")[1]
+                    )
+                    time_frame = TimeFrame(
+                        start_time=start_time, latest_time=latest_time
+                    )
+
+            device = Device(
+                id=thing.id,
+                name=thing.name,
+                description=thing.description,
+                locations=thing.location,
+                time_frame=time_frame,
+                sensor_names={ds.sensor.name for ds in thing.datastreams},
+                properties=thing.properties,
+                raw_data=thing.model_dump(),
+            )
+
+            devices.append(device)
+
+        return devices

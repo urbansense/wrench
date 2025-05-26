@@ -8,7 +8,7 @@ from wrench.components.types import Items
 from wrench.exceptions import HarvesterError
 from wrench.harvester import BaseHarvester
 from wrench.log import logger
-from wrench.models import Item
+from wrench.models import Device
 from wrench.pipeline.types import (
     Component,
     Operation,
@@ -34,46 +34,50 @@ class Harvester(Component):
         Raises:
             HarvesterError: If there's an issue retrieving items from the harvester
         """
-        previous_items: Sequence[dict[str, Any]] = state.get("previous_items")
+        previous_devices: Sequence[dict[str, Any]] = state.get("previous_devices")
 
         try:
             # Fetch current items from the harvester
-            current_items = self._harvester.return_items()
+            current_devices = self._harvester.return_items()
 
             # Generate operations based on differences from previous run
-            if previous_items:
-                previous_items = [Item.model_validate(item) for item in previous_items]
+            if previous_devices:
+                previous_devices = [
+                    Device.model_validate(device) for device in previous_devices
+                ]
 
                 self.logger.debug(
-                    """Comparing current state (%s items)
-                    with previous state (%s items)""",
-                    len(current_items),
-                    len(previous_items),
+                    """Comparing current state (%s devices)
+                    with previous state (%s devices)""",
+                    len(current_devices),
+                    len(previous_devices),
                 )
-                operations = self._detect_operations(previous_items, current_items)
+                operations = self._detect_operations(previous_devices, current_devices)
                 self.logger.info("Detected %s changes: ", len(operations))
-                self.logger.debug("Object IDs: %s", [op.item_id for op in operations])
+                self.logger.debug("Object IDs: %s", [op.device_id for op in operations])
                 if len(operations) == 0:
                     self.logger.info(
                         "No new or updated items are discovered, stopping pipeline"
                     )
                     return Items(
-                        devices=current_items, operations=operations, stop_pipeline=True
+                        devices=current_devices,
+                        operations=operations,
+                        stop_pipeline=True,
                     )
             else:
                 # First run - treat all as new additions
                 self.logger.info(
-                    f"First run, treating all {len(current_items)} items as new"
+                    f"First run, treating all {len(current_devices)} items as new"
                 )
                 operations = [
-                    Operation(type=OperationType.ADD, item_id=item.id, item=item)
-                    for item in current_items
+                    Operation(type=OperationType.ADD, device_id=item.id, device=item)
+                    for item in current_devices
                 ]
 
             return Items(
-                devices=current_items,
+                devices=current_devices,
                 operations=operations,
-                state={"previous_items": current_items},
+                state={"previous_devices": current_devices},
             )
 
         except Exception as e:
@@ -83,7 +87,7 @@ class Harvester(Component):
             ) from e
 
     def _detect_operations(
-        self, previous: Sequence[Item], current: Sequence[Item]
+        self, previous: Sequence[Device], current: Sequence[Device]
     ) -> list[Operation]:
         """
         Detect changes between previous and current item sets.
@@ -101,62 +105,68 @@ class Harvester(Component):
         operations = []
 
         # Create maps for faster lookups
-        prev_map = {item.id: item for item in previous}
-        curr_map = {item.id: item for item in current}
+        prev_map = {device.id: device for device in previous}
+        curr_map = {device.id: device for device in current}
 
         # Create content hashes for more efficient comparisons
         prev_hashes = {
-            item_id: self._hash_content(item.content)
-            for item_id, item in prev_map.items()
+            device_id: self._hash_content(device.model_dump())
+            for device_id, device in prev_map.items()
         }
 
         # Find additions and updates
-        for item_id, item in curr_map.items():
-            if item_id not in prev_map:
+        for device_id, device in curr_map.items():
+            if device_id not in prev_map:
                 # Item is new
                 operations.append(
-                    Operation(type=OperationType.ADD, item_id=item_id, item=item)
+                    Operation(
+                        type=OperationType.ADD, device_id=device_id, device=device
+                    )
                 )
             elif self._is_item_changed(
-                prev_map[item_id], item, prev_hashes.get(item_id)
+                prev_map[device_id], device, prev_hashes.get(device_id)
             ):
                 # Item exists but was updated
                 operations.append(
-                    Operation(type=OperationType.UPDATE, item_id=item_id, item=item)
+                    Operation(
+                        type=OperationType.UPDATE, device_id=device_id, device=device
+                    )
                 )
 
         # Find deletions
-        for item_id, item in prev_map.items():
-            if item_id not in curr_map:
+        for device_id, device in prev_map.items():
+            if device_id not in curr_map:
                 operations.append(
-                    Operation(type=OperationType.DELETE, item_id=item_id, item=item)
+                    Operation(
+                        type=OperationType.DELETE, device_id=device_id, device=device
+                    )
                 )
 
         return operations
 
     def _is_item_changed(
-        self, prev_item: Item, curr_item: Item, prev_hash: str | None = None
+        self, prev_device: Device, curr_device: Device, prev_hash: str | None = None
     ) -> bool:
         """
-        Determine if an item has changed by comparing content.
+        Determine if an device has changed by comparing content.
 
         This method uses content hashing for more efficient comparisons when available.
 
         Args:
-            prev_item: Item from previous run
-            curr_item: Corresponding item from current run
-            prev_hash: Optional pre-computed hash of previous item content
+            prev_device: Device from previous run
+            curr_device: Corresponding device from current run
+            prev_hash: Optional pre-computed hash of previous device content
 
         Returns:
-            bool: True if the item's content has changed, False otherwise
+            bool: True if the device's content has changed, False otherwise
         """
         # If we have a pre-computed hash, use it for comparison
         if prev_hash is not None:
-            curr_hash = self._hash_content(curr_item.content)
+            curr_hash = self._hash_content(curr_device.model_dump())
             return prev_hash != curr_hash
 
         # Fall back to direct content comparison if no hash provided
-        return prev_item.content != curr_item.content
+        return prev_device.model_dump() != curr_device.model_dump()
 
     def _hash_content(self, content: dict) -> str:
         """

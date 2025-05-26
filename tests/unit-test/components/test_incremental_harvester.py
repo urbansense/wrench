@@ -36,7 +36,7 @@ async def test_incremental_harvester_first_run():
     assert len(result.devices) == 2
     assert len(result.operations) == 2
     assert all(op.type == OperationType.ADD for op in result.operations)
-    assert {op.item_id for op in result.operations} == {"1", "2"}
+    assert {op.device_id for op in result.operations} == {"1", "2"}
 
 
 @pytest.mark.asyncio
@@ -62,7 +62,7 @@ async def test_incremental_harvester_detect_add():
     # Verify results
     assert len(result.operations) == 1
     assert result.operations[0].type == OperationType.ADD
-    assert result.operations[0].item_id == "2"
+    assert result.operations[0].device_id == "2"
 
 
 @pytest.mark.asyncio
@@ -89,8 +89,8 @@ async def test_incremental_harvester_detect_update():
     # Verify results
     assert len(result.operations) == 1
     assert result.operations[0].type == OperationType.UPDATE
-    assert result.operations[0].item_id == "2"
-    assert result.operations[0].item.content == {"value": "data2_updated"}
+    assert result.operations[0].device_id == "2"
+    assert result.operations[0].device.content == {"value": "data2_updated"}
 
 
 @pytest.mark.asyncio
@@ -116,7 +116,7 @@ async def test_incremental_harvester_detect_delete():
     # Verify results
     assert len(result.operations) == 1
     assert result.operations[0].type == OperationType.DELETE
-    assert result.operations[0].item_id == "2"
+    assert result.operations[0].device_id == "2"
 
 
 @pytest.mark.asyncio
@@ -150,14 +150,14 @@ async def test_incremental_harvester_multiple_operations():
     # Check for update operation
     update_ops = [op for op in result.operations if op.type == OperationType.UPDATE]
     assert len(update_ops) == 1
-    assert update_ops[0].item_id == "1"
+    assert update_ops[0].device_id == "1"
 
     # Check for delete operation
     delete_ops = [op for op in result.operations if op.type == OperationType.DELETE]
     assert len(delete_ops) == 1
-    assert delete_ops[0].item_id == "2"
+    assert delete_ops[0].device_id == "2"
 
     # Check for add operation
     add_ops = [op for op in result.operations if op.type == OperationType.ADD]
     assert len(add_ops) == 1
-    assert add_ops[0].item_id == "3"
+    assert add_ops[0].device_id == "3"

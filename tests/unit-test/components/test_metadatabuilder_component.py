@@ -41,14 +41,14 @@ async def test_metadatabuilder_component_basic():
 
     # Create operations for these items
     operations = [
-        Operation(type=OperationType.ADD, item_id="1", item=devices[0]),
-        Operation(type=OperationType.ADD, item_id="2", item=devices[1]),
+        Operation(type=OperationType.ADD, device_id="1", device=devices[0]),
+        Operation(type=OperationType.ADD, device_id="2", device=devices[1]),
     ]
 
     # Create groups with Item objects
     groups = [
-        Group(name="group1", items=[devices[0]]),
-        Group(name="group2", items=[devices[1]]),
+        Group(name="group1", devices=[devices[0]]),
+        Group(name="group2", devices=[devices[1]]),
     ]
 
     # Create mock base metadata builder
@@ -78,7 +78,7 @@ async def test_metadatabuilder_component_empty_groups():
 
     # Create operations for the items
     operations = [
-        Operation(type=OperationType.ADD, item_id="1", item=devices[0]),
+        Operation(type=OperationType.ADD, device_id="1", device=devices[0]),
     ]
 
     # Empty groups list
@@ -109,11 +109,11 @@ async def test_metadatabuilder_component_custom_metadata():
 
     # Create operations for the items
     operations = [
-        Operation(type=OperationType.ADD, item_id="1", item=devices[0]),
+        Operation(type=OperationType.ADD, device_id="1", device=devices[0]),
     ]
 
     # Create a group with an Item
-    groups = [Group(name="custom", items=devices)]
+    groups = [Group(name="custom", devices=devices)]
 
     # Create a custom metadata builder that returns specific metadata
     class CustomMetadataBuilder(BaseMetadataBuilder):

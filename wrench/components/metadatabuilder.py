@@ -4,7 +4,7 @@ from pydantic import validate_call
 
 from wrench.components.types import Metadata
 from wrench.metadatabuilder import BaseMetadataBuilder
-from wrench.models import Group, Item
+from wrench.models import Device, Group
 from wrench.pipeline.types import Component, Operation
 
 
@@ -23,7 +23,7 @@ class MetadataBuilder(Component):
     @validate_call
     async def run(
         self,
-        devices: Sequence[Item],
+        devices: Sequence[Device],
         operations: Sequence[Operation],
         groups: Sequence[Group],
         state: dict[str, Any] = {},

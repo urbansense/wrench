@@ -15,5 +15,4 @@ class TranslatorConfig(BaseModel):
     translator_type: Literal["libre_translate"] = Field(
         description="Type of translator to use"
     )
-    url: str = Field(description="Base URL for the translation service")
     source_lang: str | None = Field(default=None, description="Source language code")

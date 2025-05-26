@@ -29,7 +29,7 @@ class SensorThingsClient:
         self.config = config if config else PaginationConfig()
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def fetch_items(self, limit: int = -1) -> list[Thing]:
+    def fetch_things(self, limit: int = -1) -> list[Thing]:
         """
         Fetches a list of Thing objects.
 

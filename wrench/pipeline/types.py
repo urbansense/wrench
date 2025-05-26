@@ -5,7 +5,7 @@ from typing import Any, Awaitable, Protocol, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from wrench.models import Item
+from wrench.models import Device
 from wrench.pipeline.component import Component, DataModel
 
 
@@ -133,5 +133,5 @@ class Operation(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     type: OperationType
-    item_id: str
-    item: Item
+    device_id: str
+    device: Device

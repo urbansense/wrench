@@ -1,23 +1,62 @@
 from datetime import datetime
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import Any, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
+import geojson
+from geojson.feature import Feature, FeatureCollection
+from geojson.geometry import Geometry
+from geojson.utils import coords
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # Define a generic type for source-specific data
 T = TypeVar("T")
 
 
-# define a protocol for location
-@runtime_checkable
-class Location(Protocol):
+class Location(BaseModel):
+    encoding_type: str
+    location: Feature | FeatureCollection | Geometry = Field(
+        description="GeoJSON location data as Feature, FeatureCollection, or Geometry"
+    )
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("location", mode="before")
+    @classmethod
+    def validate_geojson(cls, v):
+        """Validate that the location is proper GeoJSON."""
+        if isinstance(v, (Feature, FeatureCollection, Geometry)):
+            return v
+
+        # If it's a dict, convert to a Feature object regardless of type
+        if isinstance(v, dict):
+            if not v.get("type"):
+                raise ValueError("GeoJSON object must have a 'type' field")
+
+            # If already a Feature, use as is, otherwise wrap it as a Feature
+            if v.get("type") == "Feature":
+                return geojson.GeoJSON.to_instance(v)
+            elif v.get("type") in [
+                "Point",
+                "LineString",
+                "Polygon",
+                "MultiPoint",
+                "MultiLineString",
+                "MultiPolygon",
+                "GeometryCollection",
+            ]:
+                # Create a Feature with this geometry
+                feature_dict = {"type": "Feature", "geometry": v, "properties": {}}
+                return geojson.GeoJSON.to_instance(feature_dict)
+
+        raise ValueError("Location must be a valid GeoJSON object")
+
     def get_coordinates(self) -> list[tuple[float, float]]:
         """
-        Returns the coordinates as a tuple of two float values.
+        Retrieves the coordinates of the location.
 
         Returns:
-            tuple: A tuple containing two float values representing the coordinates.
+            list[tuple[float, float]]: List of tuples with latitude and longitude
+            of the location.
         """
-        pass
+        return list(coords(self.location))
 
 
 class Item(BaseModel):
@@ -29,6 +68,28 @@ class Item(BaseModel):
 class TimeFrame(BaseModel):
     start_time: datetime
     latest_time: datetime
+
+
+class Device(BaseModel):
+    """
+    Device model representing an entity with an ID.
+
+    Attributes:
+        id (str): The unique identifier for the item.
+    """
+
+    id: str
+    name: str
+    description: str
+    time_frame: TimeFrame | None  # if there are no datastreams
+    locations: list[Location]
+    sensor_names: set[str]
+
+    properties: dict[str, Any] | None = None
+
+    raw_data: dict[str, Any]
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
 
 class CommonMetadata(BaseModel):
@@ -90,7 +151,7 @@ class Group(BaseModel):
 
     Attributes:
         name (str): Name of the group.
-        items (list[Item]): List of items belonging to this group.
+        devices (list[Device]): List of items belonging to this group.
         parent_classes (set[str], optional): Set of parent classes of this group, used
         for hierarchical classification. Defaults to an empty set.
     """
@@ -98,7 +159,7 @@ class Group(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str = Field(description="Name of the group")
-    items: list[Item] = Field(description="List of items belonging to this group")
+    devices: list[Device] = Field(description="List of items belonging to this group")
     # optional only for hierarchical classification
     parent_classes: set[str] = Field(
         default=set(), description="Set of parent classes of this group"
