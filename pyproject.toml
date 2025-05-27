@@ -100,7 +100,7 @@ convention = "google"  # Use Google-style docstrings
 "tests/*" = ["D"]  # Disable docstring checks for tests
 
 [tool.codespell]
-skip = '.git,*.pdf,*.svg,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,*.json,_dist,build,*.pyc,.venv'
+skip = '.git,*.pdf,*.svg,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,*.json,_dist,build,*.pyc,.venv,*.txt'
 ignore-words-list = 'wrench'
 check-filenames = true
 check-hidden = true
