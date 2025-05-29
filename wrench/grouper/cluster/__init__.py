@@ -1,3 +1,3 @@
-from .decision_tree import DecisionTree
+from .kinetic import KINETIC
 
-__all__ = ["DecisionTree"]
+__all__ = ["KINETIC"]

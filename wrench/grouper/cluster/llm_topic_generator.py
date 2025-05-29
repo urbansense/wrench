@@ -41,7 +41,7 @@ class RootTopics(BaseModel):
                 self.build_graph(topic.subtopics, indent + "\t")
 
 
-class TopicGenerator:
+class LLMTopicHierarchyGenerator:
     def __init__(
         self,
         llm_client: openai.OpenAI,
@@ -55,7 +55,7 @@ class TopicGenerator:
         self.merged_topics: list[int] = []
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def generate_seed_topics(self, keywords: dict[str, list]) -> RootTopics | None:
+    def generate_seed_topics(self, keywords: dict[str, list]) -> RootTopics:
         completion = self.llm_client.beta.chat.completions.parse(
             model=self.model,
             messages=[
@@ -72,10 +72,12 @@ class TopicGenerator:
             temperature=0.1,
         )
 
-        self.logger.info(
-            "Generated topics: %s", completion.choices[0].message.parsed.topics
-        )
-
         root_topics = completion.choices[0].message.parsed
 
-        return root_topics
+        if root_topics and root_topics.topics:
+            self.logger.info("Generated topics: %s", root_topics.topics)
+
+            return root_topics
+        else:
+            self.logger.warning("LLM did not generate any topics")
+            raise ValueError("LLM failed to generate well-structured topics")

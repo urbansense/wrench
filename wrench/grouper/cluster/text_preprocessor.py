@@ -96,8 +96,8 @@ def preprocess(
         yield processed_text  # Yield processed text
 
 
-def get_keywords(
-    docs: list[str], embedder: SentenceTransformer, lang=Literal["de", "en"]
+def extract_keywords(
+    docs: list[str], embedder: SentenceTransformer, lang: Literal["de", "en"] = "de"
 ) -> list[list[str]]:
     """Extracts keywords from a list of documents using the specified extractor.
 
