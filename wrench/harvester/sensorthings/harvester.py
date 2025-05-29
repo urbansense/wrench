@@ -34,13 +34,10 @@ class SensorThingsHarvester(BaseHarvester):
             translator_config (TranslationConfig | dict[str, Any]): Optional translator config.
         """
         super().__init__()
-        if isinstance(pagination_config, dict):
-            pagination_config = PaginationConfig.model_validate(pagination_config)
+        pagination_config = PaginationConfig.model_validate(pagination_config)
+        translator_config = TranslatorConfig.model_validate(translator_config)
 
-        self.client = SensorThingsClient(base_url=base_url, config=pagination_config)
-
-        if isinstance(translator_config, dict):
-            translator_config = TranslatorConfig.model_validate(translator_config)
+        self.client = SensorThingsClient(base_url, pagination_config)
 
         self.translator = TranslationService.from_config(translator_config)
 

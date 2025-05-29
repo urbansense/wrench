@@ -12,7 +12,7 @@ class PaginationConfig(BaseModel):
 
 
 class TranslatorConfig(BaseModel):
-    translator_type: Literal["libre_translate"] = Field(
-        description="Type of translator to use"
+    translator_type: Literal["libre_translate"] | None = Field(
+        default=None, description="Type of translator to use"
     )
     source_lang: str | None = Field(default=None, description="Source language code")
