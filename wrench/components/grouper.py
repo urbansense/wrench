@@ -25,27 +25,27 @@ class Grouper(Component):
     ) -> Groups:
         # Case 1: Incremental update - apply operations to existing groups
         previous_groups = state.get("previous_groups")
-        if previous_groups:
-            previous_groups = [
-                Group.model_validate(groups) for groups in previous_groups
-            ]
-            if operations:
-                # Apply operations and get only the affected groups
-                current_groups, affected_groups = self._apply_operations(
-                    previous_groups, operations
-                )
 
-                # Return only the affected groups
-                return Groups(
-                    groups=affected_groups, state={"previous_groups": current_groups}
-                )
-            # Case 2: No operations and existing groups - return empty list (no changes)
-            else:
-                return Groups(groups=[], state={"previous_groups": previous_groups})
+        if not previous_groups:
+            groups = self._grouper.group_items(devices)
+            return Groups(groups=groups, state={"previous_groups": groups})
 
-        # Case 3: First run or full rebuild - process all devices
-        groups = self._grouper.group_items(devices)
-        return Groups(groups=groups, state={"previous_groups": groups})
+        if not operations:
+            return Groups(
+                groups=[],
+                state={"previous_groups": previous_groups},
+                stop_pipeline=True,
+            )
+
+        previous_groups = [Group.model_validate(groups) for groups in previous_groups]
+
+        # Apply operations and get only the affected groups
+        current_groups, affected_groups = self._apply_operations(
+            previous_groups, operations
+        )
+
+        # Return only the affected groups
+        return Groups(groups=affected_groups, state={"previous_groups": current_groups})
 
     def _apply_operations(
         self, existing_groups: Sequence[Group], operations: Sequence[Operation]
@@ -111,38 +111,24 @@ class Grouper(Component):
             all_groups: Complete list of all existing groups
             new_groups: New groups to merge in
         """
-        # Create a mapping of existing groups by name for faster lookup
-        existing_groups_by_name = {group.name: group for group in all_groups}
-
         for new_group in new_groups:
-            if new_group.name in existing_groups_by_name:
-                # Group exists, merge items
-                existing_group = existing_groups_by_name[new_group.name]
-
-                # Create a mapping of existing items by ID
-                existing_devices_by_id = {
-                    device.id: i for i, device in enumerate(existing_group.devices)
-                }
-
-                # Update existing items and add new ones
-                for new_device in new_group.devices:
-                    device_id = new_device.id
-                    if device_id in existing_devices_by_id:
-                        # Replace existing item
-                        idx = existing_devices_by_id[device_id]
-                        existing_group.devices[idx] = new_device
-                    else:
-                        # Add new item
-                        existing_group.devices.append(new_device)
-
-                # Update parent_classes if they exist
-                if hasattr(new_group, "parent_classes") and hasattr(
-                    existing_group, "parent_classes"
-                ):
-                    existing_group.parent_classes.update(new_group.parent_classes)
-            else:
-                # Group doesn't exist, add it
+            if new_group not in all_groups:
                 all_groups.append(new_group)
+                continue
+
+            # Update existing items and add new ones
+            existing_group = next(group for group in all_groups if group == new_group)
+            for i, new_device in enumerate(new_group.devices):
+                if new_device in existing_group.devices:
+                    # Replace existing item
+                    existing_group.devices[i] = new_device
+                else:
+                    # Add new item
+                    existing_group.devices.append(new_device)
+
+            # Update parent_classes if they exist
+            if hasattr(new_group, "parent_classes"):
+                existing_group.parent_classes.update(new_group.parent_classes)
 
     def _remove_items(
         self, all_groups: list[Group], devices_to_delete: list[Device]

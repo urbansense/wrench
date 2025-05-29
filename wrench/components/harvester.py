@@ -34,38 +34,13 @@ class Harvester(Component):
         Raises:
             HarvesterError: If there's an issue retrieving items from the harvester
         """
-        previous_devices: Sequence[dict[str, Any]] = state.get("previous_devices")
+        previous_devices = state.get("previous_devices")
 
         try:
             # Fetch current items from the harvester
             current_devices = self._harvester.return_items()
 
-            # Generate operations based on differences from previous run
-            if previous_devices:
-                previous_devices = [
-                    Device.model_validate(device) for device in previous_devices
-                ]
-
-                self.logger.debug(
-                    """Comparing current state (%s devices)
-                    with previous state (%s devices)""",
-                    len(current_devices),
-                    len(previous_devices),
-                )
-                operations = self._detect_operations(previous_devices, current_devices)
-                self.logger.info("Detected %s changes: ", len(operations))
-                self.logger.debug("Object IDs: %s", [op.device_id for op in operations])
-                if len(operations) == 0:
-                    self.logger.info(
-                        "No new or updated items are discovered, stopping pipeline"
-                    )
-                    return Items(
-                        devices=current_devices,
-                        operations=operations,
-                        stop_pipeline=True,
-                    )
-            else:
-                # First run - treat all as new additions
+            if not previous_devices:
                 self.logger.info(
                     f"First run, treating all {len(current_devices)} items as new"
                 )
@@ -73,6 +48,37 @@ class Harvester(Component):
                     Operation(type=OperationType.ADD, device_id=item.id, device=item)
                     for item in current_devices
                 ]
+                return Items(
+                    devices=current_devices,
+                    operations=operations,
+                    state={"previous_devices": current_devices},
+                )
+
+            previous_devices = [
+                Device.model_validate(device) for device in previous_devices
+            ]
+
+            self.logger.debug(
+                """Comparing current state (%s devices)
+                with previous state (%s devices)""",
+                len(current_devices),
+                len(previous_devices),
+            )
+
+            operations = self._detect_operations(previous_devices, current_devices)
+
+            self.logger.info("Detected %s changes: ", len(operations))
+            self.logger.debug("Object IDs: %s", [op.device_id for op in operations])
+
+            if len(operations) == 0:
+                self.logger.info(
+                    "No new or updated items are discovered, stopping pipeline"
+                )
+                return Items(
+                    devices=current_devices,
+                    operations=operations,
+                    stop_pipeline=True,
+                )
 
             return Items(
                 devices=current_devices,
