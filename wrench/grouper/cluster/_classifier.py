@@ -45,18 +45,21 @@ class Classifier:
     def _embed_docs(self, documents: list[str]) -> np.ndarray:
         return self._embedder.embed(documents, prompt=_DOC_PROMPT)
 
-    def _load_topics(self) -> tuple[TopicTree, np.ndarray]:
+    def _load_topics(self) -> TopicTree:
         with open(self.cache_topics, "r") as f:
             tree: dict = json.load(f)
 
         topic_tree = TopicTree.model_validate(tree)
 
+        return topic_tree
+
+    def _load_embeddings(self) -> np.ndarray:
         data = np.load(self.cache_embeddings)
 
-        return topic_tree, data["embeddings"]
+        return data["embeddings"]
 
     def _save_topics(self, topic_tree: TopicTree, embeddings: np.ndarray):
-        np.savez_compressed(self.cache_embeddings, embeddings)
+        np.savez_compressed(self.cache_embeddings, embeddings=embeddings)
 
         with open(self.cache_topics, "w") as f:
             json.dump(topic_tree.model_dump(mode="json"), f)
@@ -103,11 +106,10 @@ class Classifier:
 
         return dict(zip(all_topics, result))
 
-    def _check_cache(
-        self, topic_tree: TopicTree | None = None
-    ) -> tuple[list[Topic], np.ndarray]:
-        if self.is_cached() and not topic_tree:
-            topic_tree, embeddings = self._load_topics()
+    def _check_cache(self, topic_tree: TopicTree) -> tuple[list[Topic], np.ndarray]:
+        if self.is_cached():
+            topic_tree = self._load_topics()
+            embeddings = self._load_embeddings()
 
             all_topics = [
                 subtopic
@@ -118,17 +120,16 @@ class Classifier:
 
             return all_topics, embeddings
 
-        if not self.is_cached() and topic_tree:
-            all_topics = [
-                subtopic
-                for top in topic_tree.topics
-                for subtopic in top.bfs()
-                if subtopic not in topic_tree.topics
-            ]
+        all_topics = [
+            subtopic
+            for top in topic_tree.topics
+            for subtopic in top.bfs()
+            if subtopic not in topic_tree.topics
+        ]
 
-            topic_embeddings = self._embed_topics(all_topics)
-            self._save_topics(topic_tree, topic_embeddings)
-            return all_topics, topic_embeddings
+        topic_embeddings = self._embed_topics(all_topics)
+        self._save_topics(topic_tree, topic_embeddings)
+        return all_topics, topic_embeddings
 
         raise ValueError("no existing cache found for topics")
 

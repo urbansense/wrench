@@ -7,6 +7,7 @@ from wrench.log import logger
 from wrench.utils.prompt_manager import PromptManager
 
 SEED_PROMPT = PromptManager.get_prompt("generate_seed_topics.txt")
+USER_PROMPT = PromptManager.get_prompt("user_prompt.txt")
 
 
 class Topic(BaseModel):
@@ -86,7 +87,7 @@ class LLMTopicHierarchyGenerator:
                 },
                 {
                     "role": "user",
-                    "content": f"{str(keywords)}",
+                    "content": f"{USER_PROMPT.format(keywords='\n'.join([','.join(kw) for kw in keywords.values()]))}",
                 },
             ],
             response_format=TopicTree,

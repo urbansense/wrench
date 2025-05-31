@@ -182,7 +182,7 @@ def build_cooccurence_network(keywords_per_doc: list[list[str]]) -> dict[str, li
         # compute weighted degree
         deg = {kw: G.degree(kw, weight="weight") for kw in kws}
         # select top 5 (or whatever you need)
-        top5 = sorted(deg, key=deg.get, reverse=True)[:5]
+        top5 = sorted(deg, key=deg.get, reverse=True)[:7]
         essential[f"cluster_{comm_id}"] = top5
 
     # centrality = dict(G.degree(weight="weight"))

@@ -59,6 +59,7 @@ class KeyBERTAdapter(KeywordExtractorAdapter):
             text,
             stop_words=self.stop_words,
             seed_keywords=self.seed_keywords,
+            top_n=7,
             **kwargs,
         )
         final_kw = []

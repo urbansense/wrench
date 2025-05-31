@@ -107,7 +107,10 @@ class KINETIC(BaseGrouper):
     def group_items(self, devices: list[Device]) -> list[Group]:
         docs = [f"{device.name} {device.description}".strip() for device in devices]
 
-        topic_tree = self.get_topics(docs)
+        if self.classifier.is_cached():
+            topic_tree = self.classifier._load_topics()
+        else:
+            topic_tree = self.get_topics(docs)
 
         # Build the map from child topic names to their ultimate root ancestor names
         ancestor_map = self._build_ancestor_map(topic_tree.topics)
@@ -121,42 +124,20 @@ class KINETIC(BaseGrouper):
                 topic_obj.name,
                 [devices[i].id for i in ids],
             )
-            if topic_obj.is_leaf():
-                top_level_ancestor_name = ancestor_map.get(topic_obj.name)
-                parent_classes_set = (
-                    {top_level_ancestor_name} if top_level_ancestor_name else set()
-                )
+            if not topic_obj.is_leaf() or ids.shape == 0:
+                continue
 
-                groups.append(
-                    Group(
-                        name=topic_obj.name,
-                        devices=[devices[i] for i in ids],
-                        parent_classes=parent_classes_set,
-                    )
+            top_level_ancestor_name = ancestor_map.get(topic_obj.name)
+            parent_classes_set = (
+                {top_level_ancestor_name} if top_level_ancestor_name else set()
+            )
+
+            groups.append(
+                Group(
+                    name=topic_obj.name,
+                    devices=[devices[i] for i in ids],
+                    parent_classes=parent_classes_set,
                 )
+            )
 
         return groups
-
-    # def process_operations(
-    #     self,
-    #     existing_groups: list[Group],
-    #     new_devices: list[Device],
-    #     updated_devices: list[Device],
-    #     deleted_devices: list[Device],
-    # ) -> tuple[list[Group], list[Group]]:
-    #     affected_groups = set()
-    #     if deleted_devices:
-    #         items = self._remove_items(existing_groups, deleted_devices)
-    #         affected_groups.add(items)
-
-    #     changed_devices = new_devices + updated_devices
-
-    #     docs = [
-    #         f"{device.name} {device.description}".strip() for device in changed_devices
-    #     ]
-
-    #     assigned_topics = self.classifier.classify(docs)
-
-    #     topic_dict = defaultdict(list)
-
-    #     for i, device in enumerate(changed_devices):
