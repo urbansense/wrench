@@ -1,6 +1,6 @@
 from collections import defaultdict
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Union
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -80,9 +80,7 @@ class TELEClassGrouper(BaseGrouper):
 
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def _load_devices(
-        self, source: Union[str, Path, Sequence[Device]]
-    ) -> list[Document]:
+    def _load_devices(self, source: Union[str, Path, list[Device]]) -> list[Document]:
         loader = ModelDocumentLoader(source)
 
         return loader.load(self.encoder)
@@ -226,12 +224,12 @@ class TELEClassGrouper(BaseGrouper):
 
         return self.classifier_manager.predict(text)
 
-    def group_items(self, devices: Sequence[Device]) -> list[Group]:
+    def group_items(self, devices: list[Device]) -> list[Group]:
         """
         Groups a collection of documents into predefined categories.
 
         Args:
-            devices (Sequence[Device]]): The items to classify.
+            devices (list[Device]]): The items to classify.
 
         Returns:
             list[Group]: A list of Groups containing information about documents
