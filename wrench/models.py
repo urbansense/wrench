@@ -83,11 +83,13 @@ class Device(BaseModel):
     description: str
     time_frame: TimeFrame | None  # if there are no datastreams
     locations: list[Location]
+    datastreams: set[str]
     sensor_names: set[str]
+    observed_properties: set[str]
 
     properties: dict[str, Any] | None = None
 
-    raw_data: dict[str, Any]
+    _raw_data: dict[str, Any]
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
