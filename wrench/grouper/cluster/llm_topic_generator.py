@@ -1,4 +1,4 @@
-from typing import Literal
+from collections import deque
 
 import openai
 from pydantic import BaseModel
@@ -25,8 +25,28 @@ class Topic(BaseModel):
             return False
         return self.name == other.name
 
+    def __repr__(self):
+        return f"<Topic: {self.name}>"
 
-class RootTopics(BaseModel):
+    def bfs(self) -> list["Topic"]:
+        queue: deque[Topic] = deque([self])
+        visited = set()  # use set for O(1) lookups
+        result: list[Topic] = []
+        while queue:
+            topic = queue.popleft()
+            if topic not in visited:
+                visited.add(topic)
+                # maintain order
+                result.append(topic)
+
+                queue.extend(topic.subtopics)
+        return result
+
+    def is_leaf(self) -> bool:
+        return not bool(self.subtopics)
+
+
+class TopicTree(BaseModel):
     topics: list[Topic]
 
     def visualize(self):
@@ -40,22 +60,23 @@ class RootTopics(BaseModel):
             if topic.subtopics:
                 self.build_graph(topic.subtopics, indent + "\t")
 
+    def build_ancestor_map(self):
+        pass
+
 
 class LLMTopicHierarchyGenerator:
     def __init__(
         self,
         llm_client: openai.OpenAI,
         model: str,
-        lang: Literal["english", "multilingual"] = "english",
     ):
         self.llm_client = llm_client
         self.model = model
-        self.lang = lang
         self.topic_model = None
         self.merged_topics: list[int] = []
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def generate_seed_topics(self, keywords: dict[str, list]) -> RootTopics:
+    def generate_seed_topics(self, keywords: dict[str, list]) -> TopicTree:
         completion = self.llm_client.beta.chat.completions.parse(
             model=self.model,
             messages=[
@@ -68,7 +89,7 @@ class LLMTopicHierarchyGenerator:
                     "content": f"{str(keywords)}",
                 },
             ],
-            response_format=RootTopics,
+            response_format=TopicTree,
             temperature=0.1,
         )
 
