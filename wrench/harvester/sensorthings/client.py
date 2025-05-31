@@ -40,7 +40,9 @@ class SensorThingsClient:
             list[Thing]: List of fetched Things.
         """
         self.logger.debug(f"Fetching {limit if limit != -1 else 'all'} things")
-        endpoint = "Things?$expand=Locations,Datastreams($expand=Sensor)"
+        endpoint = (
+            "Things?$expand=Locations,Datastreams($expand=Sensor,ObservedProperty)"
+        )
 
         # Simply collect all items from the generator
         things = list(self._paginate(endpoint, Thing, limit))
