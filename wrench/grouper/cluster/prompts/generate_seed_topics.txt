@@ -1,18 +1,34 @@
-Based on the given set of keywords for each cluster, create a coherent set of hierarchical topic tree (topics with subtopics) with a clear topic name and description in english which can be used to classify urban sensor devices into, discard topics that are not relevant. Select only the meaningful keywords from the given ones to the topics. Keep the hierarchy simple (max 3 levels). Use the following set of topics as root topics, build subtopics based on these:
-    1. Mobility - traffic, vehicles, pedestrians, routing, congestion, mobility hubs
-    2. Environment - air quality, pollution, noise, climate, biodiversity, ecosystem monitoring
-    3. Energy - electricity, smart grid, solar panels, energy meters, battery storage, load
-    4. Administration - waste bins, streetlights, municipal services, maintenance, urban governance
-    5. Health - epidemics, health risks, respiratory, UV exposure, public safety, sanitation
-    6. Information Technology - networks, latency, connectivity, cybersecurity, bandwidth, digital nodes
-    7. Tourism - landmarks, visitor flow, sightseeing, museum traffic, event density, guides
-    8. Living - indoor comfort, residences, appliances, smart homes, privacy, domestic living
-    9. Education - classrooms, attendance, learning spaces, education tech, student presence
-    10. Construction - scaffolding, cranes, vibration, site dust, structural load, worksite safety
-    11. Culture - galleries, exhibits, audience tracking, preservation, performance spaces
-    12. Trade - retail, inventory, shelf analytics, shopping behavior, checkout zones
-    13. Craft - workshops, tools, fabrication, manual labor, artisan, material flow
-    14. Work - occupational health, ergonomics, factory, office activity, compliance
-    15. Agriculture - soil moisture, crop monitoring, irrigation, yield, greenhouses, farm plots
+You are an expert in organizing urban sensor devices into meaningful and structured topic hierarchies based on keyword clusters extracted from documents.
+You will be provided with clusters of keywords. These clusters may:
+- Overlap (e.g., "vehicle counting" and "car detection")
+- Contain non-informative or low-value terms (e.g., location names, vague verbs)
 
-    The subtopics have to be unique to its siblings. If there are no topics related to a specific root topic, you can leave it out from the response. Respond following the given output schema with english topics, without any explanation or comments.
+<instructions>
+Your task is to:
+1. **Merge** redundant or similar clusters.
+2. **Discard** non-informative or irrelevant clusters.
+3. **Organize** the remaining clusters into a **hierarchical topic structure**, using the root topics provided below.
+    <topic>
+       1. Mobility - traffic, vehicles, pedestrians, routing, congestion, mobility hubs, parking, bicycle
+        2. Environment - air quality, pollution, noise, climate, biodiversity, ecosystem monitoring
+        3. Energy - electricity, smart grid, solar panels, energy meters, battery storage, load
+        4. Administration - waste bins, streetlights, municipal services, maintenance, urban governance
+        5. Health - epidemics, health risks, respiratory, UV exposure, public safety, sanitation
+        6. Information Technology - networks, latency, connectivity, cybersecurity, bandwidth, digital nodes
+        7. Tourism - landmarks, visitor flow, sightseeing, museum traffic, event density, guides
+        8. Living - indoor comfort, residences, appliances, smart homes, privacy, domestic living
+        9. Education - classrooms, attendance, learning spaces, education tech, student presence
+        10. Construction - scaffolding, cranes, vibration, site dust, structural load, worksite safety
+        11. Culture - galleries, exhibits, audience tracking, preservation, performance spaces
+        12. Trade - retail, inventory, shelf analytics, shopping behavior, checkout zones
+        13. Craft - workshops, tools, fabrication, manual labor, artisan, material flow
+        14. Work - occupational health, ergonomics, factory, office activity, compliance
+        15. Agriculture - soil moisture, crop monitoring, irrigation, yield, greenhouses, farm plots
+    </topic>
+Guidelines:
+- For each root topic, create subtopics *only if* relevant content exists.
+- Avoid similar topics across sibling subtopics.
+- Assign each subtopic a **clear name** and **concise description** using the keywords.
+- Omit root topics that end up with no valid subtopics.
+
+</instructions>
