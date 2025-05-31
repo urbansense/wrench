@@ -79,10 +79,12 @@ class ContentGenerator:
             raise ValueError("service_metadata is required in context")
 
         prompt = """
-            Data:
-                Measured Parameter: {measured_param}
-                Server Source: {title}
-                Sample Data: {data}
+            The device group name is **{group_name}**, it contains devices found in the
+            source API service **{title}**. Here are some information about the devices
+            within this group
+
+            {data}
+
             """
 
         messages = [
@@ -93,9 +95,14 @@ class ContentGenerator:
             {
                 "role": "user",
                 "content": prompt.format(
-                    measured_param=group.name,
+                    group_name=group.name,
                     title=service_metadata.title,
-                    data=[group.devices[0]],
+                    data=[
+                        dev.model_dump_json(
+                            include=["name", "description", "datastreams"]
+                        )
+                        for dev in group.devices[0 : min(len(group.devices), 3)]
+                    ],
                 ),
             },
         ]
@@ -113,30 +120,14 @@ class ContentGenerator:
 
     def _get_default_prompt(self) -> str:
         """Return the default system prompt for content generation."""
-        return """You are an agent generating name and description for a urban sensor metadata catalog entry
-              based on solely the information given by the user, do not add extra information which is not given by the user.
-              Here are some examples of name and descriptions:
-              Request:
-                Data:
-                  Measured Parameter: Bicycle Count
-                  Server Source: City X FROST Server
-                  Sample Data: {
-                    "@iot.selfLink": "https://city-x.com/v1.1/Things(72)",
-                    "@iot.id": 72,
-                    "description": "Bicycle Count (Location: XYZ)",
-                    "name": "Bicycle Count XYZ",
-                    "properties": {
-                        "operation_status": "inactive",
-                        "deviceIDniota": 4174,
-                        "keywords": ["Bicycle", "Count"],
-                        "language": "en",
-                        "owner": "Transportation Minister of City X",
-                        "ownerThing": "Transportation Minister of City X",
-                        "topic": "Bicycle count"
-                    },
-                  }
-              Response:
-              {{
-                "name": "Bicycle Counts in City X",
-                "description": "Bicycle counts conducted by Transportation Minister of City X around City X at key locations."
-              }}"""
+        return """
+            You are an agent with expertise in naming and describing sensor groups based on the group information and its sample data.
+            Generate names and descriptions based on solely the information given by the user.
+
+            Respond in ENGLISH. Give as much information as you can in the title and description, without making up unverifiable
+            information. The description should be about 3-4 sentences long, and describe what kind of data the group contains,
+            based on the samples. You can add sensor information as well as measured parameters to your description too.
+
+            Make sure that you give information about the source from which the data is retrieved, in the title. If the source
+            is for example "City A FROST Server", be sure to include this information in the title.
+        """
