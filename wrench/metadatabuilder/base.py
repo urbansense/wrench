@@ -22,7 +22,9 @@ class BaseMetadataBuilder(ABC):
         pass
 
     @abstractmethod
-    def build_group_metadata(self, group: Group) -> CommonMetadata:
+    def build_group_metadata(
+        self, group: Group, title: str | None = None, description: str | None = None
+    ) -> CommonMetadata:
         """
         Builds metadata for groups returned by Grouper.
 

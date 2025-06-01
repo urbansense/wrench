@@ -7,7 +7,7 @@ from wrench.metadatabuilder.sensorthings.querybuilder import (
     ThingQuery,
 )
 from wrench.models import CommonMetadata, Device, Group
-from wrench.utils.generator import ContentGenerator, GeneratorConfig
+from wrench.utils.generator import Content, ContentGenerator, GeneratorConfig
 
 from .spatial import (
     GeometryCollector,
@@ -76,12 +76,16 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
 
         return self.metadata
 
-    def build_group_metadata(self, group: Group) -> CommonMetadata:
+    def build_group_metadata(
+        self, group: Group, title: str | None = None, description: str | None = None
+    ) -> CommonMetadata:
         """
         Groups a list of Devices and builds their metadata.
 
         Args:
             group (Group): The group returned from a Grouper.
+            title (str | None): Optional title if provided
+            description (str | None): Optional description if provided
 
         Returns:
             metadata (CommonMetadata): CommonMetadata extracted
@@ -95,12 +99,15 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
 
         endpoint_url = self._build_group_url(group.devices)
 
-        content = self.content_generator.generate_group_content(
-            group,
-            context={
-                "service_metadata": self.metadata,
-            },
-        )
+        if not title or not description:
+            content = self.content_generator.generate_group_content(
+                group,
+                context={
+                    "service_metadata": self.metadata,
+                },
+            )
+        else:
+            content = Content(name=title, description=description)
 
         return CommonMetadata(
             identifier=content.name.lower().strip().replace(" ", "_"),
