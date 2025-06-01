@@ -50,7 +50,10 @@ class SentenceTransformerEmbedder(BaseEmbedder):
             that each have an embeddings size of `m`.
         """
         embeddings = self.embedding_model.encode(
-            documents, prompt=prompt, normalize_embeddings=normalize_embeddings
+            documents,
+            prompt=prompt,
+            normalize_embeddings=normalize_embeddings,
+            show_progress_bar=True,
         )
         return embeddings
 
