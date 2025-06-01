@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Literal
 
 import community as cd
+import matplotlib.pyplot as plt
 import networkx as nx
 from flair.data import Sentence
 from flair.models import SequenceTagger
@@ -185,27 +186,27 @@ def build_cooccurence_network(keywords_per_doc: list[list[str]]) -> dict[str, li
         top5 = sorted(deg, key=deg.get, reverse=True)[:7]
         essential[f"cluster_{comm_id}"] = top5
 
-    # centrality = dict(G.degree(weight="weight"))
+    centrality = dict(G.degree(weight="weight"))
 
-    # # Generate positions for all nodes
-    # pos = nx.spring_layout(G, weight="weight", seed=42)
+    # Generate positions for all nodes
+    pos = nx.spring_layout(G, weight="weight", seed=42)
 
-    # # Extract community IDs and centrality values
-    # colors = [partition[node] for node in G.nodes()]
-    # # Adjust node sizes: ensure a minimum size and scale by centrality
-    # sizes = [max(100, centrality.get(node, 0) * 300) for node in G.nodes()]
+    # Extract community IDs and centrality values
+    colors = [partition[node] for node in G.nodes()]
+    # Adjust node sizes: ensure a minimum size and scale by centrality
+    sizes = [max(100, centrality.get(node, 0) * 300) for node in G.nodes()]
 
-    # # Draw nodes
-    # nx.draw_networkx_nodes(G, pos, node_color=colors, node_size=sizes, cmap=plt.cm.Set3)
+    # Draw nodes
+    nx.draw_networkx_nodes(G, pos, node_color=colors, node_size=sizes, cmap=plt.cm.Set3)
 
-    # # Draw edges
-    # nx.draw_networkx_edges(G, pos, alpha=0.5)
+    # Draw edges
+    nx.draw_networkx_edges(G, pos, alpha=0.5)
 
-    # # Draw labels
-    # nx.draw_networkx_labels(G, pos, font_size=6)
+    # Draw labels
+    nx.draw_networkx_labels(G, pos, font_size=6)
 
-    # # Display the plot
-    # plt.axis("off")
-    # plt.show()
+    # Display the plot
+    plt.axis("off")
+    plt.show()
 
     return essential

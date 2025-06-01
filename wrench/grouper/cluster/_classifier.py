@@ -8,9 +8,9 @@ from wrench.grouper.cluster.embedder import BaseEmbedder
 from wrench.log import logger as wrench_logger
 from wrench.utils.prompt_manager import PromptManager
 
-from .llm_topic_generator import Topic, TopicTree
+from .models import Cluster
 
-_TOPIC_PROMPT = PromptManager.get_prompt("embed_topics.txt")
+_CLUSTER_PROMPT = PromptManager.get_prompt("embed_topics.txt")
 _DOC_PROMPT = PromptManager.get_prompt("embed_documents.txt")
 
 
@@ -22,53 +22,46 @@ class Classifier:
 
         self.cache_dir = Path(".kineticache")
         self.cache_dir.mkdir(exist_ok=True)
-        self.cache_topics = self.cache_dir / "topics.json"
+        self.cache_clusters = self.cache_dir / "clusters.json"
         self.cache_embeddings = self.cache_dir / "embeddings.npz"
 
-    def _embed_topics(self, topics: list[Topic]) -> np.ndarray:
-        # embeddings shape is [num_topics, D]
+    def _embed_clusters(self, cluster_kws: list[list[str]]) -> np.ndarray:
+        # embeddings shape is [num_clusters, D]
         return self._embedder.embed(
-            [
-                "{name}; {keywords}".format(
-                    name=topic.name, keywords=",".join(topic.keywords)
-                )
-                for topic in topics
-            ],
-            prompt=_TOPIC_PROMPT,
+            [str(kws) for kws in cluster_kws],
+            prompt=_CLUSTER_PROMPT,
         )
 
     def is_cached(self) -> bool:
-        return os.path.isfile(self.cache_topics) and os.path.isfile(
+        return os.path.isfile(self.cache_clusters) and os.path.isfile(
             self.cache_embeddings
         )
 
     def _embed_docs(self, documents: list[str]) -> np.ndarray:
         return self._embedder.embed(documents, prompt=_DOC_PROMPT)
 
-    def _load_topics(self) -> TopicTree:
-        with open(self.cache_topics, "r") as f:
-            tree: dict = json.load(f)
+    def _load_clusters(self) -> list[Cluster]:
+        with open(self.cache_clusters, "r") as f:
+            clusters: dict = json.load(f)
 
-        topic_tree = TopicTree.model_validate(tree)
-
-        return topic_tree
+        return [Cluster.model_validate(c) for c in clusters]
 
     def _load_embeddings(self) -> np.ndarray:
         data = np.load(self.cache_embeddings)
 
         return data["embeddings"]
 
-    def _save_topics(self, topic_tree: TopicTree, embeddings: np.ndarray):
+    def _save_clusters(self, clusters: list[Cluster], embeddings: np.ndarray):
         np.savez_compressed(self.cache_embeddings, embeddings=embeddings)
 
-        with open(self.cache_topics, "w") as f:
-            json.dump(topic_tree.model_dump(mode="json"), f)
+        with open(self.cache_clusters, "w") as f:
+            json.dump([c.model_dump(mode="json") for c in clusters], f)
 
     def classify(
         self,
         docs: list[str],
-        topic_tree: TopicTree | None = None,
-    ) -> dict[Topic, np.ndarray]:
+        clusters: list[Cluster] | None = None,
+    ) -> list[np.ndarray]:
         """
         Classifies documents against a list of topics.
 
@@ -76,17 +69,18 @@ class Classifier:
             docs: A list of document strings to classify.
             topic_tree: The topic tree containing hierarchical structure of the topics
                 to be classified. If None, attempts to use cached topics.
+            clusters: A dict of clusters with the cluster keywords.
 
         Returns:
             A list of integer arrays representing the document index classified to
             each topic.
 
         """
-        all_topics, topic_embeddings = self._check_cache(topic_tree)
+        cluster_embeddings = self._check_cache(clusters)
 
         doc_embeddings = self._embed_docs(docs)
 
-        all_sim_scores = self._calc_similarity(doc_embeddings, topic_embeddings)
+        all_sim_scores = self._calc_similarity(doc_embeddings, cluster_embeddings)
 
         # all docs now have a 1 for assigned topics
         classified = np.where(all_sim_scores > self._threshold, 1, 0)
@@ -104,52 +98,43 @@ class Classifier:
         # get doc indexes for each topic
         result = [np.nonzero(row)[0] for row in transposed]
 
-        return dict(zip(all_topics, result))
+        if len(clusters) != len(result):
+            raise AttributeError(
+                "length of clusters is different from resulting embeddings"
+            )
 
-    def _check_cache(self, topic_tree: TopicTree) -> tuple[list[Topic], np.ndarray]:
+        return result
+
+    def _check_cache(self, clusters: list[Cluster]) -> np.ndarray:
         if self.is_cached():
-            topic_tree = self._load_topics()
+            clusters = self._load_clusters()
             embeddings = self._load_embeddings()
 
-            all_topics = [
-                subtopic
-                for top in topic_tree.topics
-                for subtopic in top.bfs()
-                if subtopic not in topic_tree.topics
-            ]
+            return embeddings
 
-            return all_topics, embeddings
-
-        all_topics = [
-            subtopic
-            for top in topic_tree.topics
-            for subtopic in top.bfs()
-            if subtopic not in topic_tree.topics
-        ]
-
-        topic_embeddings = self._embed_topics(all_topics)
-        self._save_topics(topic_tree, topic_embeddings)
-        return all_topics, topic_embeddings
-
-        raise ValueError("no existing cache found for topics")
+        cluster_embeddings = self._embed_clusters([c.keywords for c in clusters])
+        self._save_clusters(clusters, cluster_embeddings)
+        return cluster_embeddings
 
     def _calc_similarity(
-        self, doc_embeddings: np.ndarray, topic_embeddings: np.ndarray
+        self, doc_embeddings: np.ndarray, cluster_embeddings: np.ndarray
     ) -> np.ndarray:
         # Ensure doc_embeddings is 2D, even if a single embedding (1D) was passed
         if doc_embeddings.ndim == 1:
             doc_embeddings = np.atleast_2d(doc_embeddings)
 
         num_docs = doc_embeddings.shape[0]
-        num_topics = topic_embeddings.shape[0]
+        num_clusters = cluster_embeddings.shape[0]
         self._logger.info(
-            "Calculating similarity for %s documents, with %s topics",
+            "Calculating similarity for %s documents, with %s clusters",
             num_docs,
-            num_topics,
+            num_clusters,
         )
 
-        similarity_matrix = self._embedder.similarity(doc_embeddings, topic_embeddings)
-        # similarity_matrix shape (n_doc, n_topic)
+        similarity_matrix = self._embedder.similarity(
+            doc_embeddings, cluster_embeddings
+        )
+        # similarity_matrix shape (n_doc, n_cluster)
 
         row_min = similarity_matrix.min(axis=1).reshape(-1, 1)
         row_max = similarity_matrix.max(axis=1).reshape(-1, 1)

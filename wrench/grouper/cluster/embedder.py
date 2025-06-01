@@ -28,27 +28,30 @@ class BaseEmbedder(ABC):
 class SentenceTransformerEmbedder(BaseEmbedder):
     def __init__(self, embedder: str | SentenceTransformer):
         if isinstance(embedder, SentenceTransformer):
-            self.embedding_model = embedder
+            self.embedding_model: SentenceTransformer = embedder
         elif isinstance(embedder, str):
-            self.embedding_model = SentenceTransformer(embedder)
+            self.embedding_model: SentenceTransformer = SentenceTransformer(embedder)
 
     def embed(
         self,
         documents: list[str],
         prompt: str | None = None,
+        normalize_embeddings: bool = True,
     ) -> np.ndarray:
         """Embed a list of documents into matrix embeddings.
 
         Args:
             documents: A list of documents or words to be embedded.
             prompt: Optional prompt to pass in to the model.
-            convert_to_numpy: Return embeddings as numpy ndarray.
+            normalize_embeddings: Normalize vectors to have length 1.
 
         Returns:
             Document/words embeddings with shape (n, m) with `n` documents/words
             that each have an embeddings size of `m`.
         """
-        embeddings = self.embedding_model.encode(documents, prompt=prompt)
+        embeddings = self.embedding_model.encode(
+            documents, prompt=prompt, normalize_embeddings=normalize_embeddings
+        )
         return embeddings
 
     def similarity(

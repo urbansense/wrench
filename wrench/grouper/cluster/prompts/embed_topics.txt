@@ -1,1 +1,1 @@
-In the context of urban sensors, distinguish these individual topic names from other sensor types and categories.
+In the context of urban sensors, distinguish these individual clusters from other sensor types and categories.

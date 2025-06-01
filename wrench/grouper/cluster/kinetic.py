@@ -1,5 +1,3 @@
-from collections import deque
-
 import openai
 from pydantic import validate_call
 
@@ -11,7 +9,8 @@ from wrench.models import Device, Group
 from ._classifier import Classifier
 from .config import LLMConfig
 from .keyword_extractor import KeyBERTAdapter
-from .llm_topic_generator import LLMTopicHierarchyGenerator, Topic
+from .llm_topic_generator import LLMTopicHierarchyGenerator
+from .models import Cluster, Topic, TopicList
 from .text_preprocessor import build_cooccurence_network
 
 
@@ -65,77 +64,58 @@ class KINETIC(BaseGrouper):
         self.classifier = Classifier(embedder, threshold)
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def get_topics(self, docs: list[str]):
+    def build_clusters(self, docs: list[str]):
         keywords = self.keyword_extractor.extract_keywords(docs)
-
-        import json
-
-        with open("keywords.json", "w") as f:
-            json.dump(keywords, f)
 
         clusters = build_cooccurence_network(keywords)
 
+        return [
+            Cluster(cluster_id=id, keywords=keywords)
+            for id, keywords in clusters.items()
+        ]
+
+    def generate_topics(
+        self, clusters: list[Cluster]
+    ) -> tuple[TopicList, dict[Topic, list[Device]]]:
         generator = LLMTopicHierarchyGenerator(
             llm_client=self.client,
             model=self.llm_model,
         )
+        topic_list, topic_dict = generator.generate_seed_topics(clusters)
 
-        topic_tree = generator.generate_seed_topics(clusters)
-
-        return topic_tree
-
-    def _build_ancestor_map(self, root_topics_list: list[Topic]) -> dict[str, str]:
-        """Builds a map from any topic name to its ultimate root ancestor's name."""
-        child_to_root_map: dict[str, str] = {}
-        for root_topic in root_topics_list:
-            queue = deque(root_topic.subtopics)
-            visited_descendants = {root_topic}  # Avoid reprocessing, include root
-
-            while queue:
-                current_descendant = queue.popleft()
-                if current_descendant in visited_descendants:
-                    continue
-                visited_descendants.add(current_descendant)
-
-                child_to_root_map[current_descendant.name] = root_topic.name
-
-                for sub_desc in current_descendant.subtopics:
-                    if sub_desc not in visited_descendants:
-                        queue.append(sub_desc)
-        return child_to_root_map
+        return topic_list, topic_dict
 
     def group_items(self, devices: list[Device]) -> list[Group]:
         docs = [f"{device.name} {device.description}".strip() for device in devices]
 
         if self.classifier.is_cached():
-            topic_tree = self.classifier._load_topics()
+            clusters = self.classifier._load_clusters()
         else:
-            topic_tree = self.get_topics(docs)
+            clusters = self.build_clusters(docs)
 
-        # Build the map from child topic names to their ultimate root ancestor names
-        ancestor_map = self._build_ancestor_map(topic_tree.topics)
+        doc_ids = self.classifier.classify(docs, clusters)
 
-        topic_dict = self.classifier.classify(docs, topic_tree)
+        for c, ids in zip(clusters, doc_ids):
+            c._devices = [devices[i] for i in ids]
+
+        _, topic_dict = self.generate_topics(clusters)
 
         groups = []
-        for topic_obj, ids in topic_dict.items():
+        for topic_obj, devices in topic_dict.items():
             self.logger.debug(
                 "Topic %s contains devices: %s",
                 topic_obj.name,
-                [devices[i].id for i in ids],
+                [dev.id for dev in devices],
             )
-            if not topic_obj.is_leaf() or ids.shape == 0:
+            if len(devices) == 0:
                 continue
 
-            top_level_ancestor_name = ancestor_map.get(topic_obj.name)
-            parent_classes_set = (
-                {top_level_ancestor_name} if top_level_ancestor_name else set()
-            )
+            parent_classes_set = set(topic_obj.parent_topics)
 
             groups.append(
                 Group(
                     name=topic_obj.name,
-                    devices=[devices[i] for i in ids],
+                    devices=devices,
                     parent_classes=parent_classes_set,
                 )
             )
