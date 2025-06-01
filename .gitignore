@@ -1,5 +1,6 @@
 __pycache__/
 .teleclass_cache*/
+.kineticache/
 *.json
 *.egg-info
 dist/
