@@ -8,10 +8,10 @@ from wrench.models import Device, Group
 
 from ._classifier import Classifier
 from .config import LLMConfig
+from .cooccurence import build_cooccurence_network
 from .keyword_extractor import KeyBERTAdapter
 from .llm_topic_generator import LLMTopicHierarchyGenerator
 from .models import Cluster, Topic, TopicList
-from .text_preprocessor import build_cooccurence_network
 
 
 class KINETIC(BaseGrouper):
