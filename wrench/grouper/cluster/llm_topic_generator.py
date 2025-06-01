@@ -12,7 +12,7 @@ SEED_PROMPT = PromptManager.get_prompt("generate_seed_topics.txt")
 USER_PROMPT = PromptManager.get_prompt("user_prompt.txt")
 
 
-class LLMTopicHierarchyGenerator:
+class LLMTopicGenerator:
     def __init__(
         self,
         llm_client: openai.OpenAI,
@@ -26,7 +26,7 @@ class LLMTopicHierarchyGenerator:
 
     def generate_seed_topics(
         self, clusters: list[Cluster]
-    ) -> tuple[TopicList, dict[Topic, list[Device]]]:
+    ) -> dict[Topic, list[Device]]:
         user_prompts = USER_PROMPT.format(
             keywords_and_docs="\n\n".join([str(c) for c in clusters])
         )
@@ -59,7 +59,7 @@ class LLMTopicHierarchyGenerator:
                     if topic.cluster_id.lower() == c.cluster_id:
                         mappings[topic].extend(c._devices)
 
-            return root_topics, mappings
+            return mappings
         else:
             self.logger.warning("LLM did not generate any topics")
             raise ValueError("LLM failed to generate well-structured topics")

@@ -10,8 +10,8 @@ from ._classifier import Classifier
 from .config import LLMConfig
 from .cooccurence import build_cooccurence_network
 from .keyword_extractor import KeyBERTAdapter
-from .llm_topic_generator import LLMTopicHierarchyGenerator
-from .models import Cluster, Topic, TopicList
+from .llm_topic_generator import LLMTopicGenerator
+from .models import Cluster, Topic
 
 
 class KINETIC(BaseGrouper):
@@ -24,11 +24,12 @@ class KINETIC(BaseGrouper):
     cosine similarity of their embeddings with topic embeddings.
 
     Attributes:
-        embedder (SentenceTransformer): The SentenceTransformer model to be used for
-            the classification into clusters.
-        client (openai.OpenAI): The OpenAI client for generating hierarchical
-            cluster schema.
-        llm_model (str): The LLM model used in conjunction with the OpenAI client.
+        keyword_extractor (KeyBERTAdapter): Uses KeyBERT to extract keywords from a
+            list of document bodies.
+        classifier (Classifier): Classifies input documents into different clusters,
+            created from the extracted keywords.
+        generator (LLMTopicGenerator): Generates coherent topic groups based on created
+            clusters.
     """
 
     @validate_call(config={"arbitrary_types_allowed": True})
@@ -57,11 +58,15 @@ class KINETIC(BaseGrouper):
             embedder = SentenceTransformerEmbedder(embedder)
 
         self.keyword_extractor = KeyBERTAdapter(embedder, lang="de")
-        self.llm_model = llm_config.model
-        self.client = openai.OpenAI(
-            base_url=llm_config.base_url, api_key=llm_config.api_key
-        )
         self.classifier = Classifier(embedder, threshold)
+
+        self.generator = LLMTopicGenerator(
+            llm_client=openai.OpenAI(
+                base_url=llm_config.base_url, api_key=llm_config.api_key
+            ),
+            model=llm_config.model,
+        )
+
         self.logger = logger.getChild(self.__class__.__name__)
 
     def build_clusters(self, docs: list[str]):
@@ -74,16 +79,10 @@ class KINETIC(BaseGrouper):
             for id, keywords in clusters.items()
         ]
 
-    def generate_topics(
-        self, clusters: list[Cluster]
-    ) -> tuple[TopicList, dict[Topic, list[Device]]]:
-        generator = LLMTopicHierarchyGenerator(
-            llm_client=self.client,
-            model=self.llm_model,
-        )
-        topic_list, topic_dict = generator.generate_seed_topics(clusters)
+    def generate_topics(self, clusters: list[Cluster]) -> dict[Topic, list[Device]]:
+        topic_dict = self.generator.generate_seed_topics(clusters)
 
-        return topic_list, topic_dict
+        return topic_dict
 
     def group_items(self, devices: list[Device]) -> list[Group]:
         docs = [f"{device.name} {device.description}".strip() for device in devices]
@@ -98,7 +97,7 @@ class KINETIC(BaseGrouper):
         for c, ids in zip(clusters, doc_ids):
             c._devices = [devices[i] for i in ids]
 
-        _, topic_dict = self.generate_topics(clusters)
+        topic_dict = self.generate_topics(clusters)
 
         groups = []
         for topic_obj, devices in topic_dict.items():
@@ -110,13 +109,11 @@ class KINETIC(BaseGrouper):
             if len(devices) == 0:
                 continue
 
-            parent_classes_set = set(topic_obj.parent_topics)
-
             groups.append(
                 Group(
                     name=topic_obj.name,
                     devices=devices,
-                    parent_classes=parent_classes_set,
+                    parent_classes=set(topic_obj.parent_topics),
                 )
             )
 
