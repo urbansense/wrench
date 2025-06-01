@@ -1,61 +1,36 @@
-from typing import Literal
+from collections import defaultdict
 
 import openai
-from pydantic import BaseModel
 
 from wrench.log import logger
+from wrench.models import Device
 from wrench.utils.prompt_manager import PromptManager
 
+from .models import Cluster, Topic, TopicList
+
 SEED_PROMPT = PromptManager.get_prompt("generate_seed_topics.txt")
+USER_PROMPT = PromptManager.get_prompt("user_prompt.txt")
 
 
-class Topic(BaseModel):
-    name: str
-    description: str
-    subtopics: list["Topic"]
-    keywords: list[str]
-
-    def __hash__(self):
-        """Use topic name as unique identifier for hashing."""
-        return hash(self.name)
-
-    def __eq__(self, other):
-        """Topics are equal if their names as the same."""
-        if not isinstance(other, Topic):
-            return False
-        return self.name == other.name
-
-
-class RootTopics(BaseModel):
-    topics: list[Topic]
-
-    def visualize(self):
-        self.build_graph(self.topics)
-
-    def build_graph(self, topics: list[Topic], indent=""):
-        for topic in topics:
-            print(indent + topic.name)
-            print(indent + topic.description)
-            print(indent + " ".join(topic.keywords))
-            if topic.subtopics:
-                self.build_graph(topic.subtopics, indent + "\t")
-
-
-class LLMTopicHierarchyGenerator:
+class LLMTopicGenerator:
     def __init__(
         self,
         llm_client: openai.OpenAI,
         model: str,
-        lang: Literal["english", "multilingual"] = "english",
     ):
         self.llm_client = llm_client
         self.model = model
-        self.lang = lang
         self.topic_model = None
         self.merged_topics: list[int] = []
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def generate_seed_topics(self, keywords: dict[str, list]) -> RootTopics:
+    def generate_seed_topics(
+        self, clusters: list[Cluster]
+    ) -> dict[Topic, list[Device]]:
+        user_prompts = USER_PROMPT.format(
+            keywords_and_docs="\n\n".join([str(c) for c in clusters])
+        )
+
         completion = self.llm_client.beta.chat.completions.parse(
             model=self.model,
             messages=[
@@ -65,10 +40,10 @@ class LLMTopicHierarchyGenerator:
                 },
                 {
                     "role": "user",
-                    "content": f"{str(keywords)}",
+                    "content": user_prompts,
                 },
             ],
-            response_format=RootTopics,
+            response_format=TopicList,
             temperature=0.1,
         )
 
@@ -77,7 +52,14 @@ class LLMTopicHierarchyGenerator:
         if root_topics and root_topics.topics:
             self.logger.info("Generated topics: %s", root_topics.topics)
 
-            return root_topics
+            mappings: dict[Topic, list[Device]] = defaultdict(list)
+
+            for c in clusters:
+                for topic in root_topics.topics:
+                    if topic.cluster_id.lower() == c.cluster_id:
+                        mappings[topic].extend(c._devices)
+
+            return mappings
         else:
             self.logger.warning("LLM did not generate any topics")
             raise ValueError("LLM failed to generate well-structured topics")

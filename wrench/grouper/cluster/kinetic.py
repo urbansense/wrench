@@ -1,19 +1,20 @@
-from collections import defaultdict, deque
-from typing import Sequence
+from typing import Literal
 
 import openai
 from pydantic import validate_call
-from sentence_transformers import SentenceTransformer
 
 from wrench.grouper import BaseGrouper
+from wrench.grouper.cluster.embedder import BaseEmbedder
+from wrench.grouper.cluster.models import Cluster, Topic
 from wrench.log import logger
 from wrench.models import Device, Group
 
-from .classifier import Classifier
+from ._classifier import Classifier
 from .config import LLMConfig
+from .cooccurence import build_cooccurence_network
+from .embedder import SentenceTransformerEmbedder
 from .keyword_extractor import KeyBERTAdapter
-from .llm_topic_generator import LLMTopicHierarchyGenerator, Topic
-from .text_preprocessor import build_cooccurence_network
+from .llm_topic_generator import LLMTopicGenerator
 
 
 class KINETIC(BaseGrouper):
@@ -26,20 +27,21 @@ class KINETIC(BaseGrouper):
     cosine similarity of their embeddings with topic embeddings.
 
     Attributes:
-        embedder (SentenceTransformer): The SentenceTransformer model to be used for
-            the classification into clusters.
-        client (openai.OpenAI): The OpenAI client for generating hierarchical
-            cluster schema.
-        llm_model (str): The LLM model used in conjunction with the OpenAI client.
-        topic_embeddings (dict[str, np.ndarray]): Generated embeddings for the
-            topics
+        keyword_extractor (KeyBERTAdapter): Uses KeyBERT to extract keywords from a
+            list of document bodies.
+        classifier (Classifier): Classifies input documents into different clusters,
+            created from the extracted keywords.
+        generator (LLMTopicGenerator): Generates coherent topic groups based on created
+            clusters.
     """
 
-    @validate_call
+    @validate_call(config={"arbitrary_types_allowed": True})
     def __init__(
         self,
         llm_config: LLMConfig,
-        embeddings_model: str = "intfloat/multilingual-e5-large-instruct",
+        embedder: str | BaseEmbedder = "intfloat/multilingual-e5-large-instruct",
+        threshold=0.9,
+        lang: Literal["de", "en"] = "de",
     ):
         """
         Initialize the KINETIC Grouper.
@@ -48,102 +50,72 @@ class KINETIC(BaseGrouper):
             llm_config (LLMConfig): The LLM configuration including host, model
                 and api_key. By default this is set to use an "ollama" as the API key.
                 To use OpenAI's models, generate an API key on the OpenAI Platform.
-            embeddings_model (str): The embeddings model compatible with the
+            embedder (str): The embeddings model compatible with the
                 `SentenceTransformers` library. Defaults to
                 `intfloat/multilingual-e5-large-instruct`, use `all-MiniLM-L12-v2` for
                 english data.
+            threshold (float): The threshold for the similarity comparison. Defaults to
+                0.9. This parameter is the first one to change in order to get better
+                classifications for your data.
+            lang (["en", "de"]): The language of the source data. Default is "de" for
+                german.
         """
-        embedder = SentenceTransformer(embeddings_model)
+        if isinstance(embedder, str):
+            embedder = SentenceTransformerEmbedder(embedder)
 
-        self.llm_model = llm_config.model
-        self.client = openai.OpenAI(
-            base_url=llm_config.base_url, api_key=llm_config.api_key
+        self.keyword_extractor = KeyBERTAdapter(embedder, lang=lang)
+        self.classifier = Classifier(embedder, threshold)
+
+        self.generator = LLMTopicGenerator(
+            llm_client=openai.OpenAI(
+                base_url=llm_config.base_url, api_key=llm_config.api_key
+            ),
+            model=llm_config.model,
         )
-        self.classifier = Classifier(embedder)
-        self.keyword_extractor = KeyBERTAdapter(embedder, lang="de")
+
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def get_topics(self, docs: list[str]):
+    def build_clusters(self, docs: list[str]):
         keywords = self.keyword_extractor.extract_keywords(docs)
 
-        clusters = build_cooccurence_network(keywords)
+        return build_cooccurence_network(keywords)
 
-        generator = LLMTopicHierarchyGenerator(
-            llm_client=self.client,
-            model=self.llm_model,
-        )
+    def generate_topics(self, clusters: list[Cluster]) -> dict[Topic, list[Device]]:
+        topic_dict = self.generator.generate_seed_topics(clusters)
 
-        root_topics = generator.generate_seed_topics(clusters)
+        return topic_dict
 
-        return root_topics
-
-    def _build_ancestor_map(self, root_topics_list: list[Topic]) -> dict[str, str]:
-        """Builds a map from any topic name to its ultimate root ancestor's name."""
-        child_to_root_map: dict[str, str] = {}
-        for root_topic in root_topics_list:
-            queue = deque(root_topic.subtopics)
-            visited_descendants = {root_topic}  # Avoid reprocessing, include root
-
-            while queue:
-                current_descendant = queue.popleft()
-                if current_descendant in visited_descendants:
-                    continue
-                visited_descendants.add(current_descendant)
-
-                child_to_root_map[current_descendant.name] = root_topic.name
-
-                for sub_desc in current_descendant.subtopics:
-                    if sub_desc not in visited_descendants:
-                        queue.append(sub_desc)
-        return child_to_root_map
-
-    def group_items(self, devices: Sequence[Device]) -> list[Group]:
+    def group_items(self, devices: list[Device]) -> list[Group]:
         docs = [f"{device.name} {device.description}".strip() for device in devices]
 
-        root_topics = self.get_topics(docs)
+        if self.classifier.is_cached():
+            clusters = self.classifier._load_clusters()
+        else:
+            clusters = self.build_clusters(docs)
 
-        # Build the map from child topic names to their ultimate root ancestor names
-        child_to_root_ancestor_map = self._build_ancestor_map(root_topics.topics)
+        doc_ids = self.classifier.classify(docs, clusters)
 
-        topic_lists = self.classifier.classify(docs, root_topics.topics)
+        for c, ids in zip(clusters, doc_ids):
+            c._devices = [devices[i] for i in ids]
 
-        topic_dict: dict[Topic, list] = defaultdict(list)
-
-        for i, (_, topics) in enumerate(zip(docs, topic_lists)):
-            if topics:
-                for t in topics:
-                    topic_dict[t].append(devices[i])
-
-        for topic, device_list in topic_dict.items():
-            self.logger.debug(
-                "Topic %s contains devices: %s",
-                topic.name,
-                [device.id for device in device_list],
-            )
+        topic_dict = self.generate_topics(clusters)
 
         groups = []
-        for topic_obj, device_list in topic_dict.items():
-            if not topic_obj.subtopics:  # Create groups only for leaf topics
-                top_level_ancestor_name = child_to_root_ancestor_map.get(topic_obj.name)
-                parent_classes_set = (
-                    {top_level_ancestor_name} if top_level_ancestor_name else set()
-                )
+        for topic_obj, devices in topic_dict.items():
+            self.logger.debug(
+                "Topic %s contains devices: %s",
+                topic_obj.name,
+                [dev.id for dev in devices],
+            )
+            if len(devices) == 0:
+                continue
 
-                groups.append(
-                    Group(
-                        name=topic_obj.name,
-                        devices=device_list,
-                        parent_classes=parent_classes_set,
-                    )
+            groups.append(
+                Group(
+                    name=topic_obj.name,
+                    devices=devices,
+                    parent_classes=set(topic_obj.parent_topics),
                 )
+            )
 
         return groups
-
-    def process_operations(
-        self,
-        existing_groups: Sequence[Group],
-        devices_to_add: Sequence[Device],
-        devices_to_update: Sequence[Device],
-        devices_to_delete: Sequence[Device],
-    ):
-        pass

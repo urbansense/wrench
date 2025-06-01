@@ -5,7 +5,8 @@ from typing import Literal
 
 import yake
 from keybert import KeyBERT
-from sentence_transformers import SentenceTransformer
+
+from wrench.grouper.cluster.embedder import BaseEmbedder
 
 SEED_KEYWORDS = [
     "mobility",
@@ -35,11 +36,11 @@ class KeywordExtractorAdapter(ABC):
 class KeyBERTAdapter(KeywordExtractorAdapter):
     def __init__(
         self,
-        embedder: SentenceTransformer,
+        embedder: BaseEmbedder,
         lang: Literal["en", "de"] = "en",
         seed_keywords: list[str] = SEED_KEYWORDS,
     ):
-        self.keybert = KeyBERT(model=embedder)  # type: ignore
+        self.keybert = KeyBERT(model=embedder.embedding_model)  # type: ignore
 
         dir_path = Path(__file__).parent / "stopwords"
         stopwords_path = os.path.join(dir_path, "stopwords-%s.txt" % lang[:2].lower())
@@ -53,24 +54,15 @@ class KeyBERTAdapter(KeywordExtractorAdapter):
         self.stop_words = stop_words
         self.seed_keywords = seed_keywords
 
-    def extract_keywords(
-        self, text: list[str], top_n: int = 5, **kwargs
-    ) -> list[list[str]]:
+    def extract_keywords(self, text: list[str], **kwargs) -> list[list[str]]:
         results = self.keybert.extract_keywords(
             text,
-            top_n=top_n,
             stop_words=self.stop_words,
             seed_keywords=self.seed_keywords,
+            top_n=7,
             **kwargs,
         )
-        final_kw = []
-
-        for keywords in results:
-            if isinstance(keywords, tuple):
-                final_kw.append(keywords[0])
-            else:
-                final_kw.append([kw for kw, _ in keywords])
-        return final_kw
+        return [kw for keywords in results for kw, _ in keywords]
 
 
 class YAKEAdapter(KeywordExtractorAdapter):

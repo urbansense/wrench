@@ -82,7 +82,11 @@ class SensorThingsHarvester(BaseHarvester):
                 description=thing.description,
                 locations=thing.location,
                 time_frame=time_frame,
+                datastreams={ds.name for ds in thing.datastreams},
                 sensor_names={ds.sensor.name for ds in thing.datastreams},
+                observed_properties={
+                    ds.observed_property.name for ds in thing.datastreams
+                },
                 properties=thing.properties,
                 raw_data=thing.model_dump(),
             )

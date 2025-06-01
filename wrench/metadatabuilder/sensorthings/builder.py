@@ -112,7 +112,9 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
             temporal_extent=timeframe,
             spatial_extent=str(geographic_extent),
             last_updated=timeframe.latest_time,
-            thematic_groups=list(group.parent_classes),
+            thematic_groups=[
+                parent.lower().replace(" ", "-") for parent in group.parent_classes
+            ],
         )
 
     def _build_group_url(self, devices: list[Device]) -> str:
