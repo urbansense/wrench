@@ -95,7 +95,7 @@ class ContentGenerator:
                 "content": prompt.format(
                     measured_param=group.name,
                     title=service_metadata.title,
-                    data=[group.items[0]],
+                    data=[group.devices[0]],
                 ),
             },
         ]

@@ -19,9 +19,7 @@ class DataModel(BaseModel):
 class ComponentMeta(ABCMeta):
     """Metaclass that extracts component interface from method signatures."""
 
-    def __new__(
-        meta, name: str, bases: tuple[type, ...], attrs: dict[str, Any]
-    ) -> type:
+    def __new__(cls, name: str, bases: tuple[type, ...], attrs: dict[str, Any]) -> type:
         # extract input and outputs from the run method signature
         run_method = attrs.get("run")
         if run_method is not None:
@@ -55,7 +53,7 @@ class ComponentMeta(ABCMeta):
             for f, field in return_model.model_fields.items()
         }
 
-        return type.__new__(meta, name, bases, attrs)
+        return type.__new__(cls, name, bases, attrs)
 
 
 class Component(ABC, metaclass=ComponentMeta):

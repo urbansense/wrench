@@ -44,7 +44,7 @@ class PipelineConfigWrapper(BaseModel):
 class PipelineRunner:
     """Runner to execute pipelines from different sources."""
 
-    def __init__(self, pipeline_definition, config=None):
+    def __init__(self, pipeline_definition: PipelineDefinition, config=None):
         """Initializes a pipeline runner."""
         self.pipeline = Pipeline.from_definition(pipeline_definition, FileStore())
         self.config = config

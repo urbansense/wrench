@@ -33,7 +33,7 @@ class MockGrouper:
             if group_name not in groups_dict:
                 groups_dict[group_name] = Group(
                     name=group_name,
-                    items=[],
+                    devices=[],
                 )
             groups_dict[group_name].items.append(item)
 
@@ -291,7 +291,7 @@ async def test_pipeline_with_custom_initial_data(mocker):
 
     # Create operations for the items
     operations = [
-        Operation(type=OperationType.ADD, item_id="100", item=custom_items[0])
+        Operation(type=OperationType.ADD, device_id="100", device=custom_items[0])
     ]
 
     # Add to initial data
@@ -355,9 +355,9 @@ async def test_incremental_harvester_operations():
     deletes = [op for op in result.operations if op.type == OperationType.DELETE]
 
     # Check that we have the expected operations
-    assert any(op.item_id == "1" for op in updates), "Should have update for item 1"
-    assert any(op.item_id == "4" for op in adds), "Should have add for item 4"
-    assert any(op.item_id == "2" for op in deletes), "Should have delete for item 2"
+    assert any(op.device_id == "1" for op in updates), "Should have update for item 1"
+    assert any(op.device_id == "4" for op in adds), "Should have add for item 4"
+    assert any(op.device_id == "2" for op in deletes), "Should have delete for item 2"
 
 
 @pytest.mark.asyncio
@@ -375,7 +375,8 @@ async def test_incremental_grouper_operations():
 
     # Initial run with ADD operations
     operations = [
-        Operation(type=OperationType.ADD, item_id=item.id, item=item) for item in items
+        Operation(type=OperationType.ADD, device_id=item.id, device=item)
+        for item in items
     ]
 
     # First run with empty state
@@ -394,7 +395,7 @@ async def test_incremental_grouper_operations():
     # Now test with an update that changes the group of an item
     updated_item = Item(id="1", content={"name": "Device 1", "type": "actuator"})
     update_operations = [
-        Operation(type=OperationType.UPDATE, item_id="1", item=updated_item)
+        Operation(type=OperationType.UPDATE, device_id="1", device=updated_item)
     ]
 
     # Run with the update and pass the previous state

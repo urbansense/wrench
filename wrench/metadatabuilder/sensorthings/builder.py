@@ -1,14 +1,12 @@
-from datetime import datetime, timezone
 from typing import Any, Sequence
 
-from wrench.harvester.sensorthings.models import Thing
 from wrench.metadatabuilder.base import BaseMetadataBuilder
 from wrench.metadatabuilder.sensorthings.querybuilder import (
     CombinedFilter,
     FilterOperator,
     ThingQuery,
 )
-from wrench.models import CommonMetadata, Group, Item, TimeFrame
+from wrench.models import CommonMetadata, Device, Group
 from wrench.utils.generator import ContentGenerator, GeneratorConfig
 
 from .spatial import (
@@ -35,6 +33,8 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
             generator_config (dict[str, Any]): Config for content generator for
                 generating name and description for device group metadata
         """
+        super().__init__()
+
         self.base_url = base_url
         self.title = title
         self.description = description
@@ -46,7 +46,7 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
         self.service_spatial_calculator = PolygonalExtentCalculator()
         self.group_spatial_calculator = GeometryCollector()
 
-    def build_service_metadata(self, items: Sequence[Item]) -> CommonMetadata:
+    def build_service_metadata(self, devices: Sequence[Device]) -> CommonMetadata:
         """
         Retrieves metadata for the SensorThings data.
 
@@ -59,10 +59,9 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
                             identifier, description, spatial extent, temporal extent,
                             source type, and last updated time.
         """
-        things = [Thing.model_validate(item.content) for item in items]
+        geographic_extent = self.service_spatial_calculator.calculate_extent(devices)
 
-        geographic_extent = self.service_spatial_calculator.calculate_extent(things)
-        timeframe = self._calculate_timeframe(things)
+        timeframe = self._calculate_timeframe(devices)
 
         self.metadata = CommonMetadata(
             endpoint_url=self.base_url,
@@ -79,7 +78,7 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
 
     def build_group_metadata(self, group: Group) -> CommonMetadata:
         """
-        Groups a list of Things and builds their metadata.
+        Groups a list of Devices and builds their metadata.
 
         Args:
             group (Group): The group returned from a Grouper.
@@ -88,15 +87,13 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
             metadata (CommonMetadata): CommonMetadata extracted
                 from the groups
         """
-        things_in_group = [Thing.model_validate(item.content) for item in group.items]
-
         geographic_extent = self.group_spatial_calculator.calculate_extent(
-            things_in_group
+            group.devices
         )
 
-        timeframe = self._calculate_timeframe(things_in_group)
+        timeframe = self._calculate_timeframe(group.devices)
 
-        endpoint_url = self._build_group_url(things_in_group)
+        endpoint_url = self._build_group_url(group.devices)
 
         content = self.content_generator.generate_group_content(
             group,
@@ -118,66 +115,22 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
             thematic_groups=list(group.parent_classes),
         )
 
-    def _calculate_timeframe(self, things: list[Thing]) -> TimeFrame:
-        """
-        Calculate the overall timeframe spanning all sensor data.
-
-        Args:
-            things: List of Thing objects containing datastream information
-
-        Returns:
-            TimeFrame: Object containing the earliest start time and latest end time
-
-        Notes:
-            - Handles ISO format datetime strings from phenomenon_time
-            - All times are converted to UTC timezone
-            - Skips datastreams with no phenomenon_time
-        """
-        # Initialize timeframe boundaries
-        time_bounds = {
-            "earliest": datetime.max.replace(tzinfo=timezone.utc),
-            "latest": datetime.min.replace(tzinfo=timezone.utc),
-        }
-
-        # Process each datastream's phenomenon time
-        for thing in things:
-            for datastream in thing.datastreams:
-                if not datastream.phenomenon_time:
-                    continue
-
-                # Parse phenomenon time range
-                start_str, end_str = datastream.phenomenon_time.split("/")
-                timespan = {
-                    "start": datetime.fromisoformat(start_str),
-                    "end": datetime.fromisoformat(end_str),
-                }
-
-                # Update overall boundaries
-                time_bounds["earliest"] = min(
-                    time_bounds["earliest"], timespan["start"]
-                )
-                time_bounds["latest"] = max(time_bounds["latest"], timespan["end"])
-
-        return TimeFrame(
-            start_time=time_bounds["earliest"], latest_time=time_bounds["latest"]
-        )
-
-    def _build_group_url(self, things: list[Thing]) -> str:
+    def _build_group_url(self, devices: list[Device]) -> str:
         """
         Builds resource URL for groups.
 
-        Takes the ID of each Thing and filters the base URL for Things based on them.
+        Takes the ID of each Thing and filters the base URL based on them.
 
         Args:
-            things (list[Thing]): List of things belonging to a group.
+            devices (list[Device]): List of devices belonging to a group.
 
         Returns:
-            url (str): The resource URL with the ID of Things filtered
+            url (str): The resource URL with the ID of Devices filtered
         """
-        if not things:
-            raise ValueError("Things list is empty, cannot build URL")
+        if not devices:
+            raise ValueError("Device list is empty, cannot build URL")
 
-        filters = [ThingQuery.property("@iot.id").eq(thing.id) for thing in things]
+        filters = [ThingQuery.property("@iot.id").eq(device.id) for device in devices]
 
         if filters:
             filter_expression = CombinedFilter(FilterOperator.OR, filters)

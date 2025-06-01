@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, cast
 
 from geojson import FeatureCollection, Polygon
 
-from wrench.harvester.sensorthings.models import Thing
+from wrench.harvester.sensorthings.models import Location
+from wrench.models import Device
 
 
 class SpatialExtentCalculator(ABC):
@@ -14,12 +15,12 @@ class SpatialExtentCalculator(ABC):
     """
 
     @abstractmethod
-    def calculate_extent(self, things: list[Thing]) -> Any:
+    def calculate_extent(self, devices: list[Device]) -> Any:
         """
         Calculate geographic extent from a list of Things.
 
         Args:
-            things: List of Thing objects with location data
+            devices: List of devices with location data
 
         Returns:
             A GeoJSON object representing the geographic extent
@@ -34,12 +35,12 @@ class PolygonalExtentCalculator(SpatialExtentCalculator):
     This strategy creates a rectangular bounding box that encompasses all points.
     """
 
-    def calculate_extent(self, things: list[Thing]) -> Polygon:
+    def calculate_extent(self, devices: list[Device]) -> Polygon:
         """
         Calculate the geographic bounding box from a set of locations.
 
         Args:
-            things: List of Thing objects with location data
+            devices: List of devices with location data
 
         Returns:
             Polygon: GeoJSON polygon representing the bounding box
@@ -55,9 +56,9 @@ class PolygonalExtentCalculator(SpatialExtentCalculator):
         # get locations of each thing, put them into a set to avoid duplicates
         locations = {
             coord
-            for thing in things
-            if thing.location
-            for loc in thing.location  # a thing can have many locations
+            for device in devices
+            if device.locations
+            for loc in device.locations  # a thing can have many locations
             for coord in loc.get_coordinates()  # a location can be have many coord
         }
 
@@ -91,10 +92,11 @@ class GeometryCollector(SpatialExtentCalculator):
     FeatureCollection
     """
 
-    def calculate_extent(self, things: list[Thing]) -> FeatureCollection:
+    def calculate_extent(self, devices: list[Device]) -> FeatureCollection:
         geometries: list = []
-        for thing in things:
-            for loc in thing.location:
+        for device in devices:
+            for loc in device.locations:
+                loc = cast(Location, loc)
                 geometries.append(loc.location)
 
         return FeatureCollection(geometries)

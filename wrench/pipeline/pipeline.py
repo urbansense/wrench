@@ -10,6 +10,7 @@ from .component import Component
 from .exceptions import (
     ComponentNotFoundError,
     PipelineDefinitionError,
+    PipelineError,
     PipelineStatusUpdateError,
     ValidationError,
 )
@@ -251,7 +252,8 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
 
                 if not self._check_type_compatibility(source_type, target_type):  # type: ignore
                     raise ValidationError(
-                        f"Type mismatch: {source_component}.{output_field} ({source_type}) is not compatible with "
+                        f"Type mismatch: {source_component}.{output_field}"
+                        f"({source_type}) is not compatible with "
                         f"{node.name}.{target_param} ({target_type})"
                     )
 
@@ -310,29 +312,26 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
         run_status = await self._execute_pipeline(run_id, inputs)
 
         # Completion phase based on run status
-        if run_status == PipelineRunStatus.COMPLETED:
-            # Normal successful completion - commit state changes
-            self.logger.info(f"Pipeline run {run_id} completed successfully")
-            await self.state_manager.commit_version()
-            await self.run_tracker.record_run_completion(run_id)
-        elif run_status == PipelineRunStatus.STOPPED:
-            # Early termination - discard state but record completion
-            self.logger.info(f"Pipeline run {run_id} stopped early (requested)")
-            await self.state_manager.discard_pending()
-            await self.run_tracker.record_run_completion(run_id, stopped_early=True)
-        else:  # PipelineRunStatus.FAILED
-            # Failure - discard state and record failure
-            self.logger.error(f"Pipeline run {run_id} failed")
-            await self.state_manager.discard_pending()
-            await self.run_tracker.record_run_failure(
-                run_id, "One or more components failed"
-            )
+        match run_status:
+            case PipelineRunStatus.COMPLETED:
+                self.logger.info("Pipeline run %s completed successfully", run_id)
+                await self.state_manager.commit_version()
+                await self.run_tracker.record_run_completion(run_id)
+            case PipelineRunStatus.STOPPED:
+                self.logger.info("Pipeline run %s stopped early (requested)", run_id)
+                await self.state_manager.discard_pending()
+                await self.run_tracker.record_run_completion(run_id, stopped_early=True)
+            case PipelineRunStatus.FAILED:
+                self.logger.error("Pipeline run %s failed", run_id)
+                await self.state_manager.discard_pending()
+                await self.run_tracker.record_run_failure(
+                    run_id, "One or more components failed"
+                )
+            case _:
+                raise PipelineError("undefined PipelineRunStatus")
 
-        # Result collection phase (always happens)
-        final_results = await self._collect_results(run_id)
-
-        # Include success flag based on status
         success = run_status in (PipelineRunStatus.COMPLETED, PipelineRunStatus.STOPPED)
+        final_results = await self._collect_results(run_id)
 
         return PipelineResult(
             run_id=run_id,

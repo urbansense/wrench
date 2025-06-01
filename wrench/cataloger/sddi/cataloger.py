@@ -1,6 +1,7 @@
 from typing import Sequence
 
 from ckanapi import RemoteCKAN
+from ckanapi.errors import NotFound
 
 from wrench.cataloger.base import BaseCataloger
 from wrench.models import CommonMetadata
@@ -61,9 +62,16 @@ class SDDICataloger(BaseCataloger):
             else:
                 self._register_api_service(online_service)
                 self.logger.info("Successfully registered API Service")
+        except NotFound:
+            self.logger.error(
+                "No entries found for %s, please clear the .pipeline_store cache and rerun the pipeline",
+                online_service.name,
+            )
 
-            if groups:
+        if groups:
+            try:
                 for d in device_groups:
+                    self.logger.debug("Processing device group: %s", d.name)
                     if d.name in self._registries:
                         self._update_device_group(d)
                         self.logger.debug(
@@ -81,11 +89,13 @@ class SDDICataloger(BaseCataloger):
                         self.logger.info(
                             "Created relationships for device_group %s", d.name
                         )
-            return list(self._registries)
+            except NotFound:
+                self.logger.error(
+                    "No entries found for %s, please clear the .pipeline_store cache and rerun the pipeline",
+                    d.name,
+                )
 
-        except Exception as e:
-            self.logger.error("Failed to register: %s", e)
-            raise
+        return list(self._registries)
 
     def _register_api_service(self, api_service: OnlineService):
         self._registries.add(api_service.name)

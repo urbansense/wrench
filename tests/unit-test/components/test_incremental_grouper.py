@@ -31,8 +31,8 @@ async def test_incremental_grouper_first_run():
     item2 = Item(id="2", content={"value": "data2"})
 
     # Define groups to be returned by the mock grouper
-    group1 = Group(name="Group1", items=[item1])
-    group2 = Group(name="Group2", items=[item2])
+    group1 = Group(name="Group1", devices=[item1])
+    group2 = Group(name="Group2", devices=[item2])
 
     # Create mock grouper that returns predefined groups
     def mock_group_items(items):
@@ -59,11 +59,11 @@ async def test_incremental_grouper_add_operation():
     item3 = Item(id="3", content={"value": "data3"})
 
     # Define groups for initial state
-    group1 = Group(name="Group1", items=[item1])
-    group2 = Group(name="Group2", items=[item2])
+    group1 = Group(name="Group1", devices=[item1])
+    group2 = Group(name="Group2", devices=[item2])
 
     # Define groups for the result of grouping item3
-    group3 = Group(name="Group3", items=[item3])
+    group3 = Group(name="Group3", devices=[item3])
 
     # Create a mock grouper with dynamic behavior
     def mock_group_items(items):
@@ -78,7 +78,7 @@ async def test_incremental_grouper_add_operation():
     groups = await incremental_grouper.run([item1, item2], [])
 
     # Create ADD operation
-    add_op = Operation(type=OperationType.ADD, item_id="3", item=item3)
+    add_op = Operation(type=OperationType.ADD, device_id="3", device=item3)
 
     # Run with ADD operation
     result = await incremental_grouper.run(
@@ -88,8 +88,8 @@ async def test_incremental_grouper_add_operation():
     # Verify results
     assert len(result.groups) == 1
     assert result.groups[0].name == "Group3"
-    assert len(result.groups[0].items) == 1
-    assert result.groups[0].items[0].id == "3"
+    assert len(result.groups[0].devices) == 1
+    assert result.groups[0].devices[0].id == "3"
 
 
 @pytest.mark.asyncio
@@ -103,11 +103,11 @@ async def test_incremental_grouper_update_operation():
     item2_updated = Item(id="2", content={"value": "data2_updated"})
 
     # Define groups
-    group1 = Group(name="Group1", items=[item1])
-    group2 = Group(name="Group2", items=[item2])
+    group1 = Group(name="Group1", devices=[item1])
+    group2 = Group(name="Group2", devices=[item2])
 
     # Define updated group
-    group2_updated = Group(name="Group2", items=[item2_updated])
+    group2_updated = Group(name="Group2", devices=[item2_updated])
 
     # Create a mock grouper with dynamic behavior
     def mock_group_items(items):
@@ -125,7 +125,9 @@ async def test_incremental_grouper_update_operation():
     result = await incremental_grouper.run([item1, item2], [])
 
     # Create UPDATE operation
-    update_op = Operation(type=OperationType.UPDATE, item_id="2", item=item2_updated)
+    update_op = Operation(
+        type=OperationType.UPDATE, device_id="2", device=item2_updated
+    )
 
     # Run with UPDATE operation
     result = await incremental_grouper.run(
@@ -138,9 +140,9 @@ async def test_incremental_grouper_update_operation():
 
     # Verify item was updated in the group
     updated_group = result.groups[0]
-    assert len(updated_group.items) == 1
-    assert updated_group.items[0].id == "2"
-    assert updated_group.items[0].content == {"value": "data2_updated"}
+    assert len(updated_group.devices) == 1
+    assert updated_group.devices[0].id == "2"
+    assert updated_group.devices[0].content == {"value": "data2_updated"}
 
 
 @pytest.mark.asyncio
@@ -151,7 +153,7 @@ async def test_incremental_grouper_delete_operation():
     item2 = Item(id="2", content={"value": "data2"})
 
     # Define groups
-    group1 = Group(name="Group1", items=[item1, item2])
+    group1 = Group(name="Group1", devices=[item1, item2])
 
     # Create a mock grouper
     def mock_group_items(items):
@@ -164,7 +166,7 @@ async def test_incremental_grouper_delete_operation():
     result = await incremental_grouper.run([item1, item2], [])
 
     # Create DELETE operation
-    delete_op = Operation(type=OperationType.DELETE, item_id="2", item=item2)
+    delete_op = Operation(type=OperationType.DELETE, device_id="2", device=item2)
 
     # Run with DELETE operation
     result = await incremental_grouper.run(
@@ -176,8 +178,8 @@ async def test_incremental_grouper_delete_operation():
     assert result.groups[0].name == "Group1"
 
     # Verify item was removed
-    assert len(result.groups[0].items) == 1
-    assert result.groups[0].items[0].id == "1"
+    assert len(result.groups[0].devices) == 1
+    assert result.groups[0].devices[0].id == "1"
 
 
 @pytest.mark.asyncio
@@ -189,8 +191,8 @@ async def test_incremental_grouper_multiple_operations():
     item3 = Item(id="3", content={"value": "data3"})
 
     # Define groups
-    group1 = Group(name="Group1", items=[item1, item2])
-    group3 = Group(name="Group3", items=[item3])
+    group1 = Group(name="Group1", devices=[item1, item2])
+    group3 = Group(name="Group3", devices=[item3])
 
     # Create a mock grouper with dynamic behavior
     def mock_group_items(items):
@@ -205,8 +207,8 @@ async def test_incremental_grouper_multiple_operations():
     result = await incremental_grouper.run([item1, item2], [])
 
     # Create operations
-    add_op = Operation(type=OperationType.ADD, item_id="3", item=item3)
-    delete_op = Operation(type=OperationType.DELETE, item_id="2", item=item2)
+    add_op = Operation(type=OperationType.ADD, device_id="3", device=item3)
+    delete_op = Operation(type=OperationType.DELETE, device_id="2", device=item2)
 
     # Run with multiple operations
     result = await incremental_grouper.run(
@@ -222,13 +224,13 @@ async def test_incremental_grouper_multiple_operations():
 
     # Verify Group1 modifications (item2 removed)
     assert group1_result is not None
-    assert len(group1_result.items) == 1
-    assert group1_result.items[0].id == "1"
+    assert len(group1_result.devices) == 1
+    assert group1_result.devices[0].id == "1"
 
     # Verify Group3 was added with item3
     assert group3_result is not None
-    assert len(group3_result.items) == 1
-    assert group3_result.items[0].id == "3"
+    assert len(group3_result.devices) == 1
+    assert group3_result.devices[0].id == "3"
 
 
 @pytest.mark.asyncio
@@ -239,8 +241,8 @@ async def test_incremental_grouper_no_operations():
     item2 = Item(id="2", content={"value": "data2"})
 
     # Define groups
-    group1 = Group(name="Group1", items=[item1])
-    group2 = Group(name="Group2", items=[item2])
+    group1 = Group(name="Group1", devices=[item1])
+    group2 = Group(name="Group2", devices=[item2])
 
     # Create a mock grouper
     def mock_group_items(items):

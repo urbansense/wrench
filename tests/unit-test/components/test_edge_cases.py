@@ -86,7 +86,7 @@ async def test_metadatabuilder_with_empty_inputs():
     assert len(empty_ops_result.group_metadata) == 0
 
     # Test with non-empty operations (should call the builder methods)
-    operations = [Operation(type=OperationType.ADD, item_id="1", item=devices[0])]
+    operations = [Operation(type=OperationType.ADD, device_id="1", device=devices[0])]
     result = await metadata_builder_component.run(
         devices=devices, operations=operations, groups=[]
     )
@@ -183,7 +183,7 @@ async def test_grouper_edge_cases():
             for item in items:
                 group_name = f"Group-{item.id}"
                 if group_name not in groups:
-                    groups[group_name] = Group(name=group_name, items=[])
+                    groups[group_name] = Group(name=group_name, devices=[])
                 groups[group_name].items.append(item)
             return list(groups.values())
 
@@ -208,9 +208,9 @@ async def test_grouper_edge_cases():
     result = await grouper_component.run(
         devices=duplicate_items,
         operations=[
-            Operation(type=OperationType.ADD, item_id=item.id, item=item)
+            Operation(type=OperationType.ADD, device_id=item.id, device=item)
             for item in duplicate_items
         ],
     )
     assert len(result.groups) == 1
-    assert len(result.groups[0].items) == 2
+    assert len(result.groups[0].devices) == 2

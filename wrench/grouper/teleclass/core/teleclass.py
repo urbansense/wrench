@@ -1,21 +1,15 @@
-import json
 from collections import defaultdict
 from pathlib import Path
 from typing import Sequence, Union
 
 import numpy as np
-from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
 from wrench.grouper.base import BaseGrouper
 from wrench.grouper.teleclass.classifier.similarity import SimilarityClassifier
 from wrench.grouper.teleclass.core.cache import TELEClassCache
 from wrench.grouper.teleclass.core.config import TELEClassConfig
-from wrench.grouper.teleclass.core.document_loader import (
-    DocumentLoader,
-    JSONDocumentLoader,
-    ModelDocumentLoader,
-)
+from wrench.grouper.teleclass.core.document_loader import ModelDocumentLoader
 from wrench.grouper.teleclass.core.models import (
     CorpusEnrichmentResult,
     Document,
@@ -26,7 +20,7 @@ from wrench.grouper.teleclass.core.taxonomy_manager import TaxonomyManager
 from wrench.grouper.teleclass.enrichment.corpus import CorpusEnricher
 from wrench.grouper.teleclass.enrichment.llm import LLMEnricher
 from wrench.log import logger
-from wrench.models import Group, Item
+from wrench.models import Device, Group
 
 
 class TELEClassGrouper(BaseGrouper):
@@ -86,54 +80,12 @@ class TELEClassGrouper(BaseGrouper):
 
         self.logger = logger.getChild(self.__class__.__name__)
 
-    def _load_items(self, source: Union[str, Path, Sequence[Item]]) -> list[Document]:
-        """Loads and processes documents from various input sources.
-
-        Args:
-            source: Input source for documents. Can be:
-                - str or Path: Path to a JSON file containing documents
-                - Sequence[dict]: List of dict instances representing documents
-
-        Returns:
-            list[DocumentMeta]: List of processed documents with embeddings.
-
-        Raises:
-            FileNotFoundError: If the input file path doesn't exist.
-            ValueError: If the JSON file format is invalid.
-        """
-        loader: DocumentLoader = (
-            JSONDocumentLoader(source)
-            if isinstance(source, (str, Path))
-            else ModelDocumentLoader(source)
-        )
+    def _load_devices(
+        self, source: Union[str, Path, Sequence[Device]]
+    ) -> list[Document]:
+        loader = ModelDocumentLoader(source)
 
         return loader.load(self.encoder)
-
-    # for testing and evaluation
-    def _load_labels(self, source: Union[str]) -> list[set[str]]:
-        """Loads ground truth labels from a JSON file for evaluation purposes.
-
-        Args:
-            source: Path to JSON file containing document labels.
-
-        Returns:
-            list[set[str]]: List of sets containing true class labels for each document.
-
-        Raises:
-            FileNotFoundError: If the labels file doesn't exist.
-            ValueError: If the JSON file format is invalid.
-        """
-        file_path = Path(source)
-        if not file_path.exists():
-            raise FileNotFoundError(f"JSON file not found: {file_path}")
-
-        with open(source, "r") as f:
-            data = json.load(f)
-
-        if not isinstance(data, list):
-            raise ValueError("JSON file must contain a list of documents")
-
-        return [set(d["label"]) for d in data]
 
     def run(self, documents: list[Document], sample_size: int = 20) -> None:
         """
@@ -274,14 +226,12 @@ class TELEClassGrouper(BaseGrouper):
 
         return self.classifier_manager.predict(text)
 
-    def group_items(self, items: Sequence[Item]) -> list[Group]:
+    def group_items(self, devices: Sequence[Device]) -> list[Group]:
         """
         Groups a collection of documents into predefined categories.
 
         Args:
-            items (Union[str, Path, list[BaseModel]]): The items to classify.
-                This can be a path to a file or directory, a string containing
-                document content, or a list of BaseModel instances.
+            devices (Sequence[Device]]): The items to classify.
 
         Returns:
             list[Group]: A list of Groups containing information about documents
@@ -290,7 +240,7 @@ class TELEClassGrouper(BaseGrouper):
         self.logger.debug("Starting document classification")
 
         try:
-            docs = self._load_items(items)
+            docs = self._load_devices(devices)
             self.logger.debug("Loaded %d items", len(docs))
             if not hasattr(self, "classifier_manager"):
                 self.run(docs)
@@ -311,8 +261,8 @@ class TELEClassGrouper(BaseGrouper):
                 groups.append(
                     Group(
                         name=leaf_class,
-                        items=[
-                            Item(id=doc.id, content=json.loads(doc.content))
+                        devices=[
+                            Device.model_validate_json(doc.content)
                             for doc in class_docs
                         ],
                         parent_classes=self.taxonomy_manager.get_ancestors(leaf_class),
@@ -323,31 +273,4 @@ class TELEClassGrouper(BaseGrouper):
 
         except Exception as e:
             self.logger.exception("Classification failed with error: %s", str(e))
-            raise
-
-    def evaluate_classifier(self, documents: Union[str, Path, list[BaseModel]]):
-        """
-        Evaluates the classifier using the provided documents.
-
-        Args:
-            documents (Union[str, Path, list[BaseModel]]): The documents to be
-                evaluated. This can be a string or Path to a file containing
-                the documents, or a list of BaseModel instances.
-
-        Raises:
-            Exception: If the evaluation process fails, an exception is
-                    raised with the error details.
-        """
-        try:
-            docs = self._load_items(documents)
-            labels = self._load_labels("./test_script/labels.json")
-            if not hasattr(self, "classifier_manager"):
-                self.run(docs)
-            result = self.classifier_manager.evaluate(
-                test_docs=docs, true_labels=labels
-            )
-            self.logger.info(result)
-
-        except Exception as e:
-            self.logger.exception("Evaluation failed with error: %s", str(e))
             raise

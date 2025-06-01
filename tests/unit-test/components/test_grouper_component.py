@@ -30,7 +30,7 @@ class MockBaseGrouper(BaseGrouper):
             if group_name not in groups_dict:
                 groups_dict[group_name] = Group(
                     name=group_name,
-                    items=[],
+                    devices=[],
                 )
 
             # Add item to group
@@ -69,9 +69,9 @@ async def test_grouper_component_basic():
     actuator_group = next((g for g in result.groups if g.name == "actuator"), None)
 
     assert sensor_group is not None
-    assert len(sensor_group.items) == 2
+    assert len(sensor_group.devices) == 2
     assert actuator_group is not None
-    assert len(actuator_group.items) == 1
+    assert len(actuator_group.devices) == 1
 
 
 @pytest.mark.asyncio
@@ -102,8 +102,8 @@ async def test_grouper_component_predefined_groups():
     items2 = [Item(id="2", content={"name": "Test 2"})]
 
     predefined_groups = [
-        Group(name="test_group", items=items1),
-        Group(name="another_group", items=items2),
+        Group(name="test_group", devices=items1),
+        Group(name="another_group", devices=items2),
     ]
 
     # Create a custom grouper for testing that returns predefined groups
@@ -127,10 +127,10 @@ async def test_grouper_component_predefined_groups():
     assert len(result.groups) == 2
     assert result.groups[0].name == "test_group"
     assert result.groups[1].name == "another_group"
-    assert len(result.groups[0].items) == 1
-    assert len(result.groups[1].items) == 1
-    assert result.groups[0].items[0].id == "1"
-    assert result.groups[1].items[0].id == "2"
+    assert len(result.groups[0].devices) == 1
+    assert len(result.groups[1].devices) == 1
+    assert result.groups[0].devices[0].id == "1"
+    assert result.groups[1].devices[0].id == "2"
 
 
 @pytest.mark.asyncio
@@ -144,7 +144,7 @@ async def test_incremental_grouper_component():
 
     # Create operations for the devices
     operations = [
-        Operation(type=OperationType.ADD, item_id=device.id, item=device)
+        Operation(type=OperationType.ADD, device_id=device.id, device=device)
         for device in devices
     ]
 
@@ -170,7 +170,7 @@ async def test_incremental_grouper_component():
     # Run with a new device and an update operation
     new_device = Item(id="3", content={"name": "Device 3", "type": "sensor"})
     update_operations = [
-        Operation(type=OperationType.ADD, item_id=new_device.id, item=new_device)
+        Operation(type=OperationType.ADD, device_id=new_device.id, device=new_device)
     ]
 
     # Add the new device to the list
@@ -188,4 +188,4 @@ async def test_incremental_grouper_component():
     sensor_group = next((g for g in result.groups if g.name == "sensor"), None)
     assert sensor_group is not None
     # The sensor group might just contain the new item in some implementations
-    assert len(sensor_group.items) >= 1  # Should contain at least the new sensor
+    assert len(sensor_group.devices) >= 1  # Should contain at least the new sensor
