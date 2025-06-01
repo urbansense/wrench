@@ -111,6 +111,7 @@ class ContentGenerator:
             model=self.model,
             messages=messages,
             format=Content.model_json_schema(),
+            options={"temperature": 0},
         )
 
         if not response.message.content:
