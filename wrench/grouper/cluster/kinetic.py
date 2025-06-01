@@ -1,17 +1,25 @@
+from typing import TYPE_CHECKING
+
 import openai
 from pydantic import validate_call
 
-from wrench.grouper import BaseGrouper
-from wrench.grouper.cluster.embedder import BaseEmbedder, SentenceTransformerEmbedder
+from wrench.grouper.cluster.embedder import SentenceTransformerEmbedder
 from wrench.log import logger
-from wrench.models import Device, Group
+from wrench.models import Group
 
 from ._classifier import Classifier
 from .config import LLMConfig
 from .cooccurence import build_cooccurence_network
 from .keyword_extractor import KeyBERTAdapter
 from .llm_topic_generator import LLMTopicGenerator
-from .models import Cluster, Topic
+
+if TYPE_CHECKING:
+    from typing import Literal
+
+    from wrench.grouper import BaseGrouper
+    from wrench.grouper.cluster.embedder import BaseEmbedder
+    from wrench.grouper.cluster.models import Cluster, Topic
+    from wrench.models import Device
 
 
 class KINETIC(BaseGrouper):
@@ -38,6 +46,7 @@ class KINETIC(BaseGrouper):
         llm_config: LLMConfig,
         embedder: str | BaseEmbedder = "intfloat/multilingual-e5-large-instruct",
         threshold=0.9,
+        lang: Literal["de", "en"] = "de",
     ):
         """
         Initialize the KINETIC Grouper.
@@ -53,11 +62,13 @@ class KINETIC(BaseGrouper):
             threshold (float): The threshold for the similarity comparison. Defaults to
                 0.9. This parameter is the first one to change in order to get better
                 classifications for your data.
+            lang (["en", "de"]): The language of the source data. Default is "de" for
+                german.
         """
         if isinstance(embedder, str):
             embedder = SentenceTransformerEmbedder(embedder)
 
-        self.keyword_extractor = KeyBERTAdapter(embedder, lang="de")
+        self.keyword_extractor = KeyBERTAdapter(embedder, lang=lang)
         self.classifier = Classifier(embedder, threshold)
 
         self.generator = LLMTopicGenerator(
@@ -72,12 +83,7 @@ class KINETIC(BaseGrouper):
     def build_clusters(self, docs: list[str]):
         keywords = self.keyword_extractor.extract_keywords(docs)
 
-        clusters = build_cooccurence_network(keywords)
-
-        return [
-            Cluster(cluster_id=id, keywords=keywords)
-            for id, keywords in clusters.items()
-        ]
+        return build_cooccurence_network(keywords)
 
     def generate_topics(self, clusters: list[Cluster]) -> dict[Topic, list[Device]]:
         topic_dict = self.generator.generate_seed_topics(clusters)

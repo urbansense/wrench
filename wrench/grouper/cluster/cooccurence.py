@@ -3,10 +3,12 @@ from collections import defaultdict
 import community as cd
 import networkx as nx
 
+from .models import Cluster
+
 
 def build_cooccurence_network(
     keywords_per_doc: list[list[str]], top_n=7
-) -> dict[str, list]:
+) -> list[Cluster]:
     """Builds a keyword co-occurrence network and visualizes it.
 
     The function identifies communities (clusters) of keywords and extracts the most
@@ -44,4 +46,6 @@ def build_cooccurence_network(
         top = sorted(deg, key=deg.get, reverse=True)[:top_n]
         essential[f"cluster_{comm_id}"] = top
 
-    return essential
+    return [
+        Cluster(cluster_id=id, keywords=keywords) for id, keywords in essential.items()
+    ]

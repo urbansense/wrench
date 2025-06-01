@@ -62,14 +62,7 @@ class KeyBERTAdapter(KeywordExtractorAdapter):
             top_n=7,
             **kwargs,
         )
-        final_kw = []
-
-        for keywords in results:
-            if isinstance(keywords, tuple):
-                final_kw.append(keywords[0])
-            else:
-                final_kw.append([kw for kw, _ in keywords])
-        return final_kw
+        return [kw for keywords in results for kw, _ in keywords]
 
 
 class YAKEAdapter(KeywordExtractorAdapter):
