@@ -1,25 +1,20 @@
-from typing import TYPE_CHECKING
+from typing import Literal
 
 import openai
 from pydantic import validate_call
 
-from wrench.grouper.cluster.embedder import SentenceTransformerEmbedder
+from wrench.grouper import BaseGrouper
+from wrench.grouper.cluster.embedder import BaseEmbedder
+from wrench.grouper.cluster.models import Cluster, Topic
 from wrench.log import logger
-from wrench.models import Group
+from wrench.models import Device, Group
 
 from ._classifier import Classifier
 from .config import LLMConfig
 from .cooccurence import build_cooccurence_network
+from .embedder import SentenceTransformerEmbedder
 from .keyword_extractor import KeyBERTAdapter
 from .llm_topic_generator import LLMTopicGenerator
-
-if TYPE_CHECKING:
-    from typing import Literal
-
-    from wrench.grouper import BaseGrouper
-    from wrench.grouper.cluster.embedder import BaseEmbedder
-    from wrench.grouper.cluster.models import Cluster, Topic
-    from wrench.models import Device
 
 
 class KINETIC(BaseGrouper):
