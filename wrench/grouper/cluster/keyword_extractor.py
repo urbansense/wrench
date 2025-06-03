@@ -62,7 +62,7 @@ class KeyBERTAdapter(KeywordExtractorAdapter):
             top_n=7,
             **kwargs,
         )
-        return [kw for keywords in results for kw, _ in keywords]
+        return [[kw for kw, _ in keywords] for keywords in results]
 
 
 class YAKEAdapter(KeywordExtractorAdapter):

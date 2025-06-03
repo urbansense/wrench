@@ -102,7 +102,7 @@ class CommonMetadata(BaseModel):
         identifier (str): A unique identifier for the metadata.
         title (str): The title of the metadata.
         description (str): A brief description of the metadata.
-        endpoint_url (str): The URL endpoint where the metadata can be accessed.
+        endpoint_urls (list[str]): The URL endpoints where the metadata can be accessed.
 
         spatial_extent (str, optional): The spatial extent of the data.
                                         Defaults to an empty string.
@@ -128,7 +128,7 @@ class CommonMetadata(BaseModel):
     identifier: str
     title: str
     description: str
-    endpoint_url: str
+    endpoint_urls: list[str]
 
     # standard, but optional fields
     spatial_extent: str = ""
@@ -143,26 +143,21 @@ class CommonMetadata(BaseModel):
     update_frequency: str | None = None
     owner: str | None = None
 
-    # license and access information
     license: str | None = None
+    "License and access information"
 
 
 class Group(BaseModel):
-    """
-    Group model representing a collection of items.
+    """Group model representing a collection of items."""
 
-    Attributes:
-        name (str): Name of the group.
-        devices (list[Device]): List of items belonging to this group.
-        parent_classes (set[str], optional): Set of parent classes of this group, used
-        for hierarchical classification. Defaults to an empty set.
-    """
+    model_config = {"arbitrary_types_allowed": True}
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    name: str = Field(description="Name of the group")
-    devices: list[Device] = Field(description="List of items belonging to this group")
+    name: str
+    "Name of the group"
+    devices: list[Device]
+    "List of items belonging to this group"
+    keywords: list[str] = []
+    "List of keywords associated with this group"
     # optional only for hierarchical classification
-    parent_classes: set[str] = Field(
-        default=set(), description="Set of parent classes of this group"
-    )
+    parent_classes: set[str] = set()
+    "Set of parent classes of this group,for hierarchical classification tasks."

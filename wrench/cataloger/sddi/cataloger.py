@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Sequence
 
 from ckanapi import RemoteCKAN
@@ -97,6 +98,12 @@ class SDDICataloger(BaseCataloger):
 
         return list(self._registries)
 
+    def _get_package(self, package_id: str):
+        pkg = self.ckan_server.call_action(
+            action="package_show", data_dict={"id": package_id}
+        )
+        return pkg
+
     def _register_api_service(self, api_service: OnlineService):
         self._registries.add(api_service.name)
         pkg = self.ckan_server.call_action(
@@ -150,7 +157,7 @@ class SDDICataloger(BaseCataloger):
 
     def _create_online_service(self, metadata: CommonMetadata) -> OnlineService:
         return OnlineService(
-            url=metadata.endpoint_url,
+            url=metadata.endpoint_urls[0],
             name=metadata.identifier,
             notes=metadata.description,
             owner_org=metadata.owner or DEFAULT_OWNER,
@@ -184,22 +191,33 @@ class SDDICataloger(BaseCataloger):
         device_groups: list[DeviceGroup] = []
 
         for group in metadata:
+            start_date, latest_date = "", ""
+
+            if group.temporal_extent:
+                start_date = group.temporal_extent.start_time.strftime("%Y-%m-%d")
+                latest_date = group.temporal_extent.latest_time.strftime("%Y-%m-%d")
+
+            if group.temporal_extent.latest_time.date() == datetime.today().date():
+                latest_date = ""
+
             device_group = DeviceGroup(
-                url=group.endpoint_url,
+                url=group.endpoint_urls[0],
                 name=group.identifier,
                 notes=group.description,
                 owner_org=group.owner or DEFAULT_OWNER,
+                begin_collection_date=start_date,
+                end_collection_date=latest_date,
                 title=group.title,
                 tags=[{"name": tag} for tag in group.tags],
                 spatial=group.spatial_extent,
                 resources=[
                     {
-                        "name": f"URL for {group.title}",
-                        "description": f"URL provides a list of all data associated "
-                        f"with the category {group.title}",
+                        "name": f"URL-{i} for {group.title}",
+                        "description": f"URL provides data for group: {group.title}",
                         "format": "JSON",
-                        "url": group.endpoint_url,
+                        "url": url,
                     }
+                    for i, url in enumerate(group.endpoint_urls)
                 ],
             )
             device_group.groups.extend(

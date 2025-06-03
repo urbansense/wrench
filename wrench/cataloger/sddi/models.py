@@ -18,6 +18,7 @@ class SDDIDataset(BaseModel):
     url: str | None = None
     author: str = ""
     author_email: str = ""
+    begin_collection_date: str = ""
     end_collection_date: str = ""  # necessary to properly register entries
     groups: list[dict] = []
     language: str = ""

@@ -1,3 +1,4 @@
+from itertools import batched
 from typing import Any, Sequence
 
 from wrench.metadatabuilder.base import BaseMetadataBuilder
@@ -7,7 +8,7 @@ from wrench.metadatabuilder.sensorthings.querybuilder import (
     ThingQuery,
 )
 from wrench.models import CommonMetadata, Device, Group
-from wrench.utils.generator import ContentGenerator, GeneratorConfig
+from wrench.utils.generator import Content, ContentGenerator, GeneratorConfig
 
 from .spatial import (
     GeometryCollector,
@@ -64,7 +65,7 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
         timeframe = self._calculate_timeframe(devices)
 
         self.metadata = CommonMetadata(
-            endpoint_url=self.base_url,
+            endpoint_urls=[self.base_url],
             title=self.title,
             identifier=self.title.lower().strip().replace(" ", "_"),
             description=self.description,
@@ -76,12 +77,16 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
 
         return self.metadata
 
-    def build_group_metadata(self, group: Group) -> CommonMetadata:
+    def build_group_metadata(
+        self, group: Group, title: str | None = None, description: str | None = None
+    ) -> CommonMetadata:
         """
         Groups a list of Devices and builds their metadata.
 
         Args:
             group (Group): The group returned from a Grouper.
+            title (str | None): Optional title if provided
+            description (str | None): Optional description if provided
 
         Returns:
             metadata (CommonMetadata): CommonMetadata extracted
@@ -93,20 +98,23 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
 
         timeframe = self._calculate_timeframe(group.devices)
 
-        endpoint_url = self._build_group_url(group.devices)
+        endpoint_urls = self._build_group_url(group.devices)
 
-        content = self.content_generator.generate_group_content(
-            group,
-            context={
-                "service_metadata": self.metadata,
-            },
-        )
+        if not title or not description:
+            content = self.content_generator.generate_group_content(
+                group,
+                context={
+                    "service_metadata": self.metadata,
+                },
+            )
+        else:
+            content = Content(name=title, description=description)
 
         return CommonMetadata(
             identifier=content.name.lower().strip().replace(" ", "_"),
             title=content.name,
             description=content.description,
-            endpoint_url=endpoint_url,
+            endpoint_urls=endpoint_urls,
             tags=list(group.parent_classes),
             source_type="sensorthings",
             temporal_extent=timeframe,
@@ -117,28 +125,36 @@ class SensorThingsMetadataBuilder(BaseMetadataBuilder):
             ],
         )
 
-    def _build_group_url(self, devices: list[Device]) -> str:
+    def _build_group_url(self, devices: list[Device]) -> list[str]:
         """
         Builds resource URL for groups.
 
-        Takes the ID of each Thing and filters the base URL based on them.
+        Takes the ID of each Thing and filters the base URL based on them. Each URL is
+        only limited to 100 Things to keep the URL length manageable.
 
         Args:
             devices (list[Device]): List of devices belonging to a group.
 
         Returns:
-            url (str): The resource URL with the ID of Devices filtered
+            url (list[str]): The list of resource URLs with the ID of Devices filtered.
         """
         if not devices:
             raise ValueError("Device list is empty, cannot build URL")
 
-        filters = [ThingQuery.property("@iot.id").eq(device.id) for device in devices]
+        urls = []
+        chunk_size = 100
 
-        if filters:
-            filter_expression = CombinedFilter(FilterOperator.OR, filters)
-        else:
-            raise ValueError("Filters is empty, check if @iot.id exists")
+        for device_chunk in batched(devices, chunk_size):
+            filters = [
+                ThingQuery.property("@iot.id").eq(device.id) for device in device_chunk
+            ]
+            if filters:
+                filter_expression = CombinedFilter(FilterOperator.OR, filters)
+            else:
+                raise ValueError("Filters is empty, check if @iot.id exists")
 
-        query = ThingQuery().filter(filter_expression).build()
+            query = ThingQuery().filter(filter_expression).build()
 
-        return f"{self.base_url}/{query}"
+            urls.append(f"{self.base_url}/{query}")
+
+        return urls

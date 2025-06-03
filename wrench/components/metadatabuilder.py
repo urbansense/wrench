@@ -29,15 +29,57 @@ class MetadataBuilder(Component):
         state: dict[str, Any] = {},
     ) -> Metadata:
         """Run the metadata builder."""
-        if not operations:
-            return Metadata(service_metadata=None, group_metadata=[])
-
+        prev_group_metadata: dict = state.get("prev_group_metadata")
+        # always rebuild service_metadata
         service_metadata = self._metadatabuilder.build_service_metadata(devices)
 
-        group_metadata = [
-            self._metadatabuilder.build_group_metadata(group) for group in groups
-        ]
+        if not prev_group_metadata:
+            group_metadata = [
+                self._metadatabuilder.build_group_metadata(group) for group in groups
+            ]
+
+            metadata = Metadata(
+                service_metadata=service_metadata,
+                group_metadata=group_metadata,
+                state={
+                    "prev_group_metadata": {
+                        group.name: [meta.title, meta.description]
+                        for group, meta in zip(groups, group_metadata)
+                    }
+                },
+            )
+
+            return metadata
+
+        if not operations:
+            return Metadata(
+                service_metadata=None,
+                group_metadata=[],
+                state={
+                    "prev_group_metadata": prev_group_metadata,
+                },
+            )
+
+        group_metadata = []
+        for group in groups:
+            if group.name not in prev_group_metadata:
+                group_metadata.append(self._metadatabuilder.build_group_metadata(group))
+            else:
+                metadata_title = prev_group_metadata[group.name][0]
+                metadata_description = prev_group_metadata[group.name][1]
+                group_metadata.append(
+                    self._metadatabuilder.build_group_metadata(
+                        group, metadata_title, metadata_description
+                    )
+                )
 
         return Metadata(
-            service_metadata=service_metadata, group_metadata=group_metadata
+            service_metadata=service_metadata,
+            group_metadata=group_metadata,
+            state={
+                "prev_group_metadata": {
+                    group.name: [meta.title, meta.description]
+                    for group, meta in zip(groups, group_metadata)
+                }
+            },
         )
