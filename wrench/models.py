@@ -128,7 +128,7 @@ class CommonMetadata(BaseModel):
     identifier: str
     title: str
     description: str
-    endpoint_url: str
+    endpoint_urls: list[str]
 
     # standard, but optional fields
     spatial_extent: str = ""

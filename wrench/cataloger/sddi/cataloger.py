@@ -157,7 +157,7 @@ class SDDICataloger(BaseCataloger):
 
     def _create_online_service(self, metadata: CommonMetadata) -> OnlineService:
         return OnlineService(
-            url=metadata.endpoint_url,
+            url=metadata.endpoint_urls[0],
             name=metadata.identifier,
             notes=metadata.description,
             owner_org=metadata.owner or DEFAULT_OWNER,
@@ -201,7 +201,7 @@ class SDDICataloger(BaseCataloger):
                 latest_date = ""
 
             device_group = DeviceGroup(
-                url=group.endpoint_url,
+                url=group.endpoint_urls[0],
                 name=group.identifier,
                 notes=group.description,
                 owner_org=group.owner or DEFAULT_OWNER,
@@ -212,12 +212,12 @@ class SDDICataloger(BaseCataloger):
                 spatial=group.spatial_extent,
                 resources=[
                     {
-                        "name": f"URL for {group.title}",
-                        "description": f"URL provides a list of all data associated "
-                        f"with the category {group.title}",
+                        "name": f"URL-{i} for {group.title}",
+                        "description": f"URL provides data for group: {group.title}",
                         "format": "JSON",
-                        "url": group.endpoint_url,
+                        "url": url,
                     }
+                    for i, url in enumerate(group.endpoint_urls)
                 ],
             )
             device_group.groups.extend(
