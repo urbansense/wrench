@@ -23,7 +23,7 @@ from wrench.cataloger import BaseCataloger
 from wrench.grouper import BaseGrouper
 from wrench.harvester import BaseHarvester
 from wrench.log import logger
-from wrench.metadatabuilder import BaseMetadataBuilder
+from wrench.metadataenricher import BaseMetadataEnricher
 from wrench.pipeline.component import Component
 from wrench.pipeline.config.base import AbstractConfig
 from wrench.pipeline.config.param_resolver import (
@@ -203,28 +203,30 @@ class GrouperType(RootModel):  # type: ignore[type-arg]
         return self.root.parse(resolved_data)
 
 
-class MetadataBuilderConfig(ObjectConfig[BaseMetadataBuilder]):
-    """Configuration for any BaseMetadataBuilder object.
+class MetadataEnricherConfig(ObjectConfig[BaseMetadataEnricher]):
+    """Configuration for any BaseMetadataEnricher object.
 
-    By default, will try to import from `wrench.metadatabuilder`.
+    By default, will try to import from `wrench.metadataenricher`.
     """
 
-    DEFAULT_MODULE = "wrench.metadatabuilder"
-    INTERFACE = BaseMetadataBuilder
+    DEFAULT_MODULE = "wrench.metadataenricher"
+    INTERFACE = BaseMetadataEnricher
 
 
-class MetadataBuilderType(RootModel):  # type: ignore[type-arg]
-    """A model to wrap BaseMetadataBuilder and MetadataBuilderConfig objects.
+class MetadataEnricherType(RootModel):  # type: ignore[type-arg]
+    """A model to wrap BaseMetadataEnricher and MetadataEnricherConfig objects.
 
-    The `parse` method always returns an object inheriting from BaseMetadataBuilder.
+    The `parse` method always returns an object inheriting from BaseMetadataEnricher.
     """
 
-    root: Union[BaseMetadataBuilder, MetadataBuilderConfig]
+    root: Union[BaseMetadataEnricher, MetadataEnricherConfig]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> BaseMetadataBuilder:
-        if isinstance(self.root, BaseMetadataBuilder):
+    def parse(
+        self, resolved_data: dict[str, Any] | None = None
+    ) -> BaseMetadataEnricher:
+        if isinstance(self.root, BaseMetadataEnricher):
             return self.root
         return self.root.parse(resolved_data)
 

@@ -51,7 +51,7 @@ from wrench.pipeline.sensor_pipeline import SensorRegistrationPipeline
 pipeline = SensorRegistrationPipeline(
     harvester=harvester, # an implementation of BaseHarvester
     grouper=grouper, # an implementation of BaseGrouper
-    metadatabuilder=metadatabuilder, # an implementation of BaseMetadataBuilder
+    metadataenricher=metadataenricher, # an implementation of BaseMetadataEnricher
     cataloger=cataloger, # an implementation of BaseCataloger
 )
 

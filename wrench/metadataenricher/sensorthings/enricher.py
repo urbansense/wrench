@@ -1,8 +1,8 @@
 from itertools import batched
 from typing import Any, Sequence
 
-from wrench.metadatabuilder.base import BaseMetadataBuilder
-from wrench.metadatabuilder.sensorthings.querybuilder import (
+from wrench.metadataenricher.base import BaseMetadataEnricher
+from wrench.metadataenricher.sensorthings.querybuilder import (
     CombinedFilter,
     FilterOperator,
     ThingQuery,
@@ -16,7 +16,7 @@ from .spatial import (
 )
 
 
-class SensorThingsMetadataBuilder(BaseMetadataBuilder):
+class SensorThingsMetadataEnricher(BaseMetadataEnricher):
     def __init__(
         self,
         base_url: str,

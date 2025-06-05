@@ -6,9 +6,9 @@ from wrench.log import logger
 from wrench.models import CommonMetadata, Device, Group, TimeFrame
 
 
-class BaseMetadataBuilder(ABC):
+class BaseMetadataEnricher(ABC):
     def __init__(self):
-        """Initializes logger for all subclasses of BaseMetadataBuilder."""
+        """Initializes logger for all subclasses of BaseMetadataEnricher."""
         self.logger = logger.getChild(self.__class__.__name__)
 
     @abstractmethod
