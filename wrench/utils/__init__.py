@@ -1,3 +1,3 @@
-from .generator import ContentGenerator, GeneratorConfig
+from .generator import ContentGenerator, LLMConfig
 
-__all__ = ["ContentGenerator", "GeneratorConfig"]
+__all__ = ["ContentGenerator", "LLMConfig"]
