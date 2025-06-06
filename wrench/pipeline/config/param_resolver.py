@@ -38,6 +38,38 @@ class ParamFromKeyConfig(ParamToResolveConfig):
         return d
 
 
+# Union type for resolver validation (without dict catch-all)
+ResolverConfig = Union[
+    ParamFromEnvConfig,
+    ParamFromKeyConfig,
+]
+
+
+def _convert_dict_to_param_config(value: Any) -> Any:
+    """Recursively convert dictionaries with resolver_ keys to appropriate ParamConfig objects."""
+    if isinstance(value, dict):
+        # Check if this dict has a resolver_ key (it's a param config)
+        if "resolver_" in value:
+            try:
+                # Use Pydantic's Union validation to convert automatically
+                from pydantic import TypeAdapter
+
+                adapter = TypeAdapter(ResolverConfig)
+                return adapter.validate_python(value)
+            except Exception:
+                # If validation fails, keep as dict
+                return value
+        else:
+            # Regular dict, recursively process its values
+            return {k: _convert_dict_to_param_config(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        # Process lists recursively too
+        return [_convert_dict_to_param_config(item) for item in value]
+    else:
+        # Regular value, return as-is
+        return value
+
+
 ParamConfig = Union[
     float,
     str,

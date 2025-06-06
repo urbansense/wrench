@@ -28,6 +28,7 @@ from wrench.pipeline.component import Component
 from wrench.pipeline.config.base import AbstractConfig
 from wrench.pipeline.config.param_resolver import (
     ParamConfig,
+    _convert_dict_to_param_config,
 )
 
 T = TypeVar("T")
@@ -82,11 +83,17 @@ class ObjectConfig(AbstractConfig, Generic[T]):
     @field_validator("params_")
     @classmethod
     def validate_params(cls, params_: dict[str, Any]) -> dict[str, Any]:
-        """Make sure all required parameters are provided."""
+        """Make sure all required parameters are provided and recursively convert nested resolvers."""
         for p in cls.REQUIRED_PARAMS:
             if p not in params_:
                 raise ValueError(f"Missing parameter {p}")
-        return params_
+
+        # Recursively convert nested dictionaries with resolver_ keys to ParamConfig objects
+        converted_params = {}
+        for key, value in params_.items():
+            converted_params[key] = _convert_dict_to_param_config(value)
+
+        return converted_params
 
     def get_module(self) -> str:
         return self.DEFAULT_MODULE

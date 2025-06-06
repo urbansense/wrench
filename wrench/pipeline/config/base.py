@@ -26,14 +26,30 @@ class AbstractConfig(BaseModel):
         return param.resolve(self._global_data)
 
     def resolve_params(self, params: dict[str, ParamConfig]) -> dict[str, Any]:
-        """Resolve all parameters.
+        """Resolve all parameters recursively.
 
         Returning dict[str, Any] because parameters can be anything (str, float, list, dict...)
         """
-        return {
-            param_name: self.resolve_param(param)
-            for param_name, param in params.items()
-        }
+        result = {}
+        for param_name, param in params.items():
+            if isinstance(param, dict):
+                # Recursively resolve nested dictionaries
+                result[param_name] = self._resolve_nested_param(param)
+            else:
+                result[param_name] = self.resolve_param(param)
+        return result
+
+    def _resolve_nested_param(self, param_dict: dict[str, Any]) -> dict[str, Any]:
+        """Recursively resolve parameters in nested dictionaries."""
+        result = {}
+        for key, value in param_dict.items():
+            if isinstance(value, dict):
+                # This nested dict should now contain properly converted ParamConfig objects
+                result[key] = self._resolve_nested_param(value)
+            else:
+                # This could be a ParamConfig object or regular value
+                result[key] = self.resolve_param(value)
+        return result
 
     def parse(self, resolved_data: dict[str, Any] | None = None) -> Any:
         raise NotImplementedError()
