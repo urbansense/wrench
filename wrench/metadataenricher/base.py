@@ -1,36 +1,123 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Sequence
+from typing import Any, Sequence
 
 from wrench.log import logger
 from wrench.models import CommonMetadata, Device, Group, TimeFrame
+from wrench.utils.generator import Content, ContentGenerator, LLMConfig
 
 
 class BaseMetadataEnricher(ABC):
-    def __init__(self):
-        """Initializes logger for all subclasses of BaseMetadataEnricher."""
-        self.logger = logger.getChild(self.__class__.__name__)
-
-    @abstractmethod
-    def build_service_metadata(self, source_data: Sequence[Device]) -> CommonMetadata:
+    def __init__(
+        self, title: str, description: str, llm_config: LLMConfig | None = None
+    ):
         """
-        Retrieves metadata for service endpoint.
+        Base metadata enricher with generic functionality.
+
+        Args:
+            title: Service title for metadata
+            description: Service description for metadata
+            llm_config: Optional config for content generation
+        """
+        self.logger = logger.getChild(self.__class__.__name__)
+        self.title = title
+        self.description = description
+
+        if llm_config:
+            self.content_generator = ContentGenerator(llm_config)
+
+    def build_service_metadata(self, devices: Sequence[Device]) -> CommonMetadata:
+        """
+        Generic service metadata building with spatial and temporal enrichment.
+
+        Args:
+            devices: List of Device objects to build metadata from
 
         Returns:
-            CommonMetadata: Data model conformant to catalog requirement.
+            CommonMetadata: Enriched metadata for the service
         """
-        pass
+        geographic_extent = self._calculate_spatial_extent(devices)
+        timeframe = self._calculate_timeframe(devices)
 
-    @abstractmethod
+        self.metadata = CommonMetadata(
+            endpoint_urls=self._build_service_urls(devices),
+            title=self.title,
+            identifier=self.title.lower().strip().replace(" ", "_"),
+            description=self.description,
+            spatial_extent=str(geographic_extent),
+            temporal_extent=timeframe,
+            source_type=self._get_source_type(),
+            last_updated=timeframe.latest_time,
+        )
+
+        return self.metadata
+
     def build_group_metadata(
         self, group: Group, title: str | None = None, description: str | None = None
     ) -> CommonMetadata:
         """
-        Builds metadata for groups returned by Grouper.
+        Generic group metadata building with spatial, temporal, and content enrichment.
+
+        Args:
+            group: The group returned from a Grouper
+            title: Optional title override
+            description: Optional description override
 
         Returns:
-            CommonMetadata: Data model conformant to catalog requirement.
+            CommonMetadata: Enriched metadata for the group
         """
+        geographic_extent = self._calculate_spatial_extent(group.devices)
+        timeframe = self._calculate_timeframe(group.devices)
+        endpoint_urls = self._build_group_urls(group.devices)
+
+        # Generate content if not provided and generator available
+        if not title or not description:
+            if self.content_generator and hasattr(self, "metadata"):
+                content = self.content_generator.generate_group_content(
+                    group, context={"service_metadata": self.metadata}
+                )
+            else:
+                # Fallback to basic naming using group.name
+                content = Content(
+                    name=title or group.name or "Unnamed Group",
+                    description=description or "Auto-generated device group",
+                )
+        else:
+            content = Content(name=title, description=description)
+
+        return CommonMetadata(
+            identifier=content.name.lower().strip().replace(" ", "_"),
+            title=content.name,
+            description=content.description,
+            endpoint_urls=endpoint_urls,
+            tags=list(group.parent_classes),
+            source_type=self._get_source_type(),
+            temporal_extent=timeframe,
+            spatial_extent=str(geographic_extent),
+            last_updated=timeframe.latest_time,
+            thematic_groups=[
+                parent.lower().replace(" ", "-") for parent in group.parent_classes
+            ],
+        )
+
+    @abstractmethod
+    def _get_source_type(self) -> str:
+        """Return the source type identifier."""
+        pass
+
+    @abstractmethod
+    def _build_service_urls(self, devices: Sequence[Device]) -> list[str]:
+        """Build service endpoint URLs."""
+        pass
+
+    @abstractmethod
+    def _build_group_urls(self, devices: list[Device]) -> list[str]:
+        """Build group-specific resource URLs."""
+        pass
+
+    @abstractmethod
+    def _calculate_spatial_extent(self, devices: Sequence[Device]) -> Any:
+        """Calculate spatial extent for devices."""
         pass
 
     def _calculate_timeframe(self, devices: list[Device]) -> TimeFrame:
