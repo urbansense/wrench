@@ -10,8 +10,8 @@ from wrench.metadataenricher.sensorthings.querybuilder import (
     ThingQuery,
 )
 from wrench.models import Device
-from wrench.utils.generator import LLMConfig
 
+from .generator import LLMConfig
 from .spatial import (
     GeometryCollector,
     PolygonalExtentCalculator,

@@ -4,6 +4,9 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from wrench.models import Group
+from wrench.utils.prompt_manager import PromptManager
+
+SYSTEM_PROMPT = PromptManager.get_prompt("generator_system_prompt.txt")
 
 
 class Content(BaseModel):
@@ -34,8 +37,6 @@ class ContentGenerator:
         """
         self.client = OpenAI(base_url=config.base_url, api_key=config.api_key)
         self.model = config.model
-
-        self.system_prompt = self._get_default_prompt()
 
     def generate_group_content(self, group: Group, context: dict[str, Any]) -> Content:
         """
@@ -71,7 +72,7 @@ class ContentGenerator:
         messages = [
             {
                 "role": "system",
-                "content": self.system_prompt,
+                "content": SYSTEM_PROMPT,
             },
             {
                 "role": "user",
@@ -99,17 +100,3 @@ class ContentGenerator:
             raise RuntimeError("LLM returned no messages")
 
         return response.choices[0].message.parsed
-
-    def _get_default_prompt(self) -> str:
-        """Return the default system prompt for content generation."""
-        return """
-            You are an agent with expertise in naming and describing sensor groups based on the group information and its sample data.
-            Generate names and descriptions based on solely the information given by the user.
-
-            Respond in ENGLISH. Give as much information as you can in the title and description, without making up unverifiable
-            information. The description should be about 3-4 sentences long, and describe what kind of data the group contains,
-            based on the samples. You can add sensor information as well as measured parameters to your description too.
-
-            Make sure that you give information about the source from which the data is retrieved, in the title. If the source
-            is for example "City A FROST Server", be sure to include this information in the title.
-        """
