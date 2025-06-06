@@ -33,8 +33,9 @@ class AbstractPipelineConfig(AbstractConfig):
     """
     This class defines the fields possibly used by all pipelines.
 
-    Harvester, Grouper, Cataloger. can be provided by user as a single item or a dict of items.
-    Validators deal with type conversion so that the field in all instances is a dict of items.
+    Harvester, Grouper, Cataloger. can be provided by user as a single item or a dict of
+    items. Validators deal with type conversion so that the field in all instances is a
+    dict of items.
     """
 
     harvester_config: dict[str, HarvesterType] = {}
@@ -116,20 +117,20 @@ class AbstractPipelineConfig(AbstractConfig):
         }
         logger.debug(f"PIPELINE_CONFIG: resolved 'extras': {extra_data}")
         harvesters: dict[str, BaseHarvester] = {
-            harvester_name: harvester_config.parse(extra_data)
-            for harvester_name, harvester_config in self.harvester_config.items()
+            name: config.parse(extra_data)
+            for name, config in self.harvester_config.items()
         }
         groupers: dict[str, BaseGrouper] = {
-            grouper_name: grouper_config.parse(extra_data)
-            for grouper_name, grouper_config in self.grouper_config.items()
+            name: config.parse(extra_data)
+            for name, config in self.grouper_config.items()
         }
         metadataenrichers: dict[str, BaseMetadataEnricher] = {
-            metadataenricher_name: metadataenricher_config.parse(extra_data)
-            for metadataenricher_name, metadataenricher_config in self.metadataenricher_config.items()
+            name: config.parse(extra_data)
+            for name, config in self.metadataenricher_config.items()
         }
         catalogers: dict[str, BaseCataloger] = {
-            cataloger_name: cataloger_config.parse(extra_data)
-            for cataloger_name, cataloger_config in self.cataloger_config.items()
+            name: config.parse(extra_data)
+            for name, config in self.cataloger_config.items()
         }
         global_data = {
             **extra_data,

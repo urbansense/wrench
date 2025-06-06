@@ -26,7 +26,7 @@ def _get_discriminator_value(model: Any) -> PipelineType:
 
 
 class PipelineConfigWrapper(BaseModel):
-    """The pipeline config wrapper will parse the right pipeline config based on the `template_` field."""
+    """Parses the pipeline config based on the `template_` field."""
 
     config: (
         Annotated[PipelineConfig, Tag(PipelineType.NONE)]
@@ -55,7 +55,7 @@ class PipelineRunner:
     ) -> "PipelineRunner":
         wrapper = PipelineConfigWrapper.model_validate({"config": config})
         logger.debug(
-            f"PIPELINE_RUNNER: instantiating Pipeline from config type: {wrapper.config.template_}"
+            f"Instantiating Pipeline from config type: {wrapper.config.template_}"
         )
         return cls(wrapper.parse(), config=wrapper.config)
 

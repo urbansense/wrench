@@ -46,7 +46,7 @@ ResolverConfig = Union[
 
 
 def _convert_dict_to_param_config(value: Any) -> Any:
-    """Recursively convert dictionaries with resolver_ keys to appropriate ParamConfig objects."""
+    """Recursively convert dictionaries with resolver_ keys to ParamConfig objects."""
     if isinstance(value, dict):
         # Check if this dict has a resolver_ key (it's a param config)
         if "resolver_" in value:

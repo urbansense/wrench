@@ -19,7 +19,6 @@ dependencies = [
     "apscheduler>=3.11.0",
     "openai>=1.76.0",
     "matplotlib>=3.10.1",
-    "cmake>=4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -34,7 +33,7 @@ teleclass = [
 sensorthings = [
     "paho-mqtt>=2.1.0",
 ]
-decisiontree = [
+kinetic = [
     "flair>=0.15.1",
     "keybert>=0.9.0",
     "networkx>=3.4.2",
@@ -90,7 +89,6 @@ ignore = [
     "D102",  # missing docstring in public method
     "D105",  # missing docstring in magic method
     "D107",  # Missing docstring in __init__ method
-    "E501",  # line too long,
 ]
 
 [tool.ruff.lint.pydocstyle]

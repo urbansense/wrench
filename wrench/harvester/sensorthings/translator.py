@@ -169,7 +169,7 @@ class LibreTranslateService(TranslationService):
             str: The translated text in English.
 
         Raises:
-            requests.exceptions.RequestException: If there is an issue with the API request.
+            requests.exceptions.RequestException: If there is an issue with the request.
         """
         payload = {"q": text, "source": self.source_lang, "target": "en"}
 
