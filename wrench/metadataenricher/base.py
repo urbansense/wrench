@@ -4,7 +4,8 @@ from typing import Any, Sequence
 
 from wrench.log import logger
 from wrench.models import CommonMetadata, Device, Group, TimeFrame
-from wrench.utils.generator import Content, ContentGenerator, LLMConfig
+
+from .generator import Content, ContentGenerator, LLMConfig
 
 
 class BaseMetadataEnricher(ABC):

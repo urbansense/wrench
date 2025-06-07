@@ -4,6 +4,7 @@ from typing import Any, Sequence
 from pydantic import validate_call
 
 from wrench.metadataenricher.base import BaseMetadataEnricher
+from wrench.metadataenricher.generator import LLMConfig
 from wrench.metadataenricher.sensorthings.querybuilder import (
     CombinedFilter,
     FilterOperator,
@@ -11,7 +12,6 @@ from wrench.metadataenricher.sensorthings.querybuilder import (
 )
 from wrench.models import Device
 
-from .generator import LLMConfig
 from .spatial import (
     GeometryCollector,
     PolygonalExtentCalculator,
