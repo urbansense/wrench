@@ -4,8 +4,8 @@ import openai
 from pydantic import validate_call
 
 from wrench.grouper import BaseGrouper
-from wrench.grouper.cluster.embedder import BaseEmbedder
-from wrench.grouper.cluster.models import Cluster, Topic
+from wrench.grouper.kinetic.embedder import BaseEmbedder
+from wrench.grouper.kinetic.models import Cluster, Topic
 from wrench.log import logger
 from wrench.models import Device, Group
 
@@ -86,7 +86,12 @@ class KINETIC(BaseGrouper):
         return topic_dict
 
     def group_items(self, devices: list[Device]) -> list[Group]:
-        docs = [f"{device.name} {device.description}".strip() for device in devices]
+        docs = [
+            f"{device.name} \
+              {device.description} \
+              {'\n'.join(device.datastreams)}".strip()
+            for device in devices
+        ]
 
         if self.classifier.is_cached():
             clusters = self.classifier._load_clusters()

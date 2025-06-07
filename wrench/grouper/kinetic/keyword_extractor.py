@@ -6,7 +6,7 @@ from typing import Literal
 import yake
 from keybert import KeyBERT
 
-from wrench.grouper.cluster.embedder import BaseEmbedder
+from wrench.grouper.kinetic.embedder import BaseEmbedder
 
 SEED_KEYWORDS = [
     "mobility",
