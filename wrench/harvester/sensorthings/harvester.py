@@ -31,7 +31,7 @@ class SensorThingsHarvester(BaseHarvester):
             base_url (str): Base SensorThings URL to harvest items from.
             pagination_config (PaginationConfig | dict[str, Any]): Pagination config
                 for fetching items.
-            translator_config (TranslationConfig | dict[str, Any]): Optional translator config.
+            translator_config (TranslationConfig | dict[str, Any]): Translator config.
         """
         super().__init__()
         pagination_config = PaginationConfig.model_validate(pagination_config)

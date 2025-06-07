@@ -63,7 +63,7 @@ class PipelineGraph[GenericNode: PipelineNode, GenericEdge: PipelineEdge]:
     def add_node(self, node: GenericNode) -> None:
         if node in self:
             raise ValueError(
-                f"Node {node.name} already exists, use 'set_node' if you want to replace it."
+                f"Node {node.name} already exists, use 'set_node' to replace it."
             )
         self._nodes[node.name] = node
 

@@ -3,22 +3,22 @@ from typing import Any, Sequence
 from pydantic import validate_call
 
 from wrench.components.types import Metadata
-from wrench.metadatabuilder import BaseMetadataBuilder
+from wrench.metadataenricher import BaseMetadataEnricher
 from wrench.models import Device, Group
 from wrench.pipeline.types import Component, Operation
 
 
-class MetadataBuilder(Component):
+class MetadataEnricher(Component):
     """
     Component for creating metadata builder component from any metadata builder.
 
     Args:
-        metadatabuilder (BaseMetadataBuilder): The metadata builder to use in the
+        metadataenricher (BaseMetadataEnricher): The metadata builder to use in the
             pipeline.
     """
 
-    def __init__(self, metadatabuilder: BaseMetadataBuilder):
-        self._metadatabuilder = metadatabuilder
+    def __init__(self, metadataenricher: BaseMetadataEnricher):
+        self._metadataenricher = metadataenricher
 
     @validate_call
     async def run(
@@ -31,11 +31,11 @@ class MetadataBuilder(Component):
         """Run the metadata builder."""
         prev_group_metadata: dict = state.get("prev_group_metadata")
         # always rebuild service_metadata
-        service_metadata = self._metadatabuilder.build_service_metadata(devices)
+        service_metadata = self._metadataenricher.build_service_metadata(devices)
 
         if not prev_group_metadata:
             group_metadata = [
-                self._metadatabuilder.build_group_metadata(group) for group in groups
+                self._metadataenricher.build_group_metadata(group) for group in groups
             ]
 
             metadata = Metadata(
@@ -63,12 +63,14 @@ class MetadataBuilder(Component):
         group_metadata = []
         for group in groups:
             if group.name not in prev_group_metadata:
-                group_metadata.append(self._metadatabuilder.build_group_metadata(group))
+                group_metadata.append(
+                    self._metadataenricher.build_group_metadata(group)
+                )
             else:
                 metadata_title = prev_group_metadata[group.name][0]
                 metadata_description = prev_group_metadata[group.name][1]
                 group_metadata.append(
-                    self._metadatabuilder.build_group_metadata(
+                    self._metadataenricher.build_group_metadata(
                         group, metadata_title, metadata_description
                     )
                 )

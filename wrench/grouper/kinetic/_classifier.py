@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from wrench.grouper.cluster.embedder import BaseEmbedder
+from wrench.grouper.kinetic.embedder import BaseEmbedder
 from wrench.log import logger as wrench_logger
 from wrench.utils.prompt_manager import PromptManager
 

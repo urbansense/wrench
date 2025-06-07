@@ -70,22 +70,24 @@ class TimeFrame(BaseModel):
     latest_time: datetime
 
 
-class Device(BaseModel):
-    """
-    Device model representing an entity with an ID.
+class SourceMetadata(BaseModel):
+    base_url: str
+    title: str
+    description: str
+    source_type: str
 
-    Attributes:
-        id (str): The unique identifier for the item.
-    """
+
+class Device(BaseModel):
+    """Device model representing an entity with an ID."""
 
     id: str
     name: str
     description: str
-    time_frame: TimeFrame | None  # if there are no datastreams
-    locations: list[Location]
     datastreams: set[str]
     sensor_names: set[str]
     observed_properties: set[str]
+    locations: list[Location]
+    time_frame: TimeFrame | None  # if there are no datastreams
 
     properties: dict[str, Any] | None = None
 

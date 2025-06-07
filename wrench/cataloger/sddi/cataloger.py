@@ -14,7 +14,7 @@ DEFAULT_OWNER = "lehrstuhl-fur-geoinformatik"
 
 class SDDICataloger(BaseCataloger):
     """
-    SDDICataloger is a class responsible for interacting with a SDDI CKAN server to register and manage datasets.
+    Interact with a SDDI CKAN server to register and manage datasets.
 
     :param url: The URL of the SDDI CKAN server.
     :param api_key: The API key for authenticating with the SDDI CKAN server.
@@ -65,7 +65,8 @@ class SDDICataloger(BaseCataloger):
                 self.logger.info("Successfully registered API Service")
         except NotFound:
             self.logger.error(
-                "No entries found for %s, please clear the .pipeline_store cache and rerun the pipeline",
+                "No entries found for %s, please clear the .pipeline_store cache and \
+                    rerun the pipeline",
                 online_service.name,
             )
 
@@ -92,7 +93,8 @@ class SDDICataloger(BaseCataloger):
                         )
             except NotFound:
                 self.logger.error(
-                    "No entries found for %s, please clear the .pipeline_store cache and rerun the pipeline",
+                    "No entries found for %s, please clear the .pipeline_store cache \
+                        and rerun the pipeline",
                     d.name,
                 )
 
