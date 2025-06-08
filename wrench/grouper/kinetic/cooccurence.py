@@ -47,8 +47,6 @@ def build_cooccurence_network(
         top = sorted(deg, key=deg.get, reverse=True)[:top_n]
         essential[f"cluster_{comm_id}"] = top
 
-    visualize_cooccurence_network(G, partition)
-
     return [
         Cluster(cluster_id=id, keywords=keywords) for id, keywords in essential.items()
     ]

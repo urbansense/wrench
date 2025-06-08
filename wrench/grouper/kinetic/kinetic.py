@@ -1,4 +1,3 @@
-import json
 from typing import Literal
 
 import openai
@@ -79,8 +78,6 @@ class KINETIC(BaseGrouper):
 
     def build_clusters(self, docs: list[str]):
         keywords = self.keyword_extractor.extract_keywords(docs)
-        with open("keywords_doc.json", "w") as f:
-            json.dump(dict(zip(docs, keywords)), f)
 
         return build_cooccurence_network(keywords)
 
@@ -91,9 +88,9 @@ class KINETIC(BaseGrouper):
 
     def group_items(self, devices: list[Device]) -> list[Group]:
         docs = [
-            f"{device.name} \
-              {device.description} \
-              {'\n'.join(device.datastreams)}".strip()
+            f"""{device.name}
+              {device.description}
+              {"\n".join(device.datastreams)}""".strip()
             for device in devices
         ]
 
