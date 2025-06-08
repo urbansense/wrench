@@ -4,6 +4,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from wrench.models import Group
+from wrench.utils.config import LLMConfig
 from wrench.utils.prompt_manager import PromptManager
 
 SYSTEM_PROMPT = PromptManager.get_prompt("generator_system_prompt.txt")
@@ -12,12 +13,6 @@ SYSTEM_PROMPT = PromptManager.get_prompt("generator_system_prompt.txt")
 class Content(BaseModel):
     name: str
     description: str
-
-
-class LLMConfig(BaseModel):
-    base_url: str
-    model: str = "llama3.3:70b-instruct-q4_K_M"
-    api_key: str = "ollama"
 
 
 class ContentGenerator:

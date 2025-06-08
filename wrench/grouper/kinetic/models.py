@@ -34,15 +34,15 @@ class Cluster(BaseModel):
     _devices: list[Device] | None = PrivateAttr(default=None)
 
     def __str__(self):
-        return """Cluster_ID: {id}:
-                    Keywords: {kw}
-                    Documents: {sample_doc}
-                """.format(
-            id=self.cluster_id,
-            kw=str(self.keywords),
-            sample_doc="{name} {description} {properties}".format(
-                name=self._devices[0].name,
-                description=self._devices[0].description,
-                properties=str(self._devices[0].observed_properties),
-            ),
-        )
+        return f"""Cluster_ID: {self.cluster_id}:
+                    Keywords: {self.keywords}
+                    Documents: {
+            (
+                "{name} {description} {properties}".format(
+                    name=self._devices[0].name,
+                    description=self._devices[0].description,
+                    properties=str(self._devices[0].observed_properties),
+                ),
+            )
+        }
+                """

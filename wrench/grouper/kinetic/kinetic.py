@@ -1,3 +1,4 @@
+import json
 from typing import Literal
 
 import openai
@@ -8,9 +9,9 @@ from wrench.grouper.kinetic.embedder import BaseEmbedder
 from wrench.grouper.kinetic.models import Cluster, Topic
 from wrench.log import logger
 from wrench.models import Device, Group
+from wrench.utils.config import LLMConfig
 
 from ._classifier import Classifier
-from .config import LLMConfig
 from .cooccurence import build_cooccurence_network
 from .embedder import SentenceTransformerEmbedder
 from .keyword_extractor import KeyBERTAdapter
@@ -64,6 +65,7 @@ class KINETIC(BaseGrouper):
             embedder = SentenceTransformerEmbedder(embedder)
 
         self.keyword_extractor = KeyBERTAdapter(embedder, lang=lang)
+
         self.classifier = Classifier(embedder, threshold)
 
         self.generator = LLMTopicGenerator(
@@ -77,6 +79,8 @@ class KINETIC(BaseGrouper):
 
     def build_clusters(self, docs: list[str]):
         keywords = self.keyword_extractor.extract_keywords(docs)
+        with open("keywords_doc.json", "w") as f:
+            json.dump(dict(zip(docs, keywords)), f)
 
         return build_cooccurence_network(keywords)
 
