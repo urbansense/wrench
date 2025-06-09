@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
 import openai
 import yake
 from keybert import KeyBERT, KeyLLM
@@ -96,13 +97,30 @@ class KeyBERTAdapter(KeywordExtractorAdapter):
         self.stop_words = stop_words
         self.seed_keywords = seed_keywords
 
-    def extract_keywords(self, text: list[str], **kwargs) -> list[list[str]]:
+    def extract_keywords(
+        self,
+        text: list[str],
+        embeddings: np.ndarray | None = None,
+        top_n=7,
+        use_mmr: bool = False,
+        use_maxsum: bool = False,
+        nr_candidates: int = 20,
+        diversity: float = 0.5,
+        threshold: float | None = None,
+        **kwargs,
+    ) -> list[list[str]]:
+        print(f"starting keyword extraction with {top_n} keywords")
         results = self.keybert.extract_keywords(
             text,
             stop_words=self.stop_words,
             seed_keywords=self.seed_keywords,
-            top_n=7,
-            **kwargs,
+            doc_embeddings=embeddings,
+            top_n=top_n,
+            use_mmr=use_mmr,
+            use_maxsum=use_maxsum,
+            diversity=diversity,
+            nr_candidates=nr_candidates,
+            threshold=threshold,
         )
         return [[kw for kw, _ in keywords] for keywords in results]
 

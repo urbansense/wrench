@@ -95,6 +95,10 @@ class Device(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
+    def to_string(self, exclude: list[str] | None = None):
+        data = self.model_dump(exclude=set(exclude))
+        return "\n".join([str(val) for attr, val in data.items()]).strip()
+
 
 class CommonMetadata(BaseModel):
     """

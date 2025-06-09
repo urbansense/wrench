@@ -88,7 +88,7 @@ class SensorThingsHarvester(BaseHarvester):
                     ds.observed_property.name for ds in thing.datastreams
                 },
                 properties=thing.properties,
-                raw_data=thing.model_dump(),
+                _raw_data=thing.model_dump(),
             )
 
             devices.append(device)

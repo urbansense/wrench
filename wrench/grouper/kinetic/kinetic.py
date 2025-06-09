@@ -77,8 +77,10 @@ class KINETIC(BaseGrouper):
         self.logger = logger.getChild(self.__class__.__name__)
 
     def build_clusters(self, docs: list[str]):
+        self.logger.info("Extracting keywords from %s docs", len(docs))
         keywords = self.keyword_extractor.extract_keywords(docs)
 
+        self.logger.info("Building cooccurence network")
         return build_cooccurence_network(keywords)
 
     def generate_topics(self, clusters: list[Cluster]) -> dict[Topic, list[Device]]:
@@ -88,9 +90,17 @@ class KINETIC(BaseGrouper):
 
     def group_items(self, devices: list[Device]) -> list[Group]:
         docs = [
-            f"""{device.name}
-              {device.description}
-              {"\n".join(device.datastreams)}""".strip()
+            device.to_string(
+                exclude=[
+                    "id",
+                    "observed_properties",
+                    "locations",
+                    "time_frame",
+                    "properties",
+                    "_raw_data",
+                    "sensor_names",
+                ]
+            )
             for device in devices
         ]
 
