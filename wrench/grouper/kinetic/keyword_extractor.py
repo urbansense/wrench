@@ -101,7 +101,7 @@ class KeyBERTAdapter(KeywordExtractorAdapter):
         self,
         text: list[str],
         embeddings: np.ndarray | None = None,
-        top_n=7,
+        top_n=20,
         use_mmr: bool = False,
         use_maxsum: bool = False,
         nr_candidates: int = 20,
@@ -109,7 +109,6 @@ class KeyBERTAdapter(KeywordExtractorAdapter):
         threshold: float | None = None,
         **kwargs,
     ) -> list[list[str]]:
-        print(f"starting keyword extraction with {top_n} keywords")
         results = self.keybert.extract_keywords(
             text,
             stop_words=self.stop_words,

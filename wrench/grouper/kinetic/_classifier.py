@@ -82,8 +82,9 @@ class Classifier:
 
         all_sim_scores = self._calc_similarity(doc_embeddings, cluster_embeddings)
 
-        # all docs now have a 1 for assigned topics
-        classified = np.where(all_sim_scores > self._threshold, 1, 0)
+        # assign each document to the cluster with highest similarity
+        max_indices = np.argmax(all_sim_scores, axis=1)
+        classified = np.eye(all_sim_scores.shape[1], dtype=int)[max_indices]
 
         unclassified_docs = np.where(~classified.any(axis=1))[0]
 
