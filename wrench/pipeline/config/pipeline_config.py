@@ -6,7 +6,7 @@ from pydantic import field_validator
 from wrench.cataloger import BaseCataloger
 from wrench.grouper import BaseGrouper
 from wrench.harvester import BaseHarvester
-from wrench.metadatabuilder import BaseMetadataBuilder
+from wrench.metadataenricher import BaseMetadataEnricher
 from wrench.pipeline.types import (
     ComponentDefinition,
     ConnectionDefinition,
@@ -19,7 +19,7 @@ from .object_config import (
     ComponentType,
     GrouperType,
     HarvesterType,
-    MetadataBuilderType,
+    MetadataEnricherType,
 )
 from .param_resolver import (
     ParamConfig,
@@ -33,13 +33,14 @@ class AbstractPipelineConfig(AbstractConfig):
     """
     This class defines the fields possibly used by all pipelines.
 
-    Harvester, Grouper, Cataloger. can be provided by user as a single item or a dict of items.
-    Validators deal with type conversion so that the field in all instances is a dict of items.
+    Harvester, Grouper, Cataloger. can be provided by user as a single item or a dict of
+    items. Validators deal with type conversion so that the field in all instances is a
+    dict of items.
     """
 
     harvester_config: dict[str, HarvesterType] = {}
     grouper_config: dict[str, GrouperType] = {}
-    metadatabuilder_config: dict[str, MetadataBuilderType] = {}
+    metadataenricher_config: dict[str, MetadataEnricherType] = {}
     cataloger_config: dict[str, CatalogerType] = {}
     # extra parameters values that can be used in different places of the config file
     extras: dict[str, ParamConfig] = {}
@@ -66,14 +67,14 @@ class AbstractPipelineConfig(AbstractConfig):
             return {cls.DEFAULT_NAME: groupers}
         return groupers
 
-    @field_validator("metadatabuilder_config", mode="before")
+    @field_validator("metadataenricher_config", mode="before")
     @classmethod
-    def validate_metadatabuilder(
-        cls, metadatabuilder: Union[MetadataBuilderType, dict[str, Any]]
+    def validate_metadataenricher(
+        cls, metadataenricher: Union[MetadataEnricherType, dict[str, Any]]
     ) -> dict[str, Any]:
-        if not isinstance(metadatabuilder, dict) or "class_" in metadatabuilder:
-            return {cls.DEFAULT_NAME: metadatabuilder}
-        return metadatabuilder
+        if not isinstance(metadataenricher, dict) or "class_" in metadataenricher:
+            return {cls.DEFAULT_NAME: metadataenricher}
+        return metadataenricher
 
     @field_validator("cataloger_config", mode="before")
     @classmethod
@@ -104,7 +105,7 @@ class AbstractPipelineConfig(AbstractConfig):
         """
         Global data contains data that can be referenced in other parts of the config.
 
-        Typically, harvesters, groupers, metadatabuilders, and catalogers can be
+        Typically, harvesters, groupers, metadataenrichers, and catalogers can be
         referenced in component input parameters.
         """
         # 'extras' parameters can be referenced in other configs,
@@ -116,26 +117,26 @@ class AbstractPipelineConfig(AbstractConfig):
         }
         logger.debug(f"PIPELINE_CONFIG: resolved 'extras': {extra_data}")
         harvesters: dict[str, BaseHarvester] = {
-            harvester_name: harvester_config.parse(extra_data)
-            for harvester_name, harvester_config in self.harvester_config.items()
+            name: config.parse(extra_data)
+            for name, config in self.harvester_config.items()
         }
         groupers: dict[str, BaseGrouper] = {
-            grouper_name: grouper_config.parse(extra_data)
-            for grouper_name, grouper_config in self.grouper_config.items()
+            name: config.parse(extra_data)
+            for name, config in self.grouper_config.items()
         }
-        metadatabuilders: dict[str, BaseMetadataBuilder] = {
-            metadatabuilder_name: metadatabuilder_config.parse(extra_data)
-            for metadatabuilder_name, metadatabuilder_config in self.metadatabuilder_config.items()
+        metadataenrichers: dict[str, BaseMetadataEnricher] = {
+            name: config.parse(extra_data)
+            for name, config in self.metadataenricher_config.items()
         }
         catalogers: dict[str, BaseCataloger] = {
-            cataloger_name: cataloger_config.parse(extra_data)
-            for cataloger_name, cataloger_config in self.cataloger_config.items()
+            name: config.parse(extra_data)
+            for name, config in self.cataloger_config.items()
         }
         global_data = {
             **extra_data,
             "harvester_config": harvesters,
             "grouper_config": groupers,
-            "metadatabuilder_config": metadatabuilders,
+            "metadataenricher_config": metadataenrichers,
             "cataloger_config": catalogers,
         }
         logger.debug(f"PIPELINE_CONFIG: resolved globals: {global_data}")
@@ -187,14 +188,14 @@ class AbstractPipelineConfig(AbstractConfig):
     def get_default_grouper(self) -> BaseGrouper:
         return self.get_grouper_by_name(self.DEFAULT_NAME)
 
-    def get_metadatabuilder_by_name(self, name: str) -> BaseMetadataBuilder:
-        metadatabuilder: dict[str, BaseMetadataBuilder] = self._global_data.get(
-            "metadatabuilder_config", {}
+    def get_metadataenricher_by_name(self, name: str) -> BaseMetadataEnricher:
+        metadataenricher: dict[str, BaseMetadataEnricher] = self._global_data.get(
+            "metadataenricher_config", {}
         )
-        return metadatabuilder[name]
+        return metadataenricher[name]
 
-    def get_default_metadatabuilder(self) -> BaseMetadataBuilder:
-        return self.get_metadatabuilder_by_name(self.DEFAULT_NAME)
+    def get_default_metadataenricher(self) -> BaseMetadataEnricher:
+        return self.get_metadataenricher_by_name(self.DEFAULT_NAME)
 
     def get_cataloger_by_name(self, name: str) -> BaseCataloger:
         cataloger: dict[str, BaseCataloger] = self._global_data.get(

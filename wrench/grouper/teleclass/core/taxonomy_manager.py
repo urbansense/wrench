@@ -112,7 +112,7 @@ class TaxonomyManager:
         """Get all classes and their description if they exist in the taxonomy."""
         return list(self.taxonomy.nodes())
 
-    def get_all_classes_with_description(self) -> dict[str, str]:
+    def get_cls_with_desc(self) -> dict[str, str]:
         """Get all classes including their descriptions in the taxonomy."""
         node_w_desc: dict[str, str] = {}
         for node in list(self.taxonomy.nodes()):

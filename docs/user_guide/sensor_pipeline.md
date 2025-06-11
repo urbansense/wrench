@@ -6,7 +6,7 @@ The sensor registration pipeline is a full-fledged registration pipeline for ing
 
 * [Harvester](../components.md#harvester)
 * [Grouper](../components.md#grouper)
-* [MetadataBuilder](../components.md#metadata-builder)
+* [MetadataEnricher](../components.md#metadata-enricher)
 * [Cataloger](../components.md#cataloger)
 
 ![sensor pipeline](../_static/sensor_pipeline_dark.png#only-dark)
@@ -24,7 +24,7 @@ Example:
 ```python
 async def run_pipeline():
     """Tests pipeline."""
-    # create a GeneratorConfig to use with MetadataBuilder
+    # create a GeneratorConfig to use with MetadataEnricher
     generator_config = GeneratorConfig(llm_host="your_llm_host", model="your_model")
 
     # create a SensorThingsHarvester
@@ -33,8 +33,8 @@ async def run_pipeline():
     # create a TELEClassGrouper
     grouper = TELEClassGrouper(config="./teleclass_config.yaml")
 
-    # create a SensorThingsMetadataBuilder
-    metadatabuilder = SensorThingsMetadataBuilder(
+    # create a SensorThingsMetadataEnricher
+    metadataenricher = SensorThingsMetadataEnricher(
         base_url="https://iot.hamburg.de/v1.1",
         title="Hamburg FROST Server",
         description="City of Hamburg FROST Server containing data collected from urban sensors around the city.",
@@ -50,7 +50,7 @@ async def run_pipeline():
     pipeline = SensorRegistrationPipeline(
         harvester=harvester,
         grouper=grouper,
-        metadatabuilder=metadatabuilder,
+        metadataenricher=metadataenricher,
         cataloger=cataloger,
         scheduler_config=SchedulerConfig(
             type={"scheduler_type": "cron", "cron_expression": "*/3 * * * *"} # run the pipeline every 3rd minute of the hour
@@ -83,8 +83,8 @@ grouper_config:
   class_: teleclass.TELEClassGrouper
   params_:
     config: "./teleclass_config.yaml"
-metadatabuilder_config:
-  class_: sensorthings.SensorThingsMetadataBuilder
+metadataenricher_config:
+  class_: sensorthings.SensorThingsMetadataEnricher
   params_:
     base_url: "https://iot.hamburg.de/v1.1"
     title: "Hamburg FROST Server"

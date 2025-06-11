@@ -8,8 +8,8 @@ from .object_config import (
     GrouperType,
     HarvesterConfig,
     HarvesterType,
-    MetadataBuilderConfig,
-    MetadataBuilderType,
+    MetadataEnricherConfig,
+    MetadataEnricherType,
     ObjectConfig,
 )
 from .pipeline_config import AbstractPipelineConfig, PipelineConfig
@@ -26,8 +26,8 @@ __all__ = [
     "GrouperType",
     "HarvesterConfig",
     "HarvesterType",
-    "MetadataBuilderConfig",
-    "MetadataBuilderType",
+    "MetadataEnricherConfig",
+    "MetadataEnricherType",
     "ObjectConfig",
     "AbstractPipelineConfig",
     "PipelineConfig",

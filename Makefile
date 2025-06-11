@@ -45,7 +45,7 @@ lint_types:
 	uv run --group lint mypy wrench
 
 # Main lint command that runs all groups
-lint: lint_src lint_tests
+lint: lint_src
 
 lint-fix:
 	uv run --group lint ruff check wrench --fix

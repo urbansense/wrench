@@ -45,7 +45,8 @@ class CronScheduler:
             )
         else:
             raise ValueError(
-                "Either a valid cron_expression or at least one time parameter (e.g., year, month, day, etc.) must be provided."
+                "Either a valid cron_expression or at least one time parameter must \
+                    be provided."
             )
         self.scheduler.add_job(
             func=pipeline_runner.run,
