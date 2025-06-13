@@ -63,15 +63,15 @@ class SimilarityClassifier:
                     term_embeddings = self.encoder.encode(terms)
                     ec.embeddings = np.mean(term_embeddings, axis=0)
                     self.logger.debug(
-                        "creating average class embeddings from terms through \
-                            averaging with dimension: %s",
+                        """creating average class embeddings from terms through
+                            averaging with dimension: %s""",
                         ec.embeddings.shape,
                     )
                     class_map[ec.class_name] = ec.embeddings
                 else:
                     raise RuntimeError(
-                        "Class terms are empty, TELEClass classifier must be trained \
-                            before prediction"
+                        """Class terms are empty, TELEClass classifier must be trained
+                            before prediction"""
                     )
         return class_map
 

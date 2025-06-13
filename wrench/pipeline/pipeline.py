@@ -218,8 +218,8 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             # Check target parameter exists
             if target_param not in component.component_inputs:
                 raise ValidationError(
-                    f"Parameter '{target_param}' is not a valid input for component \
-                        '{node.name}'"
+                    f"""Parameter '{target_param}' is not a valid input for component
+                        '{node.name}'"""
                 )
 
             # Check if already mapped
@@ -242,8 +242,8 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
                 source_node = self._nodes[source_component]
                 if output_field not in source_node.component.component_outputs:
                     raise ValidationError(
-                        f"Output field '{output_field}' does not exist in component \
-                              '{source_component}'"
+                        f"""Output field '{output_field}' does not exist in component
+                              '{source_component}'"""
                     )
 
                     # Check types are compatible
@@ -299,8 +299,8 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             for param in missing:
                 if param not in component_inputs:
                     raise ValidationError(
-                        f"Required parameter '{param}' for component '{component_name}'\
-                            not provided"
+                        f"""Required parameter '{param}' for component
+                         '{component_name}' not provided"""
                     )
 
     async def run(self, inputs: dict[str, Any] | None = None) -> PipelineResult:

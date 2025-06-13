@@ -37,7 +37,7 @@ class ModelDocumentLoader:
             isinstance(doc, Device) for doc in documents
         ):
             raise TypeError(
-                f"""documents must be a list of Device instances, got list of \
+                f"""documents must be a list of Device instances, got list of
                     {type(documents)}"""
             )
         self.documents = documents

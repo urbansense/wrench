@@ -65,8 +65,8 @@ class SDDICataloger(BaseCataloger):
                 self.logger.info("Successfully registered API Service")
         except NotFound:
             self.logger.error(
-                "No entries found for %s, please clear the .pipeline_store cache and \
-                    rerun the pipeline",
+                """No entries found for %s, please clear the .pipeline_store cache and
+                    rerun the pipeline""",
                 online_service.name,
             )
 
@@ -93,8 +93,8 @@ class SDDICataloger(BaseCataloger):
                         )
             except NotFound:
                 self.logger.error(
-                    "No entries found for %s, please clear the .pipeline_store cache \
-                        and rerun the pipeline",
+                    """No entries found for %s, please clear the .pipeline_store cache
+                        and rerun the pipeline""",
                     d.name,
                 )
 

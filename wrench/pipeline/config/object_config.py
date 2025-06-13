@@ -149,8 +149,8 @@ class ObjectConfig(AbstractConfig, Generic[T]):
         klass = self._get_class(self.class_, self.get_module())
         if not issubclass_safe(klass, self.get_interface()):
             raise ValueError(
-                f"Invalid class '{klass}'. Expected a subclass of \
-                    '{self.get_interface()}'"
+                f"""Invalid class '{klass}'. Expected a subclass of
+                    '{self.get_interface()}'"""
             )
         params = self.resolve_params(self.params_)
         try:

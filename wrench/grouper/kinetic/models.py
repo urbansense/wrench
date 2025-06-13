@@ -37,8 +37,8 @@ class Cluster(BaseModel):
         return f"""Cluster_ID: {self.cluster_id}:
                     Keywords: {self.keywords}
                     Documents: {
-            f'''{self._devices[0].name} \
-                {self._devices[0].description} \
+            f'''{self._devices[0].name}
+                {self._devices[0].description}
                 {str(self._devices[0].observed_properties)}
                 '''
         }
