@@ -101,7 +101,7 @@ class KeyBERTAdapter(KeywordExtractorAdapter):
         self,
         text: list[str],
         embeddings: np.ndarray | None = None,
-        top_n=20,
+        top_n=7,
         use_mmr: bool = False,
         use_maxsum: bool = False,
         nr_candidates: int = 20,

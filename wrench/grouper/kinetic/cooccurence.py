@@ -8,7 +8,7 @@ from .models import Cluster
 
 
 def build_cooccurence_network(
-    keywords_per_doc: list[list[str]], top_n=20
+    keywords_per_doc: list[list[str]], top_n=7
 ) -> list[Cluster]:
     """Builds a keyword co-occurrence network and visualizes it.
 
