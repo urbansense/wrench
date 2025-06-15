@@ -1,5 +1,3 @@
-from typing import Literal
-
 from pydantic import BaseModel, Field
 
 
@@ -9,10 +7,3 @@ class PaginationConfig(BaseModel):
     )
     timeout: int = Field(default=60, description="Request timeout in seconds")
     batch_size: int = Field(default=100, description="Number of items per page")
-
-
-class TranslatorConfig(BaseModel):
-    translator_type: Literal["libre_translate"] | None = Field(
-        default=None, description="Type of translator to use"
-    )
-    source_lang: str | None = Field(default=None, description="Source language code")

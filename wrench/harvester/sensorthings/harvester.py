@@ -2,11 +2,10 @@ from datetime import datetime
 from typing import Any
 
 from wrench.harvester.base import BaseHarvester
-from wrench.harvester.sensorthings.translator import TranslationService
 from wrench.models import Device, TimeFrame
 
 from .client import SensorThingsClient
-from .config import PaginationConfig, TranslatorConfig
+from .config import PaginationConfig
 from .models import Thing
 
 
@@ -22,7 +21,6 @@ class SensorThingsHarvester(BaseHarvester):
         self,
         base_url: str,
         pagination_config: PaginationConfig | dict[str, Any] = {},
-        translator_config: TranslatorConfig | dict[str, Any] = {},
     ):
         """
         Initialize the harvester.
@@ -31,15 +29,11 @@ class SensorThingsHarvester(BaseHarvester):
             base_url (str): Base SensorThings URL to harvest items from.
             pagination_config (PaginationConfig | dict[str, Any]): Pagination config
                 for fetching items.
-            translator_config (TranslationConfig | dict[str, Any]): Translator config.
         """
         super().__init__()
         pagination_config = PaginationConfig.model_validate(pagination_config)
-        translator_config = TranslatorConfig.model_validate(translator_config)
 
         self.client = SensorThingsClient(base_url, pagination_config)
-
-        self.translator = TranslationService.from_config(translator_config)
 
     def fetch_items(self) -> list[Thing]:
         """
@@ -51,10 +45,7 @@ class SensorThingsHarvester(BaseHarvester):
         """
         things = self.client.fetch_things()
 
-        if not self.translator:
-            return things
-
-        return [self.translator.translate(thing) for thing in things]
+        return things
 
     def return_items(self) -> list[Device]:
         """Returns things."""
