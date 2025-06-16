@@ -37,11 +37,10 @@ class SensorThingsHarvester(BaseHarvester):
 
     def fetch_items(self) -> list[Thing]:
         """
-        Fetches items with optional translation.
+        Fetches items.
 
         Returns:
-            things (list[Thing]) : List of things, translated if translation
-                is configured.
+            things (list[Thing]) : List of things.
         """
         things = self.client.fetch_things()
 
@@ -74,7 +73,7 @@ class SensorThingsHarvester(BaseHarvester):
                 locations=thing.location,
                 time_frame=time_frame,
                 datastreams={ds.name for ds in thing.datastreams},
-                sensor_names={ds.sensor.name for ds in thing.datastreams},
+                sensors={ds.sensor.name for ds in thing.datastreams},
                 observed_properties={
                     ds.observed_property.name for ds in thing.datastreams
                 },

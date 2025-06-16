@@ -76,7 +76,13 @@ class ContentGenerator:
                     title=service_metadata.title,
                     data=[
                         dev.model_dump_json(
-                            include=["name", "description", "datastreams"]
+                            include=[
+                                "name",
+                                "description",
+                                "datastreams",
+                                "sensors",
+                                "observed_properties",
+                            ]
                         )
                         for dev in group.devices[0 : min(len(group.devices), 3)]
                     ],

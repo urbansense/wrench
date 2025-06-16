@@ -84,7 +84,7 @@ class Device(BaseModel):
     name: str
     description: str
     datastreams: set[str]
-    sensor_names: set[str]
+    sensors: set[str]
     observed_properties: set[str]
     locations: list[Location]
     time_frame: TimeFrame | None  # if there are no datastreams
@@ -98,6 +98,14 @@ class Device(BaseModel):
     def to_string(self, exclude: list[str] | None = None):
         data = self.model_dump(exclude=set(exclude))
         return "\n".join([str(val) for attr, val in data.items()]).strip()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Device):
+            return NotImplemented
+        return self.id == other.id
+
+    def __hash__(self) -> int:
+        return hash(self.id)
 
 
 class CommonMetadata(BaseModel):

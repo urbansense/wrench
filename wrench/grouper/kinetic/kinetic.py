@@ -40,7 +40,6 @@ class KINETIC(BaseGrouper):
         self,
         llm_config: LLMConfig,
         embedder: str | BaseEmbedder = "intfloat/multilingual-e5-large-instruct",
-        threshold=0.9,
         lang: Literal["de", "en"] = "de",
     ):
         """
@@ -65,7 +64,7 @@ class KINETIC(BaseGrouper):
 
         self.keyword_extractor = KeyBERTAdapter(embedder, lang=lang)
 
-        self.classifier = Classifier(embedder, threshold)
+        self.classifier = Classifier(embedder)
 
         self.generator = LLMTopicGenerator(
             llm_client=openai.OpenAI(
@@ -98,7 +97,7 @@ class KINETIC(BaseGrouper):
                     "time_frame",
                     "properties",
                     "_raw_data",
-                    "sensor_names",
+                    "sensors",
                 ]
             )
             for device in devices

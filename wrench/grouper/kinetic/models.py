@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from pydantic import BaseModel, PrivateAttr
 
 from wrench.models import Device
@@ -33,13 +35,38 @@ class Cluster(BaseModel):
     keywords: list[str]
     _devices: list[Device] | None = PrivateAttr(default=None)
 
+    @cached_property
+    def representative_devices(self) -> list[Device]:
+        if not self._devices:
+            raise ValueError("run classifier before creating representative devices")
+        unique_ds = set()
+        repr_device = set()
+        for d in self._devices:
+            for ds in d.datastreams:
+                if ds in unique_ds:
+                    continue
+                unique_ds.add(ds)
+                repr_device.add(d)
+
+        return list(repr_device)[:1]
+
     def __str__(self):
         return f"""Cluster_ID: {self.cluster_id}:
                     Keywords: {self.keywords}
                     Documents: {
-            f'''{self._devices[0].name}
-                {self._devices[0].description}
-                {str(self._devices[0].observed_properties)}
-                '''
+            "\n\n".join(
+                dev.to_string(
+                    exclude=[
+                        "id",
+                        "locations",
+                        "time_frame",
+                        "properties",
+                        "_raw_data",
+                        "sensors",
+                        "datastreams",
+                    ]
+                )
+                for dev in self.representative_devices
+            )
         }
                 """

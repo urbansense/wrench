@@ -15,9 +15,8 @@ _DOC_PROMPT = PromptManager.get_prompt("embed_documents.txt")
 
 
 class Classifier:
-    def __init__(self, embedder: BaseEmbedder, threshold=0.9):
+    def __init__(self, embedder: BaseEmbedder):
         self._embedder = embedder
-        self._threshold = threshold
         self._logger = wrench_logger.getChild(self.__class__.__name__)
 
         self.cache_dir = Path(".kineticache")
