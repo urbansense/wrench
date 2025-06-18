@@ -48,7 +48,7 @@ class Cluster(BaseModel):
                 unique_ds.add(ds)
                 repr_device.add(d)
 
-        return list(repr_device)[:1]
+        return list(repr_device)[:3]
 
     def __str__(self):
         return f"""Cluster_ID: {self.cluster_id}:

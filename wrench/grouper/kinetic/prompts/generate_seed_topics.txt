@@ -27,10 +27,10 @@ Your task is to:
     </topic>
 Guidelines:
 - For each root topic, create subtopics *only if* relevant content exists.
-- Avoid similar topics across sibling subtopics.
-- Assign each subtopic a **clear name** and **description** using the keywords.
+- Assign each topic a **clear name** and **description** using the keywords.
 - Omit root topics that end up with no valid subtopics.
 - Keep the cluster IDs in tact
 - Assign at least one root topic from the list above to parent_topics when creating topics. Be conservative in the assignment!
+- Keep the original keyword assignments
 
 </instructions>
