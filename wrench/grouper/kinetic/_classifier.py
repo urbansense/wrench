@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from wrench.grouper.cluster.embedder import BaseEmbedder
+from wrench.grouper.kinetic.embedder import BaseEmbedder
 from wrench.log import logger as wrench_logger
 from wrench.utils.prompt_manager import PromptManager
 
@@ -15,9 +15,8 @@ _DOC_PROMPT = PromptManager.get_prompt("embed_documents.txt")
 
 
 class Classifier:
-    def __init__(self, embedder: BaseEmbedder, threshold=0.9):
+    def __init__(self, embedder: BaseEmbedder):
         self._embedder = embedder
-        self._threshold = threshold
         self._logger = wrench_logger.getChild(self.__class__.__name__)
 
         self.cache_dir = Path(".kineticache")
@@ -82,8 +81,9 @@ class Classifier:
 
         all_sim_scores = self._calc_similarity(doc_embeddings, cluster_embeddings)
 
-        # all docs now have a 1 for assigned topics
-        classified = np.where(all_sim_scores > self._threshold, 1, 0)
+        # assign each document to the cluster with highest similarity
+        max_indices = np.argmax(all_sim_scores, axis=1)
+        classified = np.eye(all_sim_scores.shape[1], dtype=int)[max_indices]
 
         unclassified_docs = np.where(~classified.any(axis=1))[0]
 

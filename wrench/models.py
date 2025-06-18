@@ -70,28 +70,42 @@ class TimeFrame(BaseModel):
     latest_time: datetime
 
 
-class Device(BaseModel):
-    """
-    Device model representing an entity with an ID.
+class SourceMetadata(BaseModel):
+    base_url: str
+    title: str
+    description: str
+    source_type: str
 
-    Attributes:
-        id (str): The unique identifier for the item.
-    """
+
+class Device(BaseModel):
+    """Device model representing an entity with an ID."""
 
     id: str
     name: str
     description: str
-    time_frame: TimeFrame | None  # if there are no datastreams
-    locations: list[Location]
     datastreams: set[str]
-    sensor_names: set[str]
+    sensors: set[str]
     observed_properties: set[str]
+    locations: list[Location]
+    time_frame: TimeFrame | None  # if there are no datastreams
 
     properties: dict[str, Any] | None = None
 
     _raw_data: dict[str, Any]
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
+
+    def to_string(self, exclude: list[str] | None = None):
+        data = self.model_dump(exclude=set(exclude))
+        return "\n".join([str(val) for attr, val in data.items()]).strip()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Device):
+            return NotImplemented
+        return self.id == other.id
+
+    def __hash__(self) -> int:
+        return hash(self.id)
 
 
 class CommonMetadata(BaseModel):

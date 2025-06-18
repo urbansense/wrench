@@ -21,12 +21,15 @@ class SimilarityClassifier:
         enriched_classes: list[EnrichedClass],
     ):
         """
-        Initialize the classifier with the given taxonomy manager, encoder, and enriched classes.
+        Initialize the classifier with taxonomy manager, encoder, and enriched classes.
 
         Args:
-            taxonomy_manager (TaxonomyManager): The manager for handling taxonomy-related operations.
-            encoder (SentenceTransformer): The encoder used for transforming sentences into embeddings.
-            enriched_classes (list[EnrichedClass]): A list of enriched classes to be used for creating class embeddings.
+            taxonomy_manager (TaxonomyManager): The manager for handling taxonomy-
+                related operations.
+            encoder (SentenceTransformer): The encoder used for transforming sentences
+                into embeddings.
+            enriched_classes (list[EnrichedClass]): A list of enriched classes to be
+                used for creating class embeddings.
         """
         self.taxonomy_manager = taxonomy_manager
         self.encoder = encoder
@@ -45,8 +48,8 @@ class SimilarityClassifier:
         a RuntimeError indicating the classifier hasn't been trained yet.
 
         Returns:
-            dict[str, np.ndarray]: A dictionary where the keys are class names and the values
-            are the corresponding embeddings as numpy arrays.
+            dict[str, np.ndarray]: A dictionary where the keys are class names and the
+            values are the corresponding embeddings as numpy arrays.
         """
         class_map: dict[str, np.ndarray] = {}
         for ec in self.enriched_classes:
@@ -60,13 +63,15 @@ class SimilarityClassifier:
                     term_embeddings = self.encoder.encode(terms)
                     ec.embeddings = np.mean(term_embeddings, axis=0)
                     self.logger.debug(
-                        "creating average class embeddings from terms through averaging with dimension: %s",
+                        """creating average class embeddings from terms through
+                            averaging with dimension: %s""",
                         ec.embeddings.shape,
                     )
                     class_map[ec.class_name] = ec.embeddings
                 else:
                     raise RuntimeError(
-                        "Class terms are empty, TELEClass classifier must be trained before prediction"
+                        """Class terms are empty, TELEClass classifier must be trained
+                            before prediction"""
                     )
         return class_map
 

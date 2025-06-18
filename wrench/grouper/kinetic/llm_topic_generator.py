@@ -51,6 +51,7 @@ class LLMTopicGenerator:
         user_prompts = USER_PROMPT.format(
             keywords_and_docs="\n\n".join([str(c) for c in clusters])
         )
+
         completion = self.llm_client.beta.chat.completions.parse(
             model=self.model,
             messages=[

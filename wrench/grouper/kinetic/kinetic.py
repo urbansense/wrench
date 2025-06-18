@@ -4,13 +4,13 @@ import openai
 from pydantic import validate_call
 
 from wrench.grouper import BaseGrouper
-from wrench.grouper.cluster.embedder import BaseEmbedder
-from wrench.grouper.cluster.models import Cluster, Topic
+from wrench.grouper.kinetic.embedder import BaseEmbedder
+from wrench.grouper.kinetic.models import Cluster, Topic
 from wrench.log import logger
 from wrench.models import Device, Group
+from wrench.utils.config import LLMConfig
 
 from ._classifier import Classifier
-from .config import LLMConfig
 from .cooccurence import build_cooccurence_network
 from .embedder import SentenceTransformerEmbedder
 from .keyword_extractor import KeyBERTAdapter
@@ -40,7 +40,6 @@ class KINETIC(BaseGrouper):
         self,
         llm_config: LLMConfig,
         embedder: str | BaseEmbedder = "intfloat/multilingual-e5-large-instruct",
-        threshold=0.9,
         lang: Literal["de", "en"] = "de",
     ):
         """
@@ -64,7 +63,8 @@ class KINETIC(BaseGrouper):
             embedder = SentenceTransformerEmbedder(embedder)
 
         self.keyword_extractor = KeyBERTAdapter(embedder, lang=lang)
-        self.classifier = Classifier(embedder, threshold)
+
+        self.classifier = Classifier(embedder)
 
         self.generator = LLMTopicGenerator(
             llm_client=openai.OpenAI(
@@ -76,8 +76,10 @@ class KINETIC(BaseGrouper):
         self.logger = logger.getChild(self.__class__.__name__)
 
     def build_clusters(self, docs: list[str]):
+        self.logger.info("Extracting keywords from %s docs", len(docs))
         keywords = self.keyword_extractor.extract_keywords(docs)
 
+        self.logger.info("Building cooccurence network")
         return build_cooccurence_network(keywords)
 
     def generate_topics(self, clusters: list[Cluster]) -> dict[Topic, list[Device]]:
@@ -86,7 +88,20 @@ class KINETIC(BaseGrouper):
         return topic_dict
 
     def group_items(self, devices: list[Device]) -> list[Group]:
-        docs = [f"{device.name} {device.description}".strip() for device in devices]
+        docs = [
+            device.to_string(
+                exclude=[
+                    "id",
+                    "observed_properties",
+                    "locations",
+                    "time_frame",
+                    "properties",
+                    "_raw_data",
+                    "sensors",
+                ]
+            )
+            for device in devices
+        ]
 
         if self.classifier.is_cached():
             clusters = self.classifier._load_clusters()
