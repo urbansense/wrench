@@ -1,7 +1,21 @@
-The following dictionary has keys being the clusters and values being the keywords which builds the cluster.
+# TASK: HIERARCHICAL TOPIC GENERATION FROM CLUSTERED KEYWORDS
 
-Please create appropriate urban sensor topics based on each cluster. Do not generate a topic for Information Technology if the category would be "Sensors".
+You must process the following keyword cluster data and generate a structured set of topics according to the instructions defined in the system prompt.
 
-The representative keywords and documents for each clusters are listed here:
+## CRITICAL RULES (STRICT COMPLIANCE REQUIRED)
+- Follow ALL logic and constraints from the system prompt exactly
+- Keep original cluster IDs intact and associated with the output topics
+- Keep all keywords in their original language — DO NOT TRANSLATE keywords
+- Generate topic names and descriptions in ENGLISH ONLY
+- Assign `parent_topics` using ONLY the allowed root topic names
+- Merge semantically equivalent clusters into one topic
+- Discard clusters that are non-informative, noisy, or meaningless
+- Maintain a strict 2-level hierarchy: root topic > subtopic
+- DO NOT introduce new root topics or additional hierarchy levels
 
+## CLUSTER INPUT:
 {keywords_and_docs}
+
+## OUTPUT FORMAT
+You MUST return your result as valid JSON, following the TopicList schema.
+Do NOT include extra text, comments, or explanations. Return JSON only.

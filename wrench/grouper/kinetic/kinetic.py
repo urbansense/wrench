@@ -33,6 +33,7 @@ class KINETIC(BaseGrouper):
             created from the extracted keywords.
         generator (LLMTopicGenerator): Generates coherent topic groups based on created
             clusters.
+        resolution (int): Size of the clusters created
     """
 
     @validate_call(config={"arbitrary_types_allowed": True})
@@ -41,6 +42,7 @@ class KINETIC(BaseGrouper):
         llm_config: LLMConfig,
         embedder: str | BaseEmbedder = "intfloat/multilingual-e5-large-instruct",
         lang: Literal["de", "en"] = "de",
+        resolution: int = 1,
     ):
         """
         Initialize the KINETIC Grouper.
@@ -53,11 +55,10 @@ class KINETIC(BaseGrouper):
                 `SentenceTransformers` library. Defaults to
                 `intfloat/multilingual-e5-large-instruct`, use `all-MiniLM-L12-v2` for
                 english data.
-            threshold (float): The threshold for the similarity comparison. Defaults to
-                0.9. This parameter is the first one to change in order to get better
-                classifications for your data.
             lang (["en", "de"]): The language of the source data. Default is "de" for
                 german.
+            resolution (int): The resolution of the clusters, larger than 1 for smaller
+                clusters, smaller than 1 for bigger clusters.
         """
         if isinstance(embedder, str):
             embedder = SentenceTransformerEmbedder(embedder)
@@ -73,6 +74,8 @@ class KINETIC(BaseGrouper):
             model=llm_config.model,
         )
 
+        self.resolution = resolution
+
         self.logger = logger.getChild(self.__class__.__name__)
 
     def build_clusters(self, docs: list[str]):
@@ -80,7 +83,7 @@ class KINETIC(BaseGrouper):
         keywords = self.keyword_extractor.extract_keywords(docs)
 
         self.logger.info("Building cooccurence network")
-        return build_cooccurence_network(keywords)
+        return build_cooccurence_network(keywords, resolution=self.resolution)
 
     def generate_topics(self, clusters: list[Cluster]) -> dict[Topic, list[Device]]:
         topic_dict = self.generator.generate_seed_topics(clusters)

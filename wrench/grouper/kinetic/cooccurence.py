@@ -8,7 +8,7 @@ from .models import Cluster
 
 
 def build_cooccurence_network(
-    keywords_per_doc: list[list[str]], top_n=7
+    keywords_per_doc: list[list[str]], top_n=7, resolution=1
 ) -> list[Cluster]:
     """Builds a keyword co-occurrence network and visualizes it.
 
@@ -19,6 +19,9 @@ def build_cooccurence_network(
         keywords_per_doc: A list of lists, where each inner list contains keywords
                           for a specific document.
         top_n: Number of most central keywords from the cluster. Defaults to 7
+        resolution:  Will change the size of the communities, default to 1. represents
+            the time described in "Laplacian Dynamics and Multiscale Modular Structure
+            in Networks", R. Lambiotte, J.-C. Delvenne, M. Barahona
 
     Returns:
         A dictionary where keys are cluster identifiers (e.g., 'cluster_0') and
@@ -34,7 +37,7 @@ def build_cooccurence_network(
                 else:
                     G.add_edge(kw, other, weight=1)
 
-    partition = cd.best_partition(G, weight="weight")
+    partition = cd.best_partition(G, weight="weight", resolution=resolution)
 
     comms = defaultdict(list)
     for node, comm_id in partition.items():

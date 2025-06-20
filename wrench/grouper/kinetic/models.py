@@ -37,7 +37,7 @@ class Cluster(BaseModel):
 
     @cached_property
     def representative_devices(self) -> list[Device]:
-        if not self._devices:
+        if self._devices is None:
             raise ValueError("run classifier before creating representative devices")
         unique_ds = set()
         repr_device = set()

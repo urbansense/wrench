@@ -65,7 +65,8 @@ class LLMTopicGenerator:
                 },
             ],
             response_format=TopicList,
-            temperature=0.1,
+            temperature=0.0,
+            max_tokens=4096,
         )
 
         root_topics = completion.choices[0].message.parsed
