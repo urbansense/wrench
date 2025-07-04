@@ -46,7 +46,7 @@ class SensorThingsHarvester(BaseHarvester):
 
         return things
 
-    def return_items(self) -> list[Device]:
+    def return_devices(self) -> list[Device]:
         """Returns things."""
         things = self.fetch_items()
 

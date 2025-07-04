@@ -1,4 +1,5 @@
 from functools import cached_property
+from typing import Literal
 
 from pydantic import BaseModel, PrivateAttr
 
@@ -9,7 +10,24 @@ class Topic(BaseModel):
     cluster_id: str
     name: str
     description: str
-    parent_topics: list[str]
+    parent_topics: list[
+        Literal[
+            "mobility",
+            "energy",
+            "environment",
+            "health",
+            "administration",
+            "tourism",
+            "living",
+            "education",
+            "construction",
+            "culture",
+            "trade",
+            "craft",
+            "work",
+            "agriculture",
+        ],
+    ]
     keywords: list[str]
 
     def __hash__(self):

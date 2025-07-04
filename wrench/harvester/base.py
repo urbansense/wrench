@@ -10,5 +10,5 @@ class BaseHarvester(ABC):
         self.logger = logger.getChild(self.__class__.__name__)
 
     @abstractmethod
-    def return_items(self) -> list[Device]:
+    def return_devices(self) -> list[Device]:
         pass

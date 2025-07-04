@@ -43,6 +43,8 @@ class KINETIC(BaseGrouper):
         embedder: str | BaseEmbedder = "intfloat/multilingual-e5-large-instruct",
         lang: Literal["de", "en"] = "de",
         resolution: int = 1,
+        embedding_weight: float = 0.7,
+        substring_weight: float = 0.3,
     ):
         """
         Initialize the KINETIC Grouper.
@@ -59,13 +61,17 @@ class KINETIC(BaseGrouper):
                 german.
             resolution (int): The resolution of the clusters, larger than 1 for smaller
                 clusters, smaller than 1 for bigger clusters.
+            embedding_weight (float): Weight for embedding-based similarity in combined
+                scoring. Default is 0.7.
+            substring_weight (float): Weight for substring matching similarity in
+            combined scoring. Default is 0.3.
         """
         if isinstance(embedder, str):
             embedder = SentenceTransformerEmbedder(embedder)
 
         self.keyword_extractor = KeyBERTAdapter(embedder, lang=lang)
 
-        self.classifier = Classifier(embedder)
+        self.classifier = Classifier(embedder, embedding_weight, substring_weight)
 
         self.generator = LLMTopicGenerator(
             llm_client=openai.OpenAI(

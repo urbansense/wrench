@@ -5,12 +5,13 @@ from wrench.models import Device, Group
 
 class BaseGrouper(ABC):
     @abstractmethod
-    def group_items(self, devices: list[Device]) -> list[Group]:
+    def group_items(self, devices: list[Device], **kwargs) -> list[Group]:
         """
         Groups the given list of items into a list of Group objects.
 
         Args:
             devices (list): A list of devices to be grouped.
+            **kwargs: Any optional arguments specific to the grouper.
 
         Returns:
             list[Group]: A list of Group objects created from the given items.

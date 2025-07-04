@@ -38,7 +38,7 @@ class Harvester(Component):
 
         try:
             # Fetch current items from the harvester
-            current_devices = self._harvester.return_items()
+            current_devices = self._harvester.return_devices()
 
             if not previous_devices:
                 self.logger.info(

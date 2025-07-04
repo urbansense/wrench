@@ -15,7 +15,12 @@ _DOC_PROMPT = PromptManager.get_prompt("embed_documents.txt")
 
 
 class Classifier:
-    def __init__(self, embedder: BaseEmbedder):
+    def __init__(
+        self,
+        embedder: BaseEmbedder,
+        embedding_weight: float = 0.7,
+        substring_weight: float = 0.3,
+    ):
         self._embedder = embedder
         self._logger = wrench_logger.getChild(self.__class__.__name__)
 
@@ -79,17 +84,39 @@ class Classifier:
 
         doc_embeddings = self._embed_docs(docs)
 
-        all_sim_scores = self._calc_similarity(doc_embeddings, cluster_embeddings)
+        # Calculate both embedding and substring similarities
+        embedding_sim_scores = self._calc_similarity(doc_embeddings, cluster_embeddings)
+        substring_sim_scores = self._calc_substring_similarity(docs, clusters)
 
-        # assign each document to the cluster with highest similarity
+        # Combine similarities using root mean square
+        all_sim_scores = np.sqrt(
+            (embedding_sim_scores**2 + substring_sim_scores**2) / 2
+        )
+
+        max_scores = np.max(all_sim_scores, axis=1)
         max_indices = np.argmax(all_sim_scores, axis=1)
-        classified = np.eye(all_sim_scores.shape[1], dtype=int)[max_indices]
+
+        # detect outliers using IQR method
+        q1 = np.percentile(max_scores, 10)
+        q3 = np.percentile(max_scores, 90)
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+
+        # classify documents that are not statistical outliers
+        is_inlier = max_scores >= lower_bound
+        classified = np.zeros_like(all_sim_scores, dtype=int)
+        classified[is_inlier, max_indices[is_inlier]] = 1
 
         unclassified_docs = np.where(~classified.any(axis=1))[0]
 
-        if unclassified_docs.shape[0] != 0:
-            self._logger.warning(
-                "documents %s were not classified successfully",
+        if unclassified_docs.shape[0] > 0:
+            self._logger.info(
+                "%d documents identified as outliers (similarity below %.3f)",
+                len(unclassified_docs),
+                lower_bound,
+            )
+            self._logger.debug(
+                "Outlier documents: %s",
                 [docs[i] for i in unclassified_docs],
             )
 
@@ -116,6 +143,35 @@ class Classifier:
         self._save_clusters(clusters, cluster_embeddings)
         return cluster_embeddings
 
+    def _calc_substring_similarity(
+        self, docs: list[str], clusters: list[Cluster]
+    ) -> np.ndarray:
+        """Calculate substring matching similarity using vectorized numpy operations."""
+        num_docs = len(docs)
+        num_clusters = len(clusters)
+
+        # Convert documents to lowercase numpy array
+        docs_lower = np.array([doc.lower() for doc in docs])
+
+        # Initialize similarity matrix
+        substring_matrix = np.zeros((num_docs, num_clusters))
+
+        for cluster_idx, cluster in enumerate(clusters):
+            cluster_keywords = [kw.lower() for kw in cluster.keywords]
+
+            # Sum keyword matches across all keywords in cluster
+            keyword_matches = np.zeros(num_docs)
+
+            for keyword in cluster_keywords:
+                # Vectorized count occurrences for frequency weighting
+                keyword_counts = np.array([doc.count(keyword) for doc in docs_lower])
+                keyword_matches += keyword_counts
+
+            # Normalize by number of keywords in cluster
+            substring_matrix[:, cluster_idx] = keyword_matches / len(cluster_keywords)
+
+        return substring_matrix
+
     def _calc_similarity(
         self, doc_embeddings: np.ndarray, cluster_embeddings: np.ndarray
     ) -> np.ndarray:
@@ -136,8 +192,4 @@ class Classifier:
         )
         # similarity_matrix shape (n_doc, n_cluster)
 
-        row_min = similarity_matrix.min(axis=1).reshape(-1, 1)
-        row_max = similarity_matrix.max(axis=1).reshape(-1, 1)
-        normalized_similarity = (similarity_matrix - row_min) / (row_max - row_min)
-
-        return normalized_similarity
+        return similarity_matrix
