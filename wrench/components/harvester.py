@@ -45,7 +45,7 @@ class Harvester(Component):
                     f"First run, treating all {len(current_devices)} items as new"
                 )
                 operations = [
-                    Operation(type=OperationType.ADD, device_id=item.id, device=item)
+                    Operation(type=OperationType.ADD, device=item)
                     for item in current_devices
                 ]
                 return Items(
@@ -68,7 +68,7 @@ class Harvester(Component):
             operations = self._detect_operations(previous_devices, current_devices)
 
             self.logger.info("Detected %s changes: ", len(operations))
-            self.logger.debug("Object IDs: %s", [op.device_id for op in operations])
+            self.logger.debug("Object IDs: %s", [op.device.id for op in operations])
 
             if len(operations) == 0:
                 self.logger.info(
@@ -124,29 +124,17 @@ class Harvester(Component):
         for device_id, device in curr_map.items():
             if device_id not in prev_map:
                 # Item is new
-                operations.append(
-                    Operation(
-                        type=OperationType.ADD, device_id=device_id, device=device
-                    )
-                )
+                operations.append(Operation(type=OperationType.ADD, device=device))
             elif self._is_item_changed(
                 prev_map[device_id], device, prev_hashes.get(device_id)
             ):
                 # Item exists but was updated
-                operations.append(
-                    Operation(
-                        type=OperationType.UPDATE, device_id=device_id, device=device
-                    )
-                )
+                operations.append(Operation(type=OperationType.UPDATE, device=device))
 
         # Find deletions
         for device_id, device in prev_map.items():
             if device_id not in curr_map:
-                operations.append(
-                    Operation(
-                        type=OperationType.DELETE, device_id=device_id, device=device
-                    )
-                )
+                operations.append(Operation(type=OperationType.DELETE, device=device))
 
         return operations
 

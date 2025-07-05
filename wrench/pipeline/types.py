@@ -83,5 +83,4 @@ class Operation(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     type: OperationType
-    device_id: str
     device: Device

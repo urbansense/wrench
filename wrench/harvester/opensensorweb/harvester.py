@@ -20,6 +20,6 @@ class OpenSensorWebHarvester(BaseHarvester):
 
         return devices
 
-    def return_items(self) -> list[Device]:
+    def return_devices(self) -> list[Device]:
         """Returns devices."""
         return self.devices
