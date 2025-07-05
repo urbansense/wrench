@@ -59,22 +59,9 @@ class Location(BaseModel):
         return list(coords(self.location))
 
 
-class Item(BaseModel):
-    model_config = {"extra": "allow"}
-    id: str
-    content: dict[str, Any]
-
-
 class TimeFrame(BaseModel):
     start_time: datetime
     latest_time: datetime
-
-
-class SourceMetadata(BaseModel):
-    base_url: str
-    title: str
-    description: str
-    source_type: str
 
 
 class Device(BaseModel):
