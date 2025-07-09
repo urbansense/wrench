@@ -1,4 +1,4 @@
-from typing import Any, Sequence
+from typing import Any
 
 from pydantic import validate_call
 
@@ -27,7 +27,7 @@ class Cataloger(Component):
     async def run(
         self,
         service_metadata: CommonMetadata | None,
-        group_metadata: Sequence[CommonMetadata],
+        group_metadata: list[CommonMetadata],
         state: dict[str, Any] = {},
     ) -> CatalogerStatus:
         """Run the cataloger and register metadata."""

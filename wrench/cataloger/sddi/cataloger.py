@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Sequence
 
 from ckanapi import RemoteCKAN
 from ckanapi.errors import NotFound
@@ -48,7 +47,7 @@ class SDDICataloger(BaseCataloger):
     def register(
         self,
         service: CommonMetadata,
-        groups: Sequence[CommonMetadata],
+        groups: list[CommonMetadata],
         managed_entries: list[str] | None,
     ) -> list[str]:
         online_service = self._create_online_service(service)
@@ -169,7 +168,7 @@ class SDDICataloger(BaseCataloger):
         )
 
     def _create_device_groups(
-        self, metadata: Sequence[CommonMetadata]
+        self, metadata: list[CommonMetadata]
     ) -> list[DeviceGroup]:
         DOMAIN_GROUPS = [
             "administration",

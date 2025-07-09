@@ -1,5 +1,5 @@
 from itertools import batched
-from typing import Any, Sequence
+from typing import Any
 
 from pydantic import validate_call
 
@@ -43,11 +43,11 @@ class SensorThingsMetadataEnricher(BaseMetadataEnricher):
         """Return SensorThings source type."""
         return "sensorthings"
 
-    def _build_service_urls(self, devices: Sequence[Device]) -> list[str]:
+    def _build_service_urls(self, devices: list[Device]) -> list[str]:
         """For SensorThings, service URL is just the base URL."""
         return [self.base_url]
 
-    def _calculate_spatial_extent(self, devices: Sequence[Device]) -> Any:
+    def _calculate_spatial_extent(self, devices: list[Device]) -> Any:
         """Calculate spatial extent using SensorThings-specific calculators."""
         if hasattr(self, "group_spatial_calculator"):
             return self.group_spatial_calculator.calculate_extent(devices)

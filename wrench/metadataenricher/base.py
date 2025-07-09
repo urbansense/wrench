@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Any, Sequence
+from typing import Any
 
 from wrench.log import logger
 from wrench.models import CommonMetadata, Device, Group, TimeFrame
@@ -28,7 +28,7 @@ class BaseMetadataEnricher(ABC):
         if llm_config:
             self.content_generator = ContentGenerator(llm_config)
 
-    def build_service_metadata(self, devices: Sequence[Device]) -> CommonMetadata:
+    def build_service_metadata(self, devices: list[Device]) -> CommonMetadata:
         """
         Generic service metadata building with spatial and temporal enrichment.
 
@@ -108,7 +108,7 @@ class BaseMetadataEnricher(ABC):
         pass
 
     @abstractmethod
-    def _build_service_urls(self, devices: Sequence[Device]) -> list[str]:
+    def _build_service_urls(self, devices: list[Device]) -> list[str]:
         """Build service endpoint URLs."""
         pass
 
@@ -118,7 +118,7 @@ class BaseMetadataEnricher(ABC):
         pass
 
     @abstractmethod
-    def _calculate_spatial_extent(self, devices: Sequence[Device]) -> Any:
+    def _calculate_spatial_extent(self, devices: list[Device]) -> Any:
         """Calculate spatial extent for devices."""
         pass
 

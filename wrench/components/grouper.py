@@ -30,7 +30,7 @@ class Grouper(Component):
 
         if not previous_groups:
             try:
-                groups = self._grouper.group_items(devices)
+                groups = self._grouper.group_devices(devices)
                 return Groups(groups=groups, state={"previous_groups": groups})
             except GrouperError as e:
                 raise ComponentExecutionError(

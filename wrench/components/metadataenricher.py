@@ -1,4 +1,4 @@
-from typing import Any, Sequence
+from typing import Any
 
 from pydantic import validate_call
 
@@ -23,9 +23,9 @@ class MetadataEnricher(Component):
     @validate_call
     async def run(
         self,
-        devices: Sequence[Device],
-        operations: Sequence[Operation],
-        groups: Sequence[Group],
+        devices: list[Device],
+        operations: list[Operation],
+        groups: list[Group],
         state: dict[str, Any] = {},
     ) -> Metadata:
         """Run the metadata builder."""

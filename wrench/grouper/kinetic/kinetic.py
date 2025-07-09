@@ -96,7 +96,7 @@ class KINETIC(BaseGrouper):
 
         return topic_dict
 
-    def group_items(self, devices: list[Device]) -> list[Group]:
+    def group_devices(self, devices: list[Device]) -> list[Group]:
         docs = [
             device.to_string(
                 exclude=[

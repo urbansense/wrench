@@ -1,6 +1,6 @@
 import hashlib
 import json
-from typing import Any, Sequence
+from typing import Any
 
 from pydantic import validate_call
 
@@ -93,7 +93,7 @@ class Harvester(Component):
             ) from e
 
     def _detect_operations(
-        self, previous: Sequence[Device], current: Sequence[Device]
+        self, previous: list[Device], current: list[Device]
     ) -> list[Operation]:
         """
         Detect changes between previous and current item sets.

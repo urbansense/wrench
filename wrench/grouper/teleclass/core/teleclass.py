@@ -223,7 +223,7 @@ class TELEClassGrouper(BaseGrouper):
 
         return self.classifier_manager.predict(text)
 
-    def group_items(self, devices: list[Device]) -> list[Group]:
+    def group_devices(self, devices: list[Device]) -> list[Group]:
         """
         Groups a collection of documents into predefined categories.
 

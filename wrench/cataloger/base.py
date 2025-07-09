@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Sequence
 
 from wrench.log import logger
 from wrench.models import CommonMetadata
@@ -23,7 +22,7 @@ class BaseCataloger(ABC):
     def register(
         self,
         service: CommonMetadata,
-        groups: Sequence[CommonMetadata],
+        groups: list[CommonMetadata],
         managed_entries: list[str] | None,
     ) -> list[str]:
         """
@@ -31,7 +30,7 @@ class BaseCataloger(ABC):
 
         Args:
             service (CommonMetadata): The service to be registered.
-            groups (Sequence(CommonMetadata)): The groups which should be
+            groups (list(CommonMetadata)): The groups which should be
                 registered under the service.
             managed_entries: list(str): The entries created by the catalogger.
 
