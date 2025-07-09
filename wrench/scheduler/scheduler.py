@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any
 
@@ -8,7 +9,17 @@ from apscheduler.triggers.interval import IntervalTrigger
 from wrench.pipeline.config.runner import PipelineRunner
 
 
-class CronScheduler:
+class Scheduler(ABC):
+    @abstractmethod
+    def start(self):
+        pass
+
+    @abstractmethod
+    def shutdown(self):
+        pass
+
+
+class CronScheduler(Scheduler):
     def __init__(
         self,
         pipeline_runner: PipelineRunner,
@@ -62,7 +73,7 @@ class CronScheduler:
         self.scheduler.shutdown()
 
 
-class IntervalScheduler:
+class IntervalScheduler(Scheduler):
     def __init__(
         self,
         pipeline_runner: PipelineRunner,
