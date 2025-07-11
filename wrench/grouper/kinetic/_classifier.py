@@ -18,8 +18,6 @@ class Classifier:
     def __init__(
         self,
         embedder: BaseEmbedder,
-        embedding_weight: float = 0.7,
-        substring_weight: float = 0.3,
     ):
         self._embedder = embedder
         self._logger = wrench_logger.getChild(self.__class__.__name__)
