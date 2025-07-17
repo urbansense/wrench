@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from ckanapi import RemoteCKAN
-from ckanapi.errors import NotFound
+from ckanapi.errors import NotFound, ValidationError
 
 from wrench.cataloger.base import BaseCataloger
 from wrench.models import CommonMetadata
@@ -68,28 +68,44 @@ class SDDICataloger(BaseCataloger):
                     rerun the pipeline""",
                 online_service.name,
             )
+        except ValidationError as e:
+            self.logger.error(
+                "CKAN validation error for service %s: %s",
+                online_service.name,
+                str(e),
+            )
+            raise
 
         if groups:
             try:
                 for d in device_groups:
                     self.logger.debug("Processing device group: %s", d.name)
-                    if d.name in self._registries:
-                        self._update_device_group(d)
-                        self.logger.debug(
-                            "Successfully updated Device Group: %s", d.name
+                    try:
+                        if d.name in self._registries:
+                            self._update_device_group(d)
+                            self.logger.debug(
+                                "Successfully updated Device Group: %s", d.name
+                            )
+                        else:
+                            self._register_device_group(d)
+                            self.logger.debug(
+                                "Successfully registered Device Group: %s", d.name
+                            )
+                            self._register_relationship(
+                                api_service_name=online_service.name,
+                                device_group_name=d.name,
+                            )
+                            self.logger.info(
+                                "Created relationships for device_group %s", d.name
+                            )
+                    except ValidationError as e:
+                        self.logger.error(
+                            "CKAN validation error for device group %s: %s",
+                            d.name,
+                            str(e),
                         )
-                    else:
-                        self._register_device_group(d)
-                        self.logger.debug(
-                            "Successfully registered Device Group: %s", d.name
-                        )
-                        self._register_relationship(
-                            api_service_name=online_service.name,
-                            device_group_name=d.name,
-                        )
-                        self.logger.info(
-                            "Created relationships for device_group %s", d.name
-                        )
+                        # Continue processing other groups instead of failing completely
+                        continue
             except NotFound:
                 self.logger.error(
                     """No entries found for %s, please clear the .pipeline_store cache
