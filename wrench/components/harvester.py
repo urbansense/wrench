@@ -1,6 +1,6 @@
 import hashlib
 import json
-from typing import Any, Sequence
+from typing import Any
 
 from pydantic import validate_call
 
@@ -14,6 +14,7 @@ from wrench.pipeline.types import (
     Operation,
     OperationType,
 )
+from wrench.utils.performance import MemoryMonitor, log_performance_metrics
 
 
 class Harvester(Component):
@@ -34,25 +35,31 @@ class Harvester(Component):
         Raises:
             HarvesterError: If there's an issue retrieving items from the harvester
         """
+        monitor = MemoryMonitor()
         previous_devices = state.get("previous_devices")
 
         try:
-            # Fetch current items from the harvester
-            current_devices = self._harvester.return_items()
+            with monitor.track_component("Harvester") as metrics:
+                # Fetch current items from the harvester
+                current_devices = self._harvester.return_devices()
+
+            log_performance_metrics(metrics, self.logger)
 
             if not previous_devices:
                 self.logger.info(
                     f"First run, treating all {len(current_devices)} items as new"
                 )
                 operations = [
-                    Operation(type=OperationType.ADD, device_id=item.id, device=item)
+                    Operation(type=OperationType.ADD, device=item)
                     for item in current_devices
                 ]
-                return Items(
+                result = Items(
                     devices=current_devices,
                     operations=operations,
                     state={"previous_devices": current_devices},
                 )
+                result._performance_metrics = metrics
+                return result
 
             previous_devices = [
                 Device.model_validate(device) for device in previous_devices
@@ -68,7 +75,7 @@ class Harvester(Component):
             operations = self._detect_operations(previous_devices, current_devices)
 
             self.logger.info("Detected %s changes: ", len(operations))
-            self.logger.debug("Object IDs: %s", [op.device_id for op in operations])
+            self.logger.debug("Object IDs: %s", [op.device.id for op in operations])
 
             if len(operations) == 0:
                 self.logger.info(
@@ -80,11 +87,13 @@ class Harvester(Component):
                     stop_pipeline=True,
                 )
 
-            return Items(
+            result = Items(
                 devices=current_devices,
                 operations=operations,
                 state={"previous_devices": current_devices},
             )
+            result._performance_metrics = metrics
+            return result
 
         except Exception as e:
             self.logger.error(f"Error during harvester run: {e}")
@@ -93,7 +102,7 @@ class Harvester(Component):
             ) from e
 
     def _detect_operations(
-        self, previous: Sequence[Device], current: Sequence[Device]
+        self, previous: list[Device], current: list[Device]
     ) -> list[Operation]:
         """
         Detect changes between previous and current item sets.
@@ -124,29 +133,17 @@ class Harvester(Component):
         for device_id, device in curr_map.items():
             if device_id not in prev_map:
                 # Item is new
-                operations.append(
-                    Operation(
-                        type=OperationType.ADD, device_id=device_id, device=device
-                    )
-                )
+                operations.append(Operation(type=OperationType.ADD, device=device))
             elif self._is_item_changed(
                 prev_map[device_id], device, prev_hashes.get(device_id)
             ):
                 # Item exists but was updated
-                operations.append(
-                    Operation(
-                        type=OperationType.UPDATE, device_id=device_id, device=device
-                    )
-                )
+                operations.append(Operation(type=OperationType.UPDATE, device=device))
 
         # Find deletions
         for device_id, device in prev_map.items():
             if device_id not in curr_map:
-                operations.append(
-                    Operation(
-                        type=OperationType.DELETE, device_id=device_id, device=device
-                    )
-                )
+                operations.append(Operation(type=OperationType.DELETE, device=device))
 
         return operations
 

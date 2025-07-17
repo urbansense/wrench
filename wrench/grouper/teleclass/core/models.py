@@ -68,7 +68,7 @@ class EnrichmentResult(BaseModel):
 
 
 class LLMEnrichmentResult(EnrichmentResult):
-    # Stores LLM enrichment results, such as classes with its relevant terms, and each document's core classes.
+    # Stores LLM enrichment results.
     DocumentCoreClasses: list[Document]
 
     @computed_field  # type: ignore[prop-decorator]

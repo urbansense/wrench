@@ -4,13 +4,13 @@ import openai
 from pydantic import validate_call
 
 from wrench.grouper import BaseGrouper
-from wrench.grouper.cluster.embedder import BaseEmbedder
-from wrench.grouper.cluster.models import Cluster, Topic
+from wrench.grouper.kinetic.embedder import BaseEmbedder
+from wrench.grouper.kinetic.models import Cluster, Topic
 from wrench.log import logger
 from wrench.models import Device, Group
+from wrench.utils.config import LLMConfig
 
 from ._classifier import Classifier
-from .config import LLMConfig
 from .cooccurence import build_cooccurence_network
 from .embedder import SentenceTransformerEmbedder
 from .keyword_extractor import KeyBERTAdapter
@@ -33,6 +33,7 @@ class KINETIC(BaseGrouper):
             created from the extracted keywords.
         generator (LLMTopicGenerator): Generates coherent topic groups based on created
             clusters.
+        resolution (int): Size of the clusters created
     """
 
     @validate_call(config={"arbitrary_types_allowed": True})
@@ -40,8 +41,8 @@ class KINETIC(BaseGrouper):
         self,
         llm_config: LLMConfig,
         embedder: str | BaseEmbedder = "intfloat/multilingual-e5-large-instruct",
-        threshold=0.9,
         lang: Literal["de", "en"] = "de",
+        resolution: int = 1,
     ):
         """
         Initialize the KINETIC Grouper.
@@ -54,17 +55,17 @@ class KINETIC(BaseGrouper):
                 `SentenceTransformers` library. Defaults to
                 `intfloat/multilingual-e5-large-instruct`, use `all-MiniLM-L12-v2` for
                 english data.
-            threshold (float): The threshold for the similarity comparison. Defaults to
-                0.9. This parameter is the first one to change in order to get better
-                classifications for your data.
             lang (["en", "de"]): The language of the source data. Default is "de" for
                 german.
+            resolution (int): The resolution of the clusters, larger than 1 for smaller
+                clusters, smaller than 1 for bigger clusters.
         """
         if isinstance(embedder, str):
             embedder = SentenceTransformerEmbedder(embedder)
 
         self.keyword_extractor = KeyBERTAdapter(embedder, lang=lang)
-        self.classifier = Classifier(embedder, threshold)
+
+        self.classifier = Classifier(embedder)
 
         self.generator = LLMTopicGenerator(
             llm_client=openai.OpenAI(
@@ -73,20 +74,37 @@ class KINETIC(BaseGrouper):
             model=llm_config.model,
         )
 
+        self.resolution = resolution
+
         self.logger = logger.getChild(self.__class__.__name__)
 
     def build_clusters(self, docs: list[str]):
+        self.logger.info("Extracting keywords from %s docs", len(docs))
         keywords = self.keyword_extractor.extract_keywords(docs)
 
-        return build_cooccurence_network(keywords)
+        self.logger.info("Building cooccurence network")
+        return build_cooccurence_network(keywords, resolution=self.resolution)
 
     def generate_topics(self, clusters: list[Cluster]) -> dict[Topic, list[Device]]:
         topic_dict = self.generator.generate_seed_topics(clusters)
 
         return topic_dict
 
-    def group_items(self, devices: list[Device]) -> list[Group]:
-        docs = [f"{device.name} {device.description}".strip() for device in devices]
+    def group_devices(self, devices: list[Device]) -> list[Group]:
+        docs = [
+            device.to_string(
+                exclude=[
+                    "id",
+                    "observed_properties",
+                    "locations",
+                    "time_frame",
+                    "properties",
+                    "_raw_data",
+                    "sensors",
+                ]
+            )
+            for device in devices
+        ]
 
         if self.classifier.is_cached():
             clusters = self.classifier._load_clusters()

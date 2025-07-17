@@ -1,5 +1,3 @@
-from typing import Sequence
-
 from pydantic import ConfigDict
 
 from wrench.models import CommonMetadata, Device, Group
@@ -8,13 +6,13 @@ from wrench.pipeline.types import Operation
 
 
 class Items[T: Device](DataModel):
-    devices: Sequence[T]
+    devices: list[T]
     operations: list[Operation] = []
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class Groups(DataModel):
-    groups: Sequence[Group]
+    groups: list[Group]
 
 
 class Metadata(DataModel):

@@ -5,12 +5,13 @@ from wrench.models import Device, Group
 
 class BaseGrouper(ABC):
     @abstractmethod
-    def group_items(self, devices: list[Device]) -> list[Group]:
+    def group_devices(self, devices: list[Device], **kwargs) -> list[Group]:
         """
         Groups the given list of items into a list of Group objects.
 
         Args:
             devices (list): A list of devices to be grouped.
+            **kwargs: Any optional arguments specific to the grouper.
 
         Returns:
             list[Group]: A list of Group objects created from the given items.
@@ -29,7 +30,7 @@ class BaseGrouper(ABC):
 
         if new_devices or updated_devices:
             # Create new groups from added and updated items
-            new_groups = self.group_items(new_devices + updated_devices)
+            new_groups = self.group_devices(new_devices + updated_devices)
             # Track which groups were affected
             affected_group_names.update(group.name for group in new_groups)
             # Merge new groups into existing groups

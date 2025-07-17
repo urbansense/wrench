@@ -44,6 +44,7 @@ class IntervalSchedulerConfig(BaseSchedulerConfig):
 To create an IntervalSchedulerConfig, you need to provide either the interval as an [ISO 8601 duration formatted string](https://docs.digi.com/resources/documentation/digidocs/90001488-13/reference/r_iso_8601_duration_format.htm), or provide the time intervals directly with the time arguments. You cannot define both.
 
 Example:
+
 ```python
 # the following expression runs the pipeline every 2 weeks, 10 days, 5 hours, 2 minutes and 30 seconds
 config = IntervalSchedulerConfig(interval="P2W10DT5H2M30S")
@@ -70,6 +71,7 @@ class CronSchedulerConfig(BaseSchedulerConfig):
 To create a CronSchedulerConfig, you need to provide either a [cron expression](https://crontab.guru/), or provide the time directly with the time arguments. You cannot define both.
 
 Example:
+
 ```python
 # the following expression runs the pipeline at 10:15 on every Wednesday.
 config = CronSchedulerConfig(cron_expression="15 10 * * 3")

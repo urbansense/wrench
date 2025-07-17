@@ -1,5 +1,4 @@
-Welcome to Wrench Documentation
-===============================
+# Welcome to Wrench Documentation
 
 ![wrench logo](./_static/logo.png)
 
@@ -7,15 +6,13 @@ Wrench is a modular framework for harvesting, classifying, and cataloging sensor
 
 > This documentation is under active development.
 
-Features
---------
+## Features
 
 * **Harvesting**: Collection of data from sensor networks (currently SensorThings API)
 * **Grouping**: Classification of sensor data using taxonomy-enhanced learning (TELEClass)
 * **Cataloging**: Registration of data in standardized catalogs (SDDI)
 
-Components
-----------
+## Components
 
 The framework is composed of three main components:
 
@@ -28,8 +25,7 @@ The framework is composed of three main components:
 **Cataloger**
    Registers data in catalog systems. Currently supports SDDI catalogs.
 
-Getting Started
---------------
+## Getting Started
 
 ### Installation
 
@@ -45,13 +41,13 @@ If you want to use certain components, which require their own dependencies, you
 
 The framework provides full-fledged pipelines with predefined components which can be used. Here is a simple usage example of the `SensorRegistrationPipeline`.
 
-```
+```python
 from wrench.pipeline.sensor_pipeline import SensorRegistrationPipeline
 
 pipeline = SensorRegistrationPipeline(
     harvester=harvester, # an implementation of BaseHarvester
     grouper=grouper, # an implementation of BaseGrouper
-    metadatabuilder=metadatabuilder, # an implementation of BaseMetadataBuilder
+    metadataenricher=metadataenricher, # an implementation of BaseMetadataEnricher
     cataloger=cataloger, # an implementation of BaseCataloger
 )
 
@@ -61,8 +57,7 @@ result = await pipeline.run()
 
 The `SensorRegistrationPipeline` accepts any implementation of each component, as long as they adhere to the base interfaces.
 
-Architecture
------------
+## Architecture
 
 ### System Architecture
 
@@ -72,17 +67,15 @@ The Pipeline allows for users to orchestrate their own sequence of components, t
 
 The pipeline can be defined with an optional store, which if provided, will persist the results of the pipeline components over runs, enabling incremental operations, throughout subsequent pipelines runs.
 
-Component Documentation
-----------------------
+## Component Documentation
 
-###  Core Components
+### Core Components
 
    components/harvester
    components/grouper
    components/cataloger
 
-API Reference
-------------
+## API Reference
 
 ### API Documentation
 
@@ -92,8 +85,7 @@ API Reference
 
    api/common
 
-Examples and Tutorials
----------------------
+## Examples and Tutorials
 
 ### Examples
 
@@ -102,8 +94,7 @@ Examples and Tutorials
    examples/sddi
    examples/custom_pipeline
 
-Contributing
------------
+## Contributing
 
 ### Development
 
@@ -111,5 +102,4 @@ Contributing
    contributing/guidelines
    contributing/testing
 
-Indices and Tables
-=================
+## Indices and Tables

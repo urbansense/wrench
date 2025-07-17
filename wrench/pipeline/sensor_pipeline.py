@@ -6,7 +6,7 @@ from wrench.cataloger import BaseCataloger
 from wrench.grouper import BaseGrouper
 from wrench.harvester import BaseHarvester
 from wrench.log import logger
-from wrench.metadatabuilder import BaseMetadataBuilder
+from wrench.metadataenricher import BaseMetadataEnricher
 from wrench.pipeline.config import (
     PipelineRunner,
     SensorRegistrationPipelineConfig,
@@ -23,7 +23,7 @@ class SensorRegistrationPipeline:
         self,
         harvester: BaseHarvester,
         grouper: BaseGrouper,
-        metadatabuilder: BaseMetadataBuilder,
+        metadataenricher: BaseMetadataEnricher,
         cataloger: BaseCataloger,
         scheduler_config: SchedulerConfig | None = None,
     ):
@@ -32,7 +32,7 @@ class SensorRegistrationPipeline:
                 # argument type are fixed in the Config object
                 harvester_config=harvester,  # type: ignore[arg-type]
                 grouper_config=grouper,  # type: ignore[arg-type]
-                metadatabuilder_config=metadatabuilder,  # type: ignore[arg-type]
+                metadataenricher_config=metadataenricher,  # type: ignore[arg-type]
                 cataloger_config=cataloger,  # type: ignore[arg-type]
             )
         except (ValidationError, ValueError) as e:

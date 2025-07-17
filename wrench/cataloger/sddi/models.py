@@ -2,6 +2,8 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, computed_field
 
+from wrench.utils.sanitization import sanitize_ckan_name
+
 
 class SDDICategory(Enum):
     online_service = "online-service"
@@ -70,7 +72,7 @@ class DeviceGroup(SDDIDataset):
         resources: list = [],
     ) -> "DeviceGroup":
         # Get all fields from api_service except 'groups' and 'resources'
-        ckan_name = name.lower().strip().replace(" ", "_")
+        ckan_name = sanitize_ckan_name(name, fallback_prefix="device_group")
         data = online_service.model_dump(exclude={"groups", "resources"})
         data.update(
             {

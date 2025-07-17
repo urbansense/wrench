@@ -26,16 +26,17 @@ from wrench.models import Device, Group
 class TELEClassGrouper(BaseGrouper):
     """Main class for taxonomy-enhanced text classification.
 
-    This class provides functionality for classifying documents using a taxonomy-enhanced
-    approach that combines LLM-based enrichment with corpus-based classification.
+    This class provides functionality for classifying documents using a taxonomy-
+    enhanced approach that combines LLM-based enrichment with corpus-based
+    classification.
 
     Attributes:
         config (TELEClassConfig): Configuration settings for the classifier.
-        taxonomy_manager (TaxonomyManager): Manages taxonomy operations and relationships.
+        taxonomy_manager (TaxonomyManager): Manages taxonomy relationships.
         encoder (SentenceTransformer): Model for encoding text into embeddings.
         llm_enricher (LLMEnricher): Handles LLM-based enrichment operations.
         corpus_enricher (CorpusEnricher): Handles corpus-based enrichment operations.
-        enriched_classes (list[EnrichedClass]): List of classes with their enriched terms.
+        enriched_classes (list[EnrichedClass]): Classes with their enriched terms.
         cache (TELEClassCache, optional): Caches intermediate results if enabled.
         logger (Logger): Logger instance for this class.
     """
@@ -70,10 +71,8 @@ class TELEClassGrouper(BaseGrouper):
 
         # initialize empty set of terms for all classes, embeddings are not yet set here
         self.enriched_classes = [
-            EnrichedClass(
-                class_name=class_name, class_description=class_description, terms=set()
-            )
-            for class_name, class_description in self.taxonomy_manager.get_all_classes_with_description().items()
+            EnrichedClass(class_name=name, class_description=description, terms=set())
+            for name, description in self.taxonomy_manager.get_cls_with_desc().items()
         ]
         # Initialize cache
         self.cache = TELEClassCache(config.cache.directory)
@@ -224,7 +223,7 @@ class TELEClassGrouper(BaseGrouper):
 
         return self.classifier_manager.predict(text)
 
-    def group_items(self, devices: list[Device]) -> list[Group]:
+    def group_devices(self, devices: list[Device]) -> list[Group]:
         """
         Groups a collection of documents into predefined categories.
 

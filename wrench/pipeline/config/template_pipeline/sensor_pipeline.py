@@ -3,7 +3,7 @@ from typing import ClassVar, Literal
 from wrench.components.cataloger import Cataloger
 from wrench.components.grouper import Grouper
 from wrench.components.harvester import Harvester
-from wrench.components.metadatabuilder import MetadataBuilder
+from wrench.components.metadataenricher import MetadataEnricher
 from wrench.pipeline.config.object_config import ComponentType
 from wrench.pipeline.config.template_pipeline.base import TemplatePipelineConfig
 from wrench.pipeline.config.types import PipelineType
@@ -16,13 +16,13 @@ class SensorRegistrationPipelineConfig(TemplatePipelineConfig):
     COMPONENTS: ClassVar[list[str]] = [
         "harvester",
         "grouper",
-        "metadatabuilder",
+        "metadataenricher",
         "cataloger",
     ]
 
     harvester: ComponentType | None = None
     grouper: ComponentType | None = None
-    metadatabuilder: ComponentType | None = None
+    metadataenricher: ComponentType | None = None
     cataloger: ComponentType | None = None
 
     template_: Literal[PipelineType.SENSOR_PIPELINE] = PipelineType.SENSOR_PIPELINE
@@ -33,8 +33,8 @@ class SensorRegistrationPipelineConfig(TemplatePipelineConfig):
     def _get_grouper(self) -> Grouper:
         return Grouper(grouper=self.get_default_grouper())
 
-    def _get_metadatabuilder(self) -> MetadataBuilder:
-        return MetadataBuilder(metadatabuilder=self.get_default_metadatabuilder())
+    def _get_metadataenricher(self) -> MetadataEnricher:
+        return MetadataEnricher(metadataenricher=self.get_default_metadataenricher())
 
     def _get_cataloger(self) -> Cataloger:
         return Cataloger(cataloger=self.get_default_cataloger())
@@ -54,7 +54,7 @@ class SensorRegistrationPipelineConfig(TemplatePipelineConfig):
         connections.append(
             ConnectionDefinition(
                 start="harvester",
-                end="metadatabuilder",
+                end="metadataenricher",
                 input_config={
                     "devices": "harvester.devices",
                     "operations": "harvester.operations",
@@ -64,17 +64,17 @@ class SensorRegistrationPipelineConfig(TemplatePipelineConfig):
         connections.append(
             ConnectionDefinition(
                 start="grouper",
-                end="metadatabuilder",
+                end="metadataenricher",
                 input_config={"groups": "grouper.groups"},
             )
         )
         connections.append(
             ConnectionDefinition(
-                start="metadatabuilder",
+                start="metadataenricher",
                 end="cataloger",
                 input_config={
-                    "service_metadata": "metadatabuilder.service_metadata",
-                    "group_metadata": "metadatabuilder.group_metadata",
+                    "service_metadata": "metadataenricher.service_metadata",
+                    "group_metadata": "metadataenricher.group_metadata",
                 },
             )
         )

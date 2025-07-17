@@ -1,13 +1,14 @@
 from collections import defaultdict
 
 import community as cd
+import matplotlib.pyplot as plt
 import networkx as nx
 
 from .models import Cluster
 
 
 def build_cooccurence_network(
-    keywords_per_doc: list[list[str]], top_n=7
+    keywords_per_doc: list[list[str]], top_n=7, resolution=1
 ) -> list[Cluster]:
     """Builds a keyword co-occurrence network and visualizes it.
 
@@ -18,6 +19,9 @@ def build_cooccurence_network(
         keywords_per_doc: A list of lists, where each inner list contains keywords
                           for a specific document.
         top_n: Number of most central keywords from the cluster. Defaults to 7
+        resolution:  Will change the size of the communities, default to 1. represents
+            the time described in "Laplacian Dynamics and Multiscale Modular Structure
+            in Networks", R. Lambiotte, J.-C. Delvenne, M. Barahona
 
     Returns:
         A dictionary where keys are cluster identifiers (e.g., 'cluster_0') and
@@ -33,7 +37,7 @@ def build_cooccurence_network(
                 else:
                     G.add_edge(kw, other, weight=1)
 
-    partition = cd.best_partition(G, weight="weight")
+    partition = cd.best_partition(G, weight="weight", resolution=resolution)
 
     comms = defaultdict(list)
     for node, comm_id in partition.items():
@@ -49,3 +53,37 @@ def build_cooccurence_network(
     return [
         Cluster(cluster_id=id, keywords=keywords) for id, keywords in essential.items()
     ]
+
+
+def visualize_cooccurence_network(G: nx.Graph, partition: dict):
+    """
+    Visualizes the cooccurence graph.
+
+    Displays the detected partitions in the graph.
+
+    Args:
+        G (nx.Graph): Graph containing nodes of keywords.
+        partition (dict): Partitioned nodes.
+    """
+    centrality = dict(G.degree(weight="weight"))
+
+    # Generate positions for all nodes
+    pos = nx.spring_layout(G, weight="weight", seed=42)
+
+    # Extract community IDs and centrality values
+    colors = [partition[node] for node in G.nodes()]
+    # Adjust node sizes: ensure a minimum size and scale by centrality
+    sizes = [max(100, centrality.get(node, 0) * 300) for node in G.nodes()]
+
+    # Draw nodes
+    nx.draw_networkx_nodes(G, pos, node_color=colors, node_size=sizes, cmap=plt.cm.Set3)
+
+    # Draw edges
+    nx.draw_networkx_edges(G, pos, alpha=0.5)
+
+    # Draw labels
+    nx.draw_networkx_labels(G, pos, font_size=6)
+
+    # Display the plot
+    plt.axis("off")
+    plt.show()

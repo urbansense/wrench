@@ -1,4 +1,5 @@
 import asyncio
+import time
 import uuid
 from typing import Any, Optional
 
@@ -218,7 +219,8 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             # Check target parameter exists
             if target_param not in component.component_inputs:
                 raise ValidationError(
-                    f"Parameter '{target_param}' is not a valid input for component '{node.name}'"
+                    f"""Parameter '{target_param}' is not a valid input for component
+                        '{node.name}'"""
                 )
 
             # Check if already mapped
@@ -241,7 +243,8 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
                 source_node = self._nodes[source_component]
                 if output_field not in source_node.component.component_outputs:
                     raise ValidationError(
-                        f"Output field '{output_field}' does not exist in component '{source_component}'"
+                        f"""Output field '{output_field}' does not exist in component
+                              '{source_component}'"""
                     )
 
                     # Check types are compatible
@@ -297,13 +300,17 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
             for param in missing:
                 if param not in component_inputs:
                     raise ValidationError(
-                        f"Required parameter '{param}' for component '{component_name}' not provided"
+                        f"""Required parameter '{param}' for component
+                         '{component_name}' not provided"""
                     )
 
     async def run(self, inputs: dict[str, Any] | None = None) -> PipelineResult:
         """Execute the pipeline."""
+        pipeline_start_time = time.time()
         inputs = inputs or {}
         run_id = str(uuid.uuid4())
+
+        self.logger.info(f"Starting pipeline run {run_id}")
 
         # Initialization phase
         await self._initialize_run(run_id, inputs)
@@ -332,6 +339,11 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
 
         success = run_status in (PipelineRunStatus.COMPLETED, PipelineRunStatus.STOPPED)
         final_results = await self._collect_results(run_id)
+
+        pipeline_execution_time = time.time() - pipeline_start_time
+        self.logger.info(
+            f"Pipeline run {run_id} completed in {pipeline_execution_time:.2f} seconds"
+        )
 
         return PipelineResult(
             run_id=run_id,

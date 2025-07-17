@@ -1,5 +1,3 @@
-from typing import Sequence
-
 from sentence_transformers import SentenceTransformer
 
 from wrench.grouper.teleclass.core.models import Document
@@ -11,10 +9,10 @@ class ModelDocumentLoader:
     A class to load and process documents that are instances of Device.
 
     Attributes:
-        documents (Sequence[Device]): A list of dict representing device instances.
+        documents (list[Device]): A list of dict representing device instances.
 
     Methods:
-        __init__(documents: Sequence[Device]):
+        __init__(documents: list[Device]):
             Initializes the ModelDocumentLoader with a list of device instances.
 
         load(encoder: SentenceTransformer) -> list[DocumentMeta]:
@@ -22,12 +20,12 @@ class ModelDocumentLoader:
             and returns a list of DocumentMeta instances.
     """
 
-    def __init__(self, documents: Sequence[Device]):
+    def __init__(self, documents: list[Device]):
         """
         Initialize the DocumentLoader with a list of devices.
 
         Args:
-            documents (Sequence[Device]): A list of devices.
+            documents (list[Device]): A list of devices.
 
         Raises:
             TypeError: If documents is not a list or if any element
@@ -37,7 +35,8 @@ class ModelDocumentLoader:
             isinstance(doc, Device) for doc in documents
         ):
             raise TypeError(
-                f"""documents must be a list of Device instances, got list of {type(documents)}"""
+                f"""documents must be a list of Device instances, got list of
+                    {type(documents)}"""
             )
         self.documents = documents
 

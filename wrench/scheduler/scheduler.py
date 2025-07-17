@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any
 
@@ -8,7 +9,17 @@ from apscheduler.triggers.interval import IntervalTrigger
 from wrench.pipeline.config.runner import PipelineRunner
 
 
-class CronScheduler:
+class Scheduler(ABC):
+    @abstractmethod
+    def start(self):
+        pass
+
+    @abstractmethod
+    def shutdown(self):
+        pass
+
+
+class CronScheduler(Scheduler):
     def __init__(
         self,
         pipeline_runner: PipelineRunner,
@@ -45,7 +56,8 @@ class CronScheduler:
             )
         else:
             raise ValueError(
-                "Either a valid cron_expression or at least one time parameter (e.g., year, month, day, etc.) must be provided."
+                """Either a valid cron_expression or at least one time parameter must
+                    be provided."""
             )
         self.scheduler.add_job(
             func=pipeline_runner.run,
@@ -61,7 +73,7 @@ class CronScheduler:
         self.scheduler.shutdown()
 
 
-class IntervalScheduler:
+class IntervalScheduler(Scheduler):
     def __init__(
         self,
         pipeline_runner: PipelineRunner,

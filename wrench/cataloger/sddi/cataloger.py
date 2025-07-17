@@ -1,8 +1,7 @@
 from datetime import datetime
-from typing import Sequence
 
 from ckanapi import RemoteCKAN
-from ckanapi.errors import NotFound
+from ckanapi.errors import NotFound, ValidationError
 
 from wrench.cataloger.base import BaseCataloger
 from wrench.models import CommonMetadata
@@ -14,7 +13,7 @@ DEFAULT_OWNER = "lehrstuhl-fur-geoinformatik"
 
 class SDDICataloger(BaseCataloger):
     """
-    SDDICataloger is a class responsible for interacting with a SDDI CKAN server to register and manage datasets.
+    Interact with a SDDI CKAN server to register and manage datasets.
 
     :param url: The URL of the SDDI CKAN server.
     :param api_key: The API key for authenticating with the SDDI CKAN server.
@@ -48,7 +47,7 @@ class SDDICataloger(BaseCataloger):
     def register(
         self,
         service: CommonMetadata,
-        groups: Sequence[CommonMetadata],
+        groups: list[CommonMetadata],
         managed_entries: list[str] | None,
     ) -> list[str]:
         online_service = self._create_online_service(service)
@@ -65,34 +64,52 @@ class SDDICataloger(BaseCataloger):
                 self.logger.info("Successfully registered API Service")
         except NotFound:
             self.logger.error(
-                "No entries found for %s, please clear the .pipeline_store cache and rerun the pipeline",
+                """No entries found for %s, please clear the .pipeline_store cache and
+                    rerun the pipeline""",
                 online_service.name,
             )
+        except ValidationError as e:
+            self.logger.error(
+                "CKAN validation error for service %s: %s",
+                online_service.name,
+                str(e),
+            )
+            raise
 
         if groups:
             try:
                 for d in device_groups:
                     self.logger.debug("Processing device group: %s", d.name)
-                    if d.name in self._registries:
-                        self._update_device_group(d)
-                        self.logger.debug(
-                            "Successfully updated Device Group: %s", d.name
+                    try:
+                        if d.name in self._registries:
+                            self._update_device_group(d)
+                            self.logger.debug(
+                                "Successfully updated Device Group: %s", d.name
+                            )
+                        else:
+                            self._register_device_group(d)
+                            self.logger.debug(
+                                "Successfully registered Device Group: %s", d.name
+                            )
+                            self._register_relationship(
+                                api_service_name=online_service.name,
+                                device_group_name=d.name,
+                            )
+                            self.logger.info(
+                                "Created relationships for device_group %s", d.name
+                            )
+                    except ValidationError as e:
+                        self.logger.error(
+                            "CKAN validation error for device group %s: %s",
+                            d.name,
+                            str(e),
                         )
-                    else:
-                        self._register_device_group(d)
-                        self.logger.debug(
-                            "Successfully registered Device Group: %s", d.name
-                        )
-                        self._register_relationship(
-                            api_service_name=online_service.name,
-                            device_group_name=d.name,
-                        )
-                        self.logger.info(
-                            "Created relationships for device_group %s", d.name
-                        )
+                        # Continue processing other groups instead of failing completely
+                        continue
             except NotFound:
                 self.logger.error(
-                    "No entries found for %s, please clear the .pipeline_store cache and rerun the pipeline",
+                    """No entries found for %s, please clear the .pipeline_store cache
+                        and rerun the pipeline""",
                     d.name,
                 )
 
@@ -167,7 +184,7 @@ class SDDICataloger(BaseCataloger):
         )
 
     def _create_device_groups(
-        self, metadata: Sequence[CommonMetadata]
+        self, metadata: list[CommonMetadata]
     ) -> list[DeviceGroup]:
         DOMAIN_GROUPS = [
             "administration",

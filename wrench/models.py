@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import cached_property
 from typing import Any, TypeVar
 
 import geojson
@@ -59,39 +60,40 @@ class Location(BaseModel):
         return list(coords(self.location))
 
 
-class Item(BaseModel):
-    model_config = {"extra": "allow"}
-    id: str
-    content: dict[str, Any]
-
-
 class TimeFrame(BaseModel):
     start_time: datetime
     latest_time: datetime
 
 
 class Device(BaseModel):
-    """
-    Device model representing an entity with an ID.
-
-    Attributes:
-        id (str): The unique identifier for the item.
-    """
+    """Device model representing an entity with an ID."""
 
     id: str
     name: str
     description: str
-    time_frame: TimeFrame | None  # if there are no datastreams
-    locations: list[Location]
     datastreams: set[str]
-    sensor_names: set[str]
+    sensors: set[str]
     observed_properties: set[str]
+    locations: list[Location]
+    time_frame: TimeFrame | None  # if there are no datastreams
 
     properties: dict[str, Any] | None = None
 
     _raw_data: dict[str, Any]
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
+
+    def to_string(self, exclude: list[str] | None = None):
+        data = self.model_dump(exclude=set(exclude))
+        return "\n".join([str(val) for attr, val in data.items()]).strip()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Device):
+            return NotImplemented
+        return self.id == other.id
+
+    def __hash__(self) -> int:
+        return hash(self.id)
 
 
 class CommonMetadata(BaseModel):
@@ -161,3 +163,18 @@ class Group(BaseModel):
     # optional only for hierarchical classification
     parent_classes: set[str] = set()
     "Set of parent classes of this group,for hierarchical classification tasks."
+
+    @cached_property
+    def representative_devices(self) -> list[Device]:
+        if self.devices is None:
+            raise ValueError("Group must be instantiated with devices")
+        unique_ds = set()
+        repr_device = set()
+        for d in self.devices:
+            for ds in d.datastreams:
+                if ds in unique_ds:
+                    continue
+                unique_ds.add(ds)
+                repr_device.add(d)
+
+        return list(repr_device)[:3]

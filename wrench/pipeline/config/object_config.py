@@ -23,11 +23,12 @@ from wrench.cataloger import BaseCataloger
 from wrench.grouper import BaseGrouper
 from wrench.harvester import BaseHarvester
 from wrench.log import logger
-from wrench.metadatabuilder import BaseMetadataBuilder
+from wrench.metadataenricher import BaseMetadataEnricher
 from wrench.pipeline.component import Component
 from wrench.pipeline.config.base import AbstractConfig
 from wrench.pipeline.config.param_resolver import (
     ParamConfig,
+    _convert_dict_to_param_config,
 )
 
 T = TypeVar("T")
@@ -58,7 +59,7 @@ def issubclass_safe(
 
 
 class ObjectConfig(AbstractConfig, Generic[T]):
-    """A config to represent an object from a class name and its constructor parameters."""
+    """Config of an object from a class name and its constructor parameters."""
 
     """Path to class to be instantiated."""
     class_: str | None = Field(default=None, validate_default=True)
@@ -82,11 +83,21 @@ class ObjectConfig(AbstractConfig, Generic[T]):
     @field_validator("params_")
     @classmethod
     def validate_params(cls, params_: dict[str, Any]) -> dict[str, Any]:
-        """Make sure all required parameters are provided."""
+        """
+        Make sure all required parameters are provided.
+
+        Recursively converts nested parameters
+        """
         for p in cls.REQUIRED_PARAMS:
             if p not in params_:
                 raise ValueError(f"Missing parameter {p}")
-        return params_
+
+        # Recursively convert nested dictionaries with resolver_ keys to ParamConfig
+        converted_params = {}
+        for key, value in params_.items():
+            converted_params[key] = _convert_dict_to_param_config(value)
+
+        return converted_params
 
     def get_module(self) -> str:
         return self.DEFAULT_MODULE
@@ -98,13 +109,13 @@ class ObjectConfig(AbstractConfig, Generic[T]):
     def _get_class(cls, class_path: str, optional_module: Optional[str] = None) -> type:
         """Get class from string and an optional module.
 
-        Will first try to import the class from `class_path` alone. If it results in an ImportError,
-        will try to import from `f'{optional_module}.{class_path}'`
+        Will first try to import the class from `class_path` alone. If it results in an
+        ImportError, will try to import from `f'{optional_module}.{class_path}'`
 
         Args:
             class_path (str): Class path with format 'my_module.MyClass'.
-            optional_module (Optional[str]): Optional module path.
-                Used to provide a default path for some known objects and simplify the notation.
+            optional_module (Optional[str]): Optional module path. Used to provide a
+            default path for some known objects and simplify the notation.
 
         Raises:
             ValueError: if the class can't be imported, even using the optional module.
@@ -138,14 +149,15 @@ class ObjectConfig(AbstractConfig, Generic[T]):
         klass = self._get_class(self.class_, self.get_module())
         if not issubclass_safe(klass, self.get_interface()):
             raise ValueError(
-                f"Invalid class '{klass}'. Expected a subclass of '{self.get_interface()}'"
+                f"""Invalid class '{klass}'. Expected a subclass of
+                    '{self.get_interface()}'"""
             )
         params = self.resolve_params(self.params_)
         try:
             obj = klass(**params)
         except TypeError as e:
             self._logger.error(
-                "OBJECT_CONFIG: failed to instantiate object due to improperly configured parameters"
+                "failed to instantiate object due to improperly configured parameters"
             )
             raise e
         return cast(T, obj)
@@ -203,28 +215,30 @@ class GrouperType(RootModel):  # type: ignore[type-arg]
         return self.root.parse(resolved_data)
 
 
-class MetadataBuilderConfig(ObjectConfig[BaseMetadataBuilder]):
-    """Configuration for any BaseMetadataBuilder object.
+class MetadataEnricherConfig(ObjectConfig[BaseMetadataEnricher]):
+    """Configuration for any BaseMetadataEnricher object.
 
-    By default, will try to import from `wrench.metadatabuilder`.
+    By default, will try to import from `wrench.metadataenricher`.
     """
 
-    DEFAULT_MODULE = "wrench.metadatabuilder"
-    INTERFACE = BaseMetadataBuilder
+    DEFAULT_MODULE = "wrench.metadataenricher"
+    INTERFACE = BaseMetadataEnricher
 
 
-class MetadataBuilderType(RootModel):  # type: ignore[type-arg]
-    """A model to wrap BaseMetadataBuilder and MetadataBuilderConfig objects.
+class MetadataEnricherType(RootModel):  # type: ignore[type-arg]
+    """A model to wrap BaseMetadataEnricher and MetadataEnricherConfig objects.
 
-    The `parse` method always returns an object inheriting from BaseMetadataBuilder.
+    The `parse` method always returns an object inheriting from BaseMetadataEnricher.
     """
 
-    root: Union[BaseMetadataBuilder, MetadataBuilderConfig]
+    root: Union[BaseMetadataEnricher, MetadataEnricherConfig]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> BaseMetadataBuilder:
-        if isinstance(self.root, BaseMetadataBuilder):
+    def parse(
+        self, resolved_data: dict[str, Any] | None = None
+    ) -> BaseMetadataEnricher:
+        if isinstance(self.root, BaseMetadataEnricher):
             return self.root
         return self.root.parse(resolved_data)
 

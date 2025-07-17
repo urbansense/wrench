@@ -1,7 +1,7 @@
 import datetime
 from collections import defaultdict
 from enum import Enum
-from typing import Any, Awaitable, Protocol, Union
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -71,56 +71,6 @@ class RunResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class EventType(Enum):
-    PIPELINE_STARTED = "PIPELINE_STARTED"
-    TASK_STARTED = "TASK_STARTED"
-    TASK_FINISHED = "TASK_FINISHED"
-    PIPELINE_FINISHED = "PIPELINE_FINISHED"
-
-    @property
-    def is_pipeline_event(self) -> bool:
-        return self in [EventType.PIPELINE_STARTED, EventType.PIPELINE_FINISHED]
-
-    @property
-    def is_task_event(self) -> bool:
-        return self in [EventType.TASK_STARTED, EventType.TASK_FINISHED]
-
-
-class Event(BaseModel):
-    event_type: EventType
-    run_id: str
-    """Pipeline unique run_id, same as the one returned in PipelineResult after pipeline.run"""
-    timestamp: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
-    )
-    message: str | None = None
-    """Optional information about the status"""
-    payload: dict[str, Any] | None = None
-    """Input or output data depending on the type of event"""
-
-
-class PipelineEvent(Event):
-    pass
-
-
-class TaskEvent(Event):
-    task_name: str
-    """Name of the task as defined in pipeline.add_component"""
-
-
-class EventCallbackProtocol(Protocol):
-    def __call__(self, event: Event) -> Awaitable[None]: ...
-
-
-EntityInputType = Union[str, dict[str, Union[str, list[dict[str, str]]]]]
-RelationInputType = Union[str, dict[str, Union[str, list[dict[str, str]]]]]
-"""Types derived from the SchemaEntity and SchemaRelation types,
- so the possible types for dict values are:
-- str (for label and description)
-- list[dict[str, str]] (for properties)
-"""
-
-
 class OperationType(str, Enum):
     ADD = "add"
     UPDATE = "update"
@@ -133,5 +83,4 @@ class Operation(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     type: OperationType
-    device_id: str
     device: Device

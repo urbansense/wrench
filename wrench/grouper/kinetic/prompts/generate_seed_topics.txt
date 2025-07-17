@@ -1,0 +1,60 @@
+You are an expert in organizing urban sensor keyword clusters into meaningful topic hierarchies.
+
+Your task is to process a set of keyword clusters. For each cluster, do the following:
+
+### 1. Merge Semantically Equivalent Clusters
+- If two or more clusters represent the same concept, merge them into a single cluster.
+  - Merge: ["vehicle counting"] and ["vehicle counts"]
+  - Do not merge: ["vehicle counting"] and ["bicycle counting"] — they are related, but distinct
+- Merging is based on semantic equivalence, not general similarity.
+
+### 2. Discard Non-Informative or Irrelevant Clusters
+- Discard clusters that contain only:
+  - Numbers or IDs (e.g., ["0239-s2h9-", "9104"])
+  - Stopwords or noise (e.g., ["is", "and", "value"])
+  - Tokens with no clear meaning or urban sensor relevance
+
+### 3. Organize Remaining Clusters into a Two-Level Topic Hierarchy
+- For each valid cluster, assign it to at least one topic from the fixed list of topics below.
+- You may only create one level of subtopics under these root topics. Do not go deeper.
+- Use your judgment to name each subtopic clearly in English.
+- Write a short English description explaining what the subtopic covers.
+- Retain the original keyword list as-is — do not translate it.
+- Always keep the original cluster ID intact and associated with the subtopic.
+
+---
+
+### Root Topics (only assign topics under these):
+1. mobility — traffic, vehicles, pedestrians, routing, congestion, parking, bicycle, loop detector, shared mobility
+2. environment — air quality, pollution, noise, climate, soil, water quality, water level, weather, co2, no2, nox, particulate matter
+3. energy — electricity, smart grid, solar panels, energy meters, battery storage, load, KwH, watt, volt
+4. administration — waste bins, streetlights, municipal services, maintenance, urban governance, winter service
+5. health — epidemics, health risks, respiratory, UV exposure, public safety, sanitation
+6. tourism — landmarks, visitor flow, sightseeing, museum traffic, event density, guides
+7. living — indoor comfort, residences, appliances, smart homes, privacy, domestic living
+8. education — classrooms, attendance, learning spaces, education tech, student presence
+9. construction — scaffolding, cranes, vibration, site dust, structural load, worksite safety
+10. culture — galleries, exhibits, audience tracking, preservation, performance spaces
+11. trade — retail, inventory, shelf analytics, shopping behavior, checkout zones
+12. craft — workshops, tools, fabrication, manual labor, artisan, material flow
+13. work — occupational health, ergonomics, factory, office activity, compliance
+14. agriculture — soil moisture, crop monitoring, irrigation, yield, greenhouses, farm plots
+
+---
+
+### Output Requirements:
+For each subtopic you create:
+- Topic Name: English, clear, descriptive
+- Topic Description: English, short explanation
+- Parent Topic: One or more from the fixed list above (must match exactly)
+- Cluster ID: Preserve original
+- Keywords: Keep in original language — do not translate
+
+---
+
+### Important Rules Recap:
+- Only merge semantically identical clusters.
+- Discard clusters that contain only noise, IDs, or meaningless content.
+- Create subtopics only under the fixed root topics — no new top-level categories.
+- Keep the hierarchy at exactly two levels: root topic > subtopic.
+- Keep the original cluster ID and keywords unchanged.

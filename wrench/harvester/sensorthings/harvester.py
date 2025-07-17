@@ -2,11 +2,10 @@ from datetime import datetime
 from typing import Any
 
 from wrench.harvester.base import BaseHarvester
-from wrench.harvester.sensorthings.translator import TranslationService
 from wrench.models import Device, TimeFrame
 
 from .client import SensorThingsClient
-from .config import PaginationConfig, TranslatorConfig
+from .config import PaginationConfig
 from .models import Thing
 
 
@@ -22,7 +21,6 @@ class SensorThingsHarvester(BaseHarvester):
         self,
         base_url: str,
         pagination_config: PaginationConfig | dict[str, Any] = {},
-        translator_config: TranslatorConfig | dict[str, Any] = {},
     ):
         """
         Initialize the harvester.
@@ -31,32 +29,24 @@ class SensorThingsHarvester(BaseHarvester):
             base_url (str): Base SensorThings URL to harvest items from.
             pagination_config (PaginationConfig | dict[str, Any]): Pagination config
                 for fetching items.
-            translator_config (TranslationConfig | dict[str, Any]): Optional translator config.
         """
         super().__init__()
         pagination_config = PaginationConfig.model_validate(pagination_config)
-        translator_config = TranslatorConfig.model_validate(translator_config)
 
         self.client = SensorThingsClient(base_url, pagination_config)
 
-        self.translator = TranslationService.from_config(translator_config)
-
     def fetch_items(self) -> list[Thing]:
         """
-        Fetches items with optional translation.
+        Fetches items.
 
         Returns:
-            things (list[Thing]) : List of things, translated if translation
-                is configured.
+            things (list[Thing]) : List of things.
         """
         things = self.client.fetch_things()
 
-        if not self.translator:
-            return things
+        return things
 
-        return [self.translator.translate(thing) for thing in things]
-
-    def return_items(self) -> list[Device]:
+    def return_devices(self) -> list[Device]:
         """Returns things."""
         things = self.fetch_items()
 
@@ -83,12 +73,12 @@ class SensorThingsHarvester(BaseHarvester):
                 locations=thing.location,
                 time_frame=time_frame,
                 datastreams={ds.name for ds in thing.datastreams},
-                sensor_names={ds.sensor.name for ds in thing.datastreams},
+                sensors={ds.sensor.name for ds in thing.datastreams},
                 observed_properties={
                     ds.observed_property.name for ds in thing.datastreams
                 },
                 properties=thing.properties,
-                raw_data=thing.model_dump(),
+                _raw_data=thing.model_dump(),
             )
 
             devices.append(device)

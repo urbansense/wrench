@@ -1,7 +1,0 @@
-The following dictionary has keys being the clusters and values being the keywords which builds the cluster.
-
-Please create appropriate urban sensor topics based on each cluster. Do not generate a topic for Information Technology if the category would be "Sensors".
-
-The representative keywords and documents for each clusters are listed here:
-
-{keywords_and_docs}

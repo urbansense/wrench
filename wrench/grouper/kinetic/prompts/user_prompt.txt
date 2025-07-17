@@ -1,0 +1,21 @@
+# TASK: HIERARCHICAL TOPIC GENERATION FROM CLUSTERED KEYWORDS
+
+You must process the following keyword cluster data and generate a structured set of topics according to the instructions defined in the system prompt.
+
+## CRITICAL RULES (STRICT COMPLIANCE REQUIRED)
+- Follow ALL logic and constraints from the system prompt exactly
+- Keep original cluster IDs intact and associated with the output topics
+- Keep all keywords in their original language — DO NOT TRANSLATE keywords
+- Generate topic names and descriptions in ENGLISH ONLY
+- Assign `parent_topics` using ONLY the allowed root topic names
+- Merge semantically equivalent clusters into one topic
+- Discard clusters that are non-informative, noisy, or meaningless
+- Maintain a strict 2-level hierarchy: root topic > subtopic
+- DO NOT introduce new root topics or additional hierarchy levels
+
+## CLUSTER INPUT:
+{keywords_and_docs}
+
+## OUTPUT FORMAT
+You MUST return your result as valid JSON, following the TopicList schema.
+Do NOT include extra text, comments, or explanations. Return JSON only.

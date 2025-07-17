@@ -20,21 +20,21 @@ We provide the following Groupers with the framework:
 
 * [TELEClassGrouper](./API_reference/grouper.md#wrench.grouper.TELEClassGrouper)
 
-## Metadata Builder
+## Metadata Enricher
 
-The MetadataBuilder builds both spatial and temporal metadata for the list of items returned by the harvester and also the list of grouped items returned by the grouper. The Wrench framework provides an interface `BaseMetadataBuilder` with the abstract methods `build_service_metadata` and `build_group_metadata`.
+The MetadataEnricher builds both spatial and temporal metadata for the list of items returned by the harvester and also the list of grouped items returned by the grouper. The Wrench framework provides an interface `BaseMetadataEnricher` with the abstract methods `build_service_metadata` and `build_group_metadata`.
 
 `build_service_metadata` builds the CommonMetadata for the items returned by the harvester, providing metadata for the API service itself, `build_group_metadata` builds the CommonMetadata for each Group returned by the grouper and provides metadata for each group.
 
-We provide the following metadata builders with the framework:
+We provide the following metadata enrichers with the framework:
 
-* [SensorThingsMetadataBuilder](./API_reference/MetadataBuilder.md#wrench.metadatabuilder.SensorThingsMetadataBuilder)
+* [SensorThingsMetadataEnricher](./API_reference/MetadataEnricher.md#wrench.metadataenricher.SensorThingsMetadataEnricher)
 
-> Note that the MetadataBuilder must always be connected to the same type of Harvester, since typically the data model for each harvester type is different, connecting a MetadataBuilder to a different type of Harvester will not work.
+> Note that the MetadataEnricher must always be connected to the same type of Harvester, since typically the data model for each harvester type is different, connecting a MetadataEnricher to a different type of Harvester will not work.
 
 ## Cataloger
 
-The Cataloger is responsible for cataloging both the service and the group metadata returned by the Metadata Builder and enriches the Catalog with useful metadata information about the source data being referenced. The Wrench framework provides an interface `BaseCataloger` with the abstract methods `register`, accepting both the service and group metadata as input and builds entries for each of the service and groups. Framework-specific features such as connecting entries should be implemented in this register function to maximize the discoverability of the entries in the catalog.
+The Cataloger is responsible for cataloging both the service and the group metadata returned by the Metadata Enricher and enriches the Catalog with useful metadata information about the source data being referenced. The Wrench framework provides an interface `BaseCataloger` with the abstract methods `register`, accepting both the service and group metadata as input and builds entries for each of the service and groups. Framework-specific features such as connecting entries should be implemented in this register function to maximize the discoverability of the entries in the catalog.
 
 We provide the following Catalogers with the framework:
 
