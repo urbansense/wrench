@@ -135,4 +135,4 @@ class YAKEAdapter(KeywordExtractorAdapter):
 
         # Take top_n results and extract keywords
         sorted_results = sorted(results, key=lambda x: x[0])[:top_n]
-        return [keyword for score, keyword in sorted_results]  # type: ignore
+        return [keyword for keyword, _ in sorted_results]  # type: ignore
