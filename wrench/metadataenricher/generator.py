@@ -58,7 +58,7 @@ class ContentGenerator:
         prompt = """
             The device group name is **{group_name}**, it contains devices found in the
             source API service **{title}**. Here are some information about the devices
-            within this group
+            within this group. Number of total devices: **{num_devices}**
 
             {data}
 
@@ -74,6 +74,7 @@ class ContentGenerator:
                 "content": prompt.format(
                     group_name=group.name,
                     title=service_metadata.title,
+                    num_devices=len(group.devices),
                     data=[
                         dev.model_dump_json(
                             include=[
@@ -84,7 +85,7 @@ class ContentGenerator:
                                 "observed_properties",
                             ]
                         )
-                        for dev in group.devices[0 : min(len(group.devices), 3)]
+                        for dev in group.representative_devices
                     ],
                 ),
             },
