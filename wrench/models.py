@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import cached_property
 from typing import Any, TypeVar
 
 import geojson
@@ -162,3 +163,18 @@ class Group(BaseModel):
     # optional only for hierarchical classification
     parent_classes: set[str] = set()
     "Set of parent classes of this group,for hierarchical classification tasks."
+
+    @cached_property
+    def representative_devices(self) -> list[Device]:
+        if self.devices is None:
+            raise ValueError("Group must be instantiated with devices")
+        unique_ds = set()
+        repr_device = set()
+        for d in self.devices:
+            for ds in d.datastreams:
+                if ds in unique_ds:
+                    continue
+                unique_ds.add(ds)
+                repr_device.add(d)
+
+        return list(repr_device)[:3]
