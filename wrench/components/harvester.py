@@ -14,6 +14,7 @@ from wrench.pipeline.types import (
     Operation,
     OperationType,
 )
+from wrench.utils.performance import MemoryMonitor, log_performance_metrics
 
 
 class Harvester(Component):
@@ -34,11 +35,15 @@ class Harvester(Component):
         Raises:
             HarvesterError: If there's an issue retrieving items from the harvester
         """
+        monitor = MemoryMonitor()
         previous_devices = state.get("previous_devices")
 
         try:
-            # Fetch current items from the harvester
-            current_devices = self._harvester.return_devices()
+            with monitor.track_component("Harvester") as metrics:
+                # Fetch current items from the harvester
+                current_devices = self._harvester.return_devices()
+
+            log_performance_metrics(metrics, self.logger)
 
             if not previous_devices:
                 self.logger.info(
@@ -48,11 +53,13 @@ class Harvester(Component):
                     Operation(type=OperationType.ADD, device=item)
                     for item in current_devices
                 ]
-                return Items(
+                result = Items(
                     devices=current_devices,
                     operations=operations,
                     state={"previous_devices": current_devices},
                 )
+                result._performance_metrics = metrics
+                return result
 
             previous_devices = [
                 Device.model_validate(device) for device in previous_devices
@@ -80,11 +87,13 @@ class Harvester(Component):
                     stop_pipeline=True,
                 )
 
-            return Items(
+            result = Items(
                 devices=current_devices,
                 operations=operations,
                 state={"previous_devices": current_devices},
             )
+            result._performance_metrics = metrics
+            return result
 
         except Exception as e:
             self.logger.error(f"Error during harvester run: {e}")
