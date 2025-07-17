@@ -47,12 +47,13 @@ class SensorThingsMetadataEnricher(BaseMetadataEnricher):
         """For SensorThings, service URL is just the base URL."""
         return [self.base_url]
 
-    def _calculate_spatial_extent(self, devices: list[Device]) -> Any:
-        """Calculate spatial extent using SensorThings-specific calculators."""
-        if hasattr(self, "group_spatial_calculator"):
-            return self.group_spatial_calculator.calculate_extent(devices)
-        else:
-            return self.service_spatial_calculator.calculate_extent(devices)
+    def _calculate_service_spatial_extent(self, devices: list[Device]) -> Any:
+        """Calculate service spatial extent using SensorThings-specific calculators."""
+        return self.service_spatial_calculator.calculate_extent(devices)
+
+    def _calculate_group_spatial_extent(self, devices: list[Device]) -> Any:
+        """Calculate group spatial extent using SensorThings-specific calculators."""
+        return self.group_spatial_calculator.calculate_extent(devices)
 
     def _build_group_urls(self, devices: list[Device]) -> list[str]:
         """

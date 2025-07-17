@@ -5,6 +5,7 @@ from typing import Any
 from wrench.log import logger
 from wrench.models import CommonMetadata, Device, Group, TimeFrame
 from wrench.utils.config import LLMConfig
+from wrench.utils.sanitization import sanitize_ckan_name
 
 from .generator import Content, ContentGenerator
 
@@ -38,13 +39,13 @@ class BaseMetadataEnricher(ABC):
         Returns:
             CommonMetadata: Enriched metadata for the service
         """
-        geographic_extent = self._calculate_spatial_extent(devices)
+        geographic_extent = self._calculate_service_spatial_extent(devices)
         timeframe = self._calculate_timeframe(devices)
 
         self.metadata = CommonMetadata(
             endpoint_urls=self._build_service_urls(devices),
             title=self.title,
-            identifier=self.title.lower().strip().replace(" ", "_"),
+            identifier=sanitize_ckan_name(self.title, fallback_prefix="service"),
             description=self.description,
             spatial_extent=str(geographic_extent),
             temporal_extent=timeframe,
@@ -68,7 +69,7 @@ class BaseMetadataEnricher(ABC):
         Returns:
             CommonMetadata: Enriched metadata for the group
         """
-        geographic_extent = self._calculate_spatial_extent(group.devices)
+        geographic_extent = self._calculate_group_spatial_extent(group.devices)
         timeframe = self._calculate_timeframe(group.devices)
         endpoint_urls = self._build_group_urls(group.devices)
 
@@ -88,7 +89,7 @@ class BaseMetadataEnricher(ABC):
             content = Content(name=title, description=description)
 
         return CommonMetadata(
-            identifier=content.name.lower().strip().replace(" ", "_"),
+            identifier=sanitize_ckan_name(content.name, fallback_prefix="group"),
             title=content.name,
             description=content.description,
             endpoint_urls=endpoint_urls,
@@ -118,8 +119,13 @@ class BaseMetadataEnricher(ABC):
         pass
 
     @abstractmethod
-    def _calculate_spatial_extent(self, devices: list[Device]) -> Any:
-        """Calculate spatial extent for devices."""
+    def _calculate_service_spatial_extent(self, devices: list[Device]) -> Any:
+        """Calculate service spatial extent for devices."""
+        pass
+
+    @abstractmethod
+    def _calculate_group_spatial_extent(self, devices: list[Device]) -> Any:
+        """Calculate group spatial extent for devices."""
         pass
 
     def _calculate_timeframe(self, devices: list[Device]) -> TimeFrame:
