@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from wrench.log import logger
 from wrench.pipeline.stores import ResultStore
+from wrench.utils.performance import ComponentPerformanceMetrics
 
 
 class PipelineRunStatus(str, Enum):
@@ -13,6 +14,37 @@ class PipelineRunStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     STOPPED = "stopped"
+
+
+class ComponentPerformanceRecord(BaseModel):
+    """Performance record for a single component."""
+
+    component_name: str
+    execution_time_seconds: float
+    memory_peak_mb: float
+    memory_start_mb: float
+    memory_end_mb: float
+    memory_delta_mb: float
+    memory_percent_peak: float
+    tracemalloc_peak_mb: float | None = None
+    tracemalloc_current_mb: float | None = None
+
+    @classmethod
+    def from_metrics(
+        cls, metrics: ComponentPerformanceMetrics
+    ) -> "ComponentPerformanceRecord":
+        """Create record from performance metrics."""
+        return cls(
+            component_name=metrics.component_name,
+            execution_time_seconds=metrics.execution_time_seconds,
+            memory_peak_mb=metrics.memory_peak_mb,
+            memory_start_mb=metrics.memory_start_mb,
+            memory_end_mb=metrics.memory_end_mb,
+            memory_delta_mb=metrics.memory_delta_mb,
+            memory_percent_peak=metrics.memory_percent_peak,
+            tracemalloc_peak_mb=metrics.tracemalloc_peak_mb,
+            tracemalloc_current_mb=metrics.tracemalloc_current_mb,
+        )
 
 
 class RunRecord(BaseModel):
@@ -27,6 +59,13 @@ class RunRecord(BaseModel):
     # Additional metadata for observability
     component_statuses: dict[str, str] = {}  # Component name -> status
     inputs: dict[str, Any] = {}  # High-level inputs (sanitized)
+
+    # Performance tracking
+    component_performance: dict[
+        str, ComponentPerformanceRecord
+    ] = {}  # Component name -> performance
+    total_execution_time_seconds: float | None = None
+    pipeline_memory_peak_mb: float | None = None
 
 
 class PipelineRunTracker:
@@ -94,9 +133,6 @@ class PipelineRunTracker:
 
             record.end_time = datetime.now()
 
-            # Collect final component statuses
-            # (Implementation detail - could fetch from store)
-
             await self._save_history()
         return record
 
@@ -111,6 +147,31 @@ class PipelineRunTracker:
             # Collect component statuses at failure point
 
             await self._save_history()
+        return record
+
+    async def record_component_performance(
+        self, run_id: str, metrics: ComponentPerformanceMetrics
+    ) -> RunRecord:
+        """Record performance metrics for a component."""
+        record = await self._find_run_record(run_id)
+        if record:
+            perf_record = ComponentPerformanceRecord.from_metrics(metrics)
+            record.component_performance[metrics.component_name] = perf_record
+            await self._save_history()
+        return record
+
+    async def update_pipeline_memory_peak(
+        self, run_id: str, memory_peak_mb: float
+    ) -> RunRecord:
+        """Update the pipeline-level memory peak."""
+        record = await self._find_run_record(run_id)
+        if record:
+            if (
+                record.pipeline_memory_peak_mb is None
+                or memory_peak_mb > record.pipeline_memory_peak_mb
+            ):
+                record.pipeline_memory_peak_mb = memory_peak_mb
+                await self._save_history()
         return record
 
     async def _find_run_record(self, run_id: str) -> RunRecord | None:

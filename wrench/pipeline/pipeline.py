@@ -1,4 +1,5 @@
 import asyncio
+import time
 import uuid
 from typing import Any, Optional
 
@@ -305,8 +306,11 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
 
     async def run(self, inputs: dict[str, Any] | None = None) -> PipelineResult:
         """Execute the pipeline."""
+        pipeline_start_time = time.time()
         inputs = inputs or {}
         run_id = str(uuid.uuid4())
+
+        self.logger.info(f"Starting pipeline run {run_id}")
 
         # Initialization phase
         await self._initialize_run(run_id, inputs)
@@ -335,6 +339,11 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
 
         success = run_status in (PipelineRunStatus.COMPLETED, PipelineRunStatus.STOPPED)
         final_results = await self._collect_results(run_id)
+
+        pipeline_execution_time = time.time() - pipeline_start_time
+        self.logger.info(
+            f"Pipeline run {run_id} completed in {pipeline_execution_time:.2f} seconds"
+        )
 
         return PipelineResult(
             run_id=run_id,
