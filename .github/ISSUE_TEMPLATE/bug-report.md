@@ -5,11 +5,10 @@ about: Create a report to help us improve
 ---
 
 <!--
-Thank you for reporting a possible bug in Node.js.
+Thank you for reporting a possible bug in WRENCH.
 
 Please fill in as much of the template below as you can.
 
-Version: output of `node -v`
 Platform: output of `uname -a` (UNIX), or version and 32 or 64-bit (Windows)
 Subsystem: if known, please specify the affected core module name
 
