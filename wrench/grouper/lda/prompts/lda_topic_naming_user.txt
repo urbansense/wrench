@@ -1,0 +1,11 @@
+Analyze the following topics discovered by LDA topic modeling. Each topic is represented by its ID, top keywords, and keyword weights.
+
+{topics_data}
+
+Please:
+1. Review all topics for semantic overlap or similarity
+2. Merge any topics that represent the same concepts, do not merge if they are similar but may be their own category.
+3. Provide consolidated topic names and descriptions
+4. Map the original topic IDs to your final consolidated topics
+
+Return your analysis with the merged topics and the mapping from original topic IDs to final topic names.
