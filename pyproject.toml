@@ -1,6 +1,6 @@
 [project]
 name = "auto-wrench"
-version = "0.2.0"
+version = "0.3.0"
 description = "Automated registration package for urban sensor endpoints into metadata catalogs"
 authors = [
     {name = "Jeffrey Limnardy", email = "jeffreylimnardy@yahoo.com"}
