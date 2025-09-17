@@ -29,16 +29,27 @@ pip install auto-wrench
 To install with specific component dependencies:
 
 ```bash
+# For TELEClass grouper
 pip install 'auto-wrench[teleclass]'
+
+# For SensorThings support
+pip install 'auto-wrench[sensorthings]'
+
+# For KINETIC grouper
+pip install 'auto-wrench[kinetic]'
+
+# Multiple components
+pip install 'auto-wrench[teleclass,sensorthings,kinetic]'
 ```
 
 ## Core Components
 
-Wrench consists of three main component types that can be combined in a pipeline:
+Wrench consists of four main component types that can be combined in a pipeline:
 
 1. **Harvesters**: Extract metadata from IoT data sources (e.g., SensorThings API)
-2. **Groupers**: Classify and organize sensors into meaningful groups
-3. **Catalogers**: Register the processed metadata into data catalogs (e.g., SDDI/CKAN)
+2. **Groupers**: Classify and organize sensors into meaningful groups using various ML approaches
+3. **MetadataEnrichers**: Build spatial and temporal metadata for services and sensor groups
+4. **Catalogers**: Register the processed metadata into data catalogs (e.g., SDDI/CKAN)
 
 Each component type follows a standardized interface, making it easy to extend with custom implementations.
 
@@ -47,30 +58,40 @@ Each component type follows a standardized interface, making it easy to extend w
 The following example sets up a complete pipeline with a SensorThings API harvester, a TELEClass grouper for classification, and an SDDI cataloger for registration:
 
 ```python
-from wrench.cataloger import SDDICataloger
-from wrench.common.pipeline import Pipeline
-from wrench.grouper import TELEClassGrouper
-from wrench.harvester import SensorThingsHarvester
-from wrench.utils import ContentGenerator
+from wrench.cataloger.sddi import SDDICataloger
+from wrench.grouper.teleclass import TELEClassGrouper
+from wrench.harvester.sensorthings import SensorThingsHarvester
+from wrench.metadataenricher.sensorthings import SensorThingsMetadataEnricher
+from wrench.pipeline.sensor_pipeline import SensorRegistrationPipeline
+from wrench.utils.config import LLMConfig
 
-# Initialize components with their respective configurations
+# Initialize components with their configurations
 harvester = SensorThingsHarvester(
-    config="config/sta_config.yaml",
-    content_generator=ContentGenerator(config="config/generator_config.yaml")
+    base_url="https://example.org/v1.1",
+    pagination_config={"page_delay": 0.2, "timeout": 60, "batch_size": 100}
+)
+grouper = TELEClassGrouper(config="config/teleclass_config.yaml")
+metadata_enricher = SensorThingsMetadataEnricher(
+    base_url="https://example.org/v1.1",
+    title="City Sensor Network",
+    description="Environmental sensors across the city",
+    llm_config=LLMConfig(provider="openai", model="gpt-4")
+)
+cataloger = SDDICataloger(
+    base_url="https://catalog.example.org",
+    api_key="your-api-key",
+    owner_org="your-organization"
 )
 
-grouper = TELEClassGrouper(config="config/teleclass_config.yaml")
-
-cataloger = SDDICataloger(config="config/sddi_config.yaml")
-
 # Assemble and run the pipeline
-pipeline = Pipeline(
+pipeline = SensorRegistrationPipeline(
     harvester=harvester,
     grouper=grouper,
+    metadataenricher=metadata_enricher,
     cataloger=cataloger
 )
 
-pipeline.run()
+result = await pipeline.run_async()
 ```
 
 ## Configuration
@@ -88,10 +109,6 @@ pagination:
   page_delay: 0.2
   timeout: 60
   batch_size: 100
-
-translator:
-  url: "https://translate.example.org"
-  source_lang: "de"
 ```
 
 ## Component Overview
@@ -105,42 +122,57 @@ Harvesters connect to data sources and extract metadata. Wrench includes:
 
 ### Groupers
 
-Groupers organize sensors into logical groups:
+Groupers organize sensors into logical groups using various machine learning approaches:
 
 - **TELEClassGrouper**: Taxonomy-enhanced classification using LLMs and corpus-based methods
+- **KINETIC**: Keyword-Informed, Network-Enhanced Topical Intelligence Classifier with hierarchical clustering
+- **LDAGrouper**: Latent Dirichlet Allocation for topic modeling and device grouping
+- **BERTopicGrouper**: BERTopic-based clustering with HDBSCAN and UMAP for topic discovery
 - Can be extended with custom grouping algorithms
+
+### MetadataEnrichers
+
+MetadataEnrichers build spatial and temporal metadata for items and groups:
+
+- **SensorThingsMetadataEnricher**: Builds metadata for SensorThings API data sources
+- Extensible base class for different data source types
 
 ### Catalogers
 
 Catalogers register metadata into data catalogs:
 
 - **SDDICataloger**: Registers metadata into SDDI/CKAN-based catalogs
-
 - Extensible interface for supporting other catalog systems
 
 ## Advanced Features
 
-### Translation Support
+### Advanced Grouping with ML
 
-Wrench includes built-in support for translating metadata using services like LibreTranslate:
-
-```python
-# Translation is configured in the harvester configuration
-translator:
-  url: "https://translate.example.org"
-  source_lang: "auto"  # Automatically detect source language
-```
-
-### LLM-Enhanced Content Generation
-
-Generate rich descriptions for sensor groups using LLM services:
+Different groupers offer various approaches for sensor classification:
 
 ```python
-content_generator = ContentGenerator(config="config/generator_config.yaml")
-harvester = SensorThingsHarvester(
-    config="config/sta_config.yaml",
-    content_generator=content_generator
+from wrench.utils.config import LLMConfig
+
+# TELEClass with taxonomy-enhanced learning
+from wrench.grouper.teleclass import TELEClassGrouper
+grouper = TELEClassGrouper(config="config/teleclass_config.yaml")
+
+# KINETIC for hierarchical topic clustering
+from wrench.grouper.kinetic import KINETIC
+grouper = KINETIC(
+    llm_config=LLMConfig(provider="openai", model="gpt-4"),
+    embedder="intfloat/multilingual-e5-large-instruct",
+    lang="en",
+    resolution=1
 )
+
+# LDA for topic modeling
+from wrench.grouper.lda import LDAGrouper
+grouper = LDAGrouper(config="config/lda_config.yaml")
+
+# BERTopic for advanced clustering
+from wrench.grouper.bertopic import BERTopicGrouper
+grouper = BERTopicGrouper(config="config/bertopic_config.yaml")
 ```
 
 ## Development
@@ -152,20 +184,31 @@ harvester = SensorThingsHarvester(
 git clone https://github.com/yourusername/wrench.git
 cd wrench
 
-# Run the make target
+# Run the make target for full setup
 make setup
 
-# Install component dependencies
-uv pip install -e ".[teleclass,sensorthings]"
+# Install component dependencies for development
+uv pip install -e ".[teleclass,sensorthings,kinetic]"
 ```
 
-### Code Style
+### Code Style and Testing
 
-This project follows the Ruff code style. Format your code using:
+This project follows the Ruff code style and uses comprehensive testing:
 
 ```bash
-ruff format .
-ruff check .
+# Format and lint code
+make format
+make lint
+
+# Run tests with coverage
+make test
+
+# Run specific test types
+make test_unit
+make test_e2e
+
+# Type checking
+make lint_types
 ```
 
 ## Contributing
