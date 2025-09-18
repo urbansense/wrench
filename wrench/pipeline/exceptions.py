@@ -1,3 +1,13 @@
+# Copyright The Neo4j Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# This code has been copied from:
+# https://github.com/neo4j/neo4j-graphrag-python/
+
+# Some modifications have been made to the original code to better suit the
+# needs of this project.
+
+
 class PipelineError(Exception):
     """Base exception for all Pipeline related errors."""
 
