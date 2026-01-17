@@ -15,6 +15,7 @@ repos:
         types_or: [python, pyi]
         args: ["--fix"]
         stages: [pre-commit]
+        exclude: ^tools/  # Skip tools directory entirely
       # Run the formatter.
       - id: ruff-format
         types_or: [python, pyi]
