@@ -5,7 +5,7 @@ description = "Automated registration package for urban sensor endpoints into me
 authors = [
     {name = "Jeffrey Limnardy", email = "jeffreylimnardy@yahoo.com"}
 ]
-license = {text = "MIT"}
+license = {text = "Apache-2.0"}
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [

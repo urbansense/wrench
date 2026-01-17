@@ -26,8 +26,9 @@ class Grouper(Component):
         self,
         devices: list[Device],
         operations: list[Operation],
-        state: dict[str, Any] = {},
+        state: dict[str, Any] | None = None,
     ) -> Groups:
+        state = state or {}
         monitor = MemoryMonitor()
         # Case 1: Incremental update - apply operations to existing groups
         previous_groups = state.get("previous_groups")
