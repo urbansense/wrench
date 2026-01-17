@@ -8,6 +8,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from tools.core.ground_truth import GroundTruthBuilder
 from tools.fixtures.data_sources import get_source
 
 console = Console()
@@ -34,7 +35,6 @@ def create_ground_truth(source: str, output: str, interactive: bool):
     SOURCE: Name of the data source (hamburg, osnabrueck, muenchen)
     OUTPUT: Path to save the ground truth JSON file
     """
-    from tools.core.ground_truth import GroundTruthBuilder
     from wrench.harvester.sensorthings import SensorThingsHarvester
 
     data_source = get_source(source)
