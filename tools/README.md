@@ -43,15 +43,18 @@ wrench-tools catalog delete-batch old_entries.txt
 Manage test data and caching for different SensorThings sources.
 
 #### `data fetch <source>`
+
 Fetch data from a SensorThings server and cache it locally.
 
 **Options:**
+
 - `--limit, -l <number>`: Limit number of items to fetch (-1 for all)
 - `--embeddings`: Also generate and cache embeddings
 - `--embedding-model <name>`: Model to use for embeddings (default: intfloat/multilingual-e5-large-instruct)
 - `--force, -f`: Force re-fetch even if cached data exists
 
 **Examples:**
+
 ```bash
 # Fetch all items from Hamburg
 wrench-tools data fetch hamburg
@@ -64,6 +67,7 @@ wrench-tools data fetch muenchen --force
 ```
 
 #### `data list`
+
 List all cached data sources and their status.
 
 ```bash
@@ -71,6 +75,7 @@ wrench-tools data list
 ```
 
 #### `data info <source>`
+
 Show detailed information about a cached data source.
 
 ```bash
@@ -78,6 +83,7 @@ wrench-tools data info hamburg
 ```
 
 **Available Sources:**
+
 - `hamburg`: Hamburg FROST Server
 - `osnabrueck`: Osnabrück FROST Server
 - `muenchen`: München FROST Server
@@ -89,16 +95,20 @@ wrench-tools data info hamburg
 Tools for creating ground truth datasets and computing clustering metrics.
 
 #### `evaluate create-ground-truth <source> <output>`
+
 Create a ground truth dataset from a data source.
 
 **Arguments:**
+
 - `source`: Name of the data source (hamburg, osnabrueck, muenchen)
 - `output`: Path to save the ground truth JSON file
 
 **Options:**
+
 - `--interactive, -i`: Interactive mode to add custom rules (coming soon)
 
 **Examples:**
+
 ```bash
 # Create ground truth for Hamburg
 wrench-tools evaluate create-ground-truth hamburg data/hamburg_gt.json
@@ -108,17 +118,21 @@ wrench-tools evaluate create-ground-truth osnabrueck data/osnabrueck_gt.json
 ```
 
 #### `evaluate metrics <ground_truth> <results>`
+
 Compute clustering metrics by comparing results to ground truth.
 
 **Arguments:**
+
 - `ground_truth`: Path to ground truth JSON file
 - `results`: Path to clustering results JSON file
 
 **Options:**
+
 - `--output, -o <path>`: Save metrics to JSON file
 - `--handle-missing <strategy>`: How to handle missing items (skip/error/assign_new_cluster)
 
 **Examples:**
+
 ```bash
 # Compute metrics
 wrench-tools evaluate metrics data/hamburg_gt.json results/hamburg_results.json
@@ -128,18 +142,22 @@ wrench-tools evaluate metrics data/gt.json results.json --output metrics.json
 ```
 
 **Metrics Computed:**
+
 - Normalized Mutual Information (NMI)
 - Homogeneity
 - Completeness
 - V-Measure
 
 #### `evaluate compare <ground_truth> <results>`
+
 Compare clustering results to ground truth and show detailed differences.
 
 **Options:**
+
 - `--detailed/--summary`: Show detailed differences per category (default: summary)
 
 **Examples:**
+
 ```bash
 # Summary comparison
 wrench-tools evaluate compare data/gt.json results.json
@@ -155,18 +173,22 @@ wrench-tools evaluate compare data/gt.json results.json --detailed
 Manage SDDI/CKAN catalog entries.
 
 **Environment Variables:**
+
 - `CKAN_BASE_URL`: CKAN base URL (default: http://localhost:5000)
 - `CKAN_API_TOKEN`: CKAN API token (required)
 
 #### `catalog list`
+
 List packages in the SDDI catalog.
 
 **Options:**
+
 - `--base-url <url>`: CKAN base URL
 - `--api-key <key>`: CKAN API token
 - `--pattern, -p <pattern>`: Filter packages by name pattern
 
 **Examples:**
+
 ```bash
 # List all packages
 wrench-tools catalog list
@@ -176,6 +198,7 @@ wrench-tools catalog list --pattern "hamburg"
 ```
 
 #### `catalog show <package_id>`
+
 Show details of a specific package.
 
 ```bash
@@ -183,12 +206,15 @@ wrench-tools catalog show osnabrueck_frost_server
 ```
 
 #### `catalog delete <package_id>`
+
 Delete a package from the catalog.
 
 **Options:**
+
 - `--force, -f`: Skip confirmation prompt
 
 **Examples:**
+
 ```bash
 # Delete with confirmation
 wrench-tools catalog delete old_package
@@ -198,12 +224,15 @@ wrench-tools catalog delete old_package --force
 ```
 
 #### `catalog delete-batch <package_file>`
+
 Delete multiple packages from a file (one package ID per line).
 
 **Options:**
+
 - `--force, -f`: Skip confirmation prompt
 
 **Examples:**
+
 ```bash
 # Create a file with package IDs to delete
 cat > packages_to_delete.txt << EOF
@@ -217,12 +246,15 @@ wrench-tools catalog delete-batch packages_to_delete.txt
 ```
 
 #### `catalog clean-all`
+
 Interactively clean all packages from the catalog.
 
 **Options:**
+
 - `--pattern, -p <pattern>`: Only delete packages matching pattern
 
 **Examples:**
+
 ```bash
 # Clean all test packages
 wrench-tools catalog clean-all --pattern "test_"
@@ -238,13 +270,16 @@ wrench-tools catalog clean-all
 Run and test pipelines and components.
 
 #### `pipeline run <config_path>`
+
 Run a pipeline from a configuration file.
 
 **Options:**
+
 - `--once`: Run pipeline once and exit (ignore scheduler)
 - `--save-results, -s <path>`: Save results to JSON file
 
 **Examples:**
+
 ```bash
 # Run pipeline once
 wrench-tools pipeline run test_script/pipeline_config.yaml --once
@@ -257,18 +292,22 @@ wrench-tools pipeline run config.yaml --once --save-results output/results.json
 ```
 
 #### `pipeline test <component_type> <config_path>`
+
 Test a single component with its configuration.
 
 **Component Types:**
+
 - `harvester`: Test data harvesting
 - `grouper`: Test clustering/grouping
 - `cataloger`: Test catalog connection
 - `metadataenricher`: Test metadata enrichment
 
 **Options:**
+
 - `--limit, -l <number>`: Limit number of items to process
 
 **Examples:**
+
 ```bash
 # Test harvester
 wrench-tools pipeline test harvester test_script/sta_config.yaml
@@ -281,12 +320,15 @@ wrench-tools pipeline test harvester config.yaml --limit 10
 ```
 
 #### `pipeline list-configs`
+
 List available pipeline configuration files.
 
 **Options:**
+
 - `--component, -c <type>`: Filter by component type
 
 **Examples:**
+
 ```bash
 # List all configs
 wrench-tools pipeline list-configs
@@ -322,7 +364,7 @@ GEMINI_API_KEY=your_gemini_key_here
 
 Cached data is stored in `tools/fixtures/data/` by default:
 
-```
+```bash
 tools/fixtures/data/
 ├── hamburg_items.json
 ├── hamburg_embeddings.npz
@@ -337,6 +379,7 @@ tools/fixtures/data/
 The tools CLI replaces scattered test scripts with a unified interface:
 
 ### Before (test_script)
+
 ```bash
 # Had to know which file to run and modify
 python test_script/checkout_sta_server.py  # Manual code edits needed
@@ -345,6 +388,7 @@ python test_script/delete_sddi_entries.py  # Manual list editing needed
 ```
 
 ### After (tools CLI)
+
 ```bash
 # Clean, documented interface
 wrench-tools data fetch hamburg
@@ -401,6 +445,7 @@ tools/
 3. Register in `tools/cli.py`
 
 Example:
+
 ```python
 # tools/commands/mynew.py
 import click
@@ -481,21 +526,27 @@ wrench-tools catalog delete-batch packages.txt --force
 ## Troubleshooting
 
 ### Command not found
+
 Make sure you're running from the wrench project root:
+
 ```bash
 cd /path/to/wrench
 python -m tools.cli --help
 ```
 
 ### CKAN API errors
+
 Ensure your API token is set:
+
 ```bash
 export CKAN_API_TOKEN=your_token_here
 # Or add to .env file
 ```
 
 ### Missing dependencies
+
 Install all optional dependencies:
+
 ```bash
 uv pip install -e ".[teleclass,sensorthings]"
 ```
@@ -505,6 +556,7 @@ uv pip install -e ".[teleclass,sensorthings]"
 ## Contributing
 
 When adding new test scripts, consider:
+
 1. Can this be a CLI command instead?
 2. Does it fit into existing command groups?
 3. Should it use the unified cache system?
