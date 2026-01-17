@@ -44,7 +44,7 @@ def list(base_url: str, api_key: str, pattern: str):
     try:
         with console.status("[bold green]Fetching catalog packages..."):
             # Use CKAN API to list packages
-            packages = cataloger.ckan.action.package_list()
+            packages = cataloger.ckan_server.call_action(action="package_list")
 
         if pattern:
             packages = [p for p in packages if pattern.lower() in p.lower()]

@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 
 if TYPE_CHECKING:
-    from wrench.harvester.sensorthings import SensorThingsHarvester
     from wrench.models import Device
 
 DEFAULT_CACHE_DIR = Path("tools/fixtures/data")
@@ -157,7 +156,7 @@ class DataCache:
         """
         from wrench.harvester.sensorthings import SensorThingsHarvester
 
-        harvester = SensorThingsHarvester(base_url=base_url, default_limit=limit)
+        harvester = SensorThingsHarvester(base_url=base_url)
         devices = harvester.return_devices()
         self.save_devices(source, devices)
         return devices
