@@ -155,7 +155,7 @@ wrench-tools evaluate compare data/gt.json results.json --detailed
 Manage SDDI/CKAN catalog entries.
 
 **Environment Variables:**
-- `CKAN_BASE_URL`: CKAN base URL (default: http://10.162.246.69:5000)
+- `CKAN_BASE_URL`: CKAN base URL (default: http://localhost:5000)
 - `CKAN_API_TOKEN`: CKAN API token (required)
 
 #### `catalog list`
@@ -305,7 +305,7 @@ Create a `.env` file in the `test_script` directory or your home directory (`~/.
 
 ```bash
 # CKAN/SDDI Configuration
-CKAN_BASE_URL=http://10.162.246.69:5000
+CKAN_BASE_URL=http://localhost:5000
 CKAN_API_TOKEN=your_api_token_here
 
 # LLM Configuration

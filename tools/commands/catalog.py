@@ -21,7 +21,7 @@ def catalog():
 @click.option(
     "--base-url",
     envvar="CKAN_BASE_URL",
-    default="http://10.162.246.69:5000",
+    default="http://localhost:5000",
     help="CKAN base URL",
 )
 @click.option(
@@ -68,7 +68,7 @@ def list(base_url: str, api_key: str, pattern: str):
 @click.option(
     "--base-url",
     envvar="CKAN_BASE_URL",
-    default="http://10.162.246.69:5000",
+    default="http://localhost:5000",
     help="CKAN base URL",
 )
 @click.option(
@@ -130,7 +130,7 @@ def show(package_id: str, base_url: str, api_key: str):
 @click.option(
     "--base-url",
     envvar="CKAN_BASE_URL",
-    default="http://10.162.246.69:5000",
+    default="http://localhost:5000",
     help="CKAN base URL",
 )
 @click.option(
@@ -173,7 +173,7 @@ def delete(package_id: str, base_url: str, api_key: str, force: bool):
 @click.option(
     "--base-url",
     envvar="CKAN_BASE_URL",
-    default="http://10.162.246.69:5000",
+    default="http://localhost:5000",
     help="CKAN base URL",
 )
 @click.option(
@@ -242,7 +242,7 @@ def delete_batch(package_file: str, base_url: str, api_key: str, force: bool):
 @click.option(
     "--base-url",
     envvar="CKAN_BASE_URL",
-    default="http://10.162.246.69:5000",
+    default="http://localhost:5000",
     help="CKAN base URL",
 )
 @click.option(
