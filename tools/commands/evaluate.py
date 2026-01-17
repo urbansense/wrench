@@ -1,18 +1,14 @@
 """Evaluation and metrics commands."""
 
+from __future__ import annotations
+
 import json
 
 import click
 from rich.console import Console
 from rich.table import Table
-from sklearn.metrics import (
-    homogeneity_completeness_v_measure,
-    normalized_mutual_info_score,
-)
 
-from tools.core.ground_truth import GroundTruthBuilder
 from tools.fixtures.data_sources import get_source
-from wrench.harvester.sensorthings import SensorThingsHarvester
 
 console = Console()
 
@@ -38,6 +34,9 @@ def create_ground_truth(source: str, output: str, interactive: bool):
     SOURCE: Name of the data source (hamburg, osnabrueck, muenchen)
     OUTPUT: Path to save the ground truth JSON file
     """
+    from tools.core.ground_truth import GroundTruthBuilder
+    from wrench.harvester.sensorthings import SensorThingsHarvester
+
     data_source = get_source(source)
     console.print(
         f"[bold blue]Creating ground truth for {data_source.title}[/bold blue]"
@@ -192,6 +191,11 @@ def compute_metrics(ground_truth: str, results: str, output: str, handle_missing
     GROUND_TRUTH: Path to ground truth JSON file
     RESULTS: Path to clustering results JSON file
     """
+    from sklearn.metrics import (
+        homogeneity_completeness_v_measure,
+        normalized_mutual_info_score,
+    )
+
     console.print("[bold blue]Computing Clustering Metrics[/bold blue]\n")
 
     # Load data

@@ -1,14 +1,16 @@
 """Unified caching system for test data."""
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
-from wrench.harvester.sensorthings import SensorThingsHarvester
-from wrench.models import Device
+if TYPE_CHECKING:
+    from wrench.harvester.sensorthings import SensorThingsHarvester
+    from wrench.models import Device
 
 DEFAULT_CACHE_DIR = Path("tools/fixtures/data")
 
@@ -92,6 +94,8 @@ class DataCache:
         Raises:
             FileNotFoundError: If cache doesn't exist
         """
+        from wrench.models import Device
+
         cache_path = self.get_cache_path(source, "devices")
         if not cache_path.exists():
             raise FileNotFoundError(
@@ -151,6 +155,8 @@ class DataCache:
         Returns:
             List of fetched Device objects
         """
+        from wrench.harvester.sensorthings import SensorThingsHarvester
+
         harvester = SensorThingsHarvester(base_url=base_url, default_limit=limit)
         devices = harvester.return_devices()
         self.save_devices(source, devices)
@@ -175,6 +181,8 @@ class DataCache:
         Raises:
             FileNotFoundError: If devices are not cached
         """
+        from sentence_transformers import SentenceTransformer
+
         devices = self.load_devices(source)
 
         if exclude_fields is None:

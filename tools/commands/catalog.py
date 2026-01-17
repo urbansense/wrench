@@ -6,8 +6,6 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
-from wrench.cataloger.sddi import SDDICataloger
-
 console = Console()
 
 
@@ -37,6 +35,8 @@ def catalog():
 )
 def list(base_url: str, api_key: str, pattern: str):
     """List packages in the SDDI catalog."""
+    from wrench.cataloger.sddi import SDDICataloger
+
     load_dotenv("test_script/.env")
 
     cataloger = SDDICataloger(base_url=base_url, api_key=api_key)
@@ -82,6 +82,8 @@ def show(package_id: str, base_url: str, api_key: str):
 
     PACKAGE_ID: The package identifier
     """
+    from wrench.cataloger.sddi import SDDICataloger
+
     load_dotenv("test_script/.env")
 
     cataloger = SDDICataloger(base_url=base_url, api_key=api_key)
@@ -150,6 +152,8 @@ def delete(package_id: str, base_url: str, api_key: str, force: bool):
 
     PACKAGE_ID: The package identifier to delete
     """
+    from wrench.cataloger.sddi import SDDICataloger
+
     load_dotenv("test_script/.env")
 
     if not force:
@@ -193,6 +197,8 @@ def delete_batch(package_file: str, base_url: str, api_key: str, force: bool):
 
     PACKAGE_FILE: Path to file containing package IDs (one per line)
     """
+    from wrench.cataloger.sddi import SDDICataloger
+
     load_dotenv("test_script/.env")
 
     with open(package_file) as f:
@@ -261,6 +267,8 @@ def clean_all(base_url: str, api_key: str, pattern: str):
 
     This is a destructive operation. Use with caution!
     """
+    from wrench.cataloger.sddi import SDDICataloger
+
     load_dotenv("test_script/.env")
 
     cataloger = SDDICataloger(base_url=base_url, api_key=api_key)
