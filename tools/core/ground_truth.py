@@ -19,42 +19,42 @@ class GroundTruthBuilder:
             harvester: SensorThings harvester to fetch devices
         """
         self.harvester = harvester
-        self.items: list[Device] | None = None
+        self.devices: list[Device] | None = None
         self.ground_truth: defaultdict[str, list] = defaultdict(list)
 
-    def fetch_items(self) -> list[Device]:
-        """Fetch items from the harvester.
+    def fetch_devices(self) -> list[Device]:
+        """Fetch devices from the harvester.
 
         Returns:
-            List of items
+            List of devices
         """
-        if self.items is None:
-            self.items = self.harvester.return_items()
-        return self.items
+        if self.devices is None:
+            self.devices = self.harvester.return_devices()
+        return self.devices
 
     def add_rule(
         self,
         category: str,
         condition: Callable[[Device], bool],
-        items: list[Device] | None = None,
+        devices: list[Device] | None = None,
     ) -> int:
         """Add a classification rule.
 
         Args:
-            category: Category name for items matching the condition
+            category: Category name for devices matching the condition
             condition: Function that takes an Device and returns True if it belongs to category
-            items: Devices to check (optional, uses fetched items if None)
+            devices: Devices to check (optional, uses fetched devices if None)
 
         Returns:
-            Number of items added to the category
+            Number of devices added to the category
         """
-        if items is None:
-            items = self.fetch_items()
+        if devices is None:
+            devices = self.fetch_devices()
 
         count = 0
-        for item in items:
-            if condition(item):
-                self.ground_truth[category].append(str(item.id))
+        for device in devices:
+            if condition(device):
+                self.ground_truth[category].append(str(device.id))
                 count += 1
 
         return count
@@ -70,16 +70,16 @@ class GroundTruthBuilder:
             field: Property field to check (default: 'keywords')
 
         Returns:
-            Number of items added to the category
+            Number of devices added to the category
         """
 
-        def condition(item: Device) -> bool:
-            if not item.properties or field not in item.properties:
+        def condition(device: Device) -> bool:
+            if not device.properties or field not in device.properties:
                 return False
-            item_keywords = item.properties[field]
-            if isinstance(item_keywords, str):
-                item_keywords = [item_keywords]
-            return any(kw in item_keywords for kw in keywords)
+            device_keywords = device.properties[field]
+            if isinstance(device_keywords, str):
+                device_keywords = [device_keywords]
+            return any(kw in device_keywords for kw in keywords)
 
         return self.add_rule(category, condition)
 
@@ -91,11 +91,11 @@ class GroundTruthBuilder:
             prefixes: List of name prefixes to match
 
         Returns:
-            Number of items added to the category
+            Number of devices added to the category
         """
 
-        def condition(item: Device) -> bool:
-            return any(item.name.startswith(prefix) for prefix in prefixes)
+        def condition(device: Device) -> bool:
+            return any(device.name.startswith(prefix) for prefix in prefixes)
 
         return self.add_rule(category, condition)
 
@@ -107,26 +107,26 @@ class GroundTruthBuilder:
             patterns: List of substrings to match in name
 
         Returns:
-            Number of items added to the category
+            Number of devices added to the category
         """
 
-        def condition(item: Device) -> bool:
-            return any(pattern in item.name for pattern in patterns)
+        def condition(device: Device) -> bool:
+            return any(pattern in device.name for pattern in patterns)
 
         return self.add_rule(category, condition)
 
-    def get_unassigned_items(self) -> list[Device]:
-        """Get items that haven't been assigned to any category.
+    def get_unassigned_devices(self) -> list[Device]:
+        """Get devices that haven't been assigned to any category.
 
         Returns:
-            List of unassigned items
+            List of unassigned devices
         """
-        items = self.fetch_items()
+        devices = self.fetch_devices()
         assigned_ids = set()
-        for item_ids in self.ground_truth.values():
-            assigned_ids.update(item_ids)
+        for device_ids in self.ground_truth.values():
+            assigned_ids.update(device_ids)
 
-        return [item for item in items if str(item.id) not in assigned_ids]
+        return [device for device in devices if str(device.id) not in assigned_ids]
 
     def save(self, output_path: Path | str) -> None:
         """Save ground truth to JSON file.
