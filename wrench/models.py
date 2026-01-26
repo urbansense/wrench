@@ -166,6 +166,8 @@ class Group(BaseModel):
 
     @cached_property
     def representative_devices(self) -> list[Device]:
+        if self.devices is None:
+            raise ValueError("Group must be instantiated with devices")
         unique_ds = set()
         repr_device = set()
         for d in self.devices:
