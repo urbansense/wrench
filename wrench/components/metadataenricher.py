@@ -29,9 +29,10 @@ class MetadataEnricher(Component):
         devices: list[Device],
         operations: list[Operation],
         groups: list[Group],
-        state: dict[str, Any] = {},
+        state: dict[str, Any] | None = None,
     ) -> Metadata:
         """Run the metadata builder."""
+        state = state or {}
         monitor = MemoryMonitor()
         prev_group_metadata: dict = state.get("prev_group_metadata")
 

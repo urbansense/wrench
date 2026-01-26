@@ -22,7 +22,6 @@ class DataModel(BaseModel):
 
     state: dict[str, Any] | None = None
     stop_pipeline: bool = False
-    pass
 
 
 class ComponentMeta(ABCMeta):
@@ -76,6 +75,6 @@ class Component(ABC, metaclass=ComponentMeta):
 
     @abstractmethod
     async def run(
-        self, state: dict[str, Any] = {}, *args: Any, **kwargs: Any
+        self, state: dict[str, Any] | None = None, *args: Any, **kwargs: Any
     ) -> DataModel:
         pass

@@ -31,9 +31,10 @@ class Cataloger(Component):
         self,
         service_metadata: CommonMetadata | None,
         group_metadata: list[CommonMetadata],
-        state: dict[str, Any] = {},
+        state: dict[str, Any] | None = None,
     ) -> CatalogerStatus:
         """Run the cataloger and register metadata."""
+        state = state or {}
         monitor = MemoryMonitor()
         previous_registries = state.get("previous_registries")
 

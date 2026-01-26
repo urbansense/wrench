@@ -17,6 +17,6 @@ class GrouperError(WrenchError):
 
 
 class CatalogerError(WrenchError):
-    """Raised when catalogging operations fail."""
+    """Raised when cataloging operations fail."""
 
     pass

@@ -25,7 +25,7 @@ class Harvester(Component):
         self.logger = logger.getChild(self.__class__.__name__)
 
     @validate_call
-    async def run(self, state: dict[str, Any] = {}) -> Items:
+    async def run(self, state: dict[str, Any] | None = None) -> Items:
         """
         Run the harvester and detect changes compared to previous run.
 
@@ -35,6 +35,7 @@ class Harvester(Component):
         Raises:
             HarvesterError: If there's an issue retrieving items from the harvester
         """
+        state = state or {}
         monitor = MemoryMonitor()
         previous_devices = state.get("previous_devices")
 

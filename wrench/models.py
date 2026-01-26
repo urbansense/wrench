@@ -79,12 +79,12 @@ class Device(BaseModel):
 
     properties: dict[str, Any] | None = None
 
-    _raw_data: dict[str, Any]
+    _raw_data: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
     def to_string(self, exclude: list[str] | None = None):
-        data = self.model_dump(exclude=set(exclude))
+        data = self.model_dump(exclude=set(exclude) if exclude else None)
         return "\n".join([str(val) for attr, val in data.items()]).strip()
 
     def __eq__(self, other) -> bool:
