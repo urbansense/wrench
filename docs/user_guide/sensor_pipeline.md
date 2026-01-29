@@ -74,9 +74,6 @@ harvester_config:
       page_delay: 0.1
       timeout: 30
       batch_size: 120
-    translator_config:
-      translator_type: libre_translate
-      url: "http://your_libretranslate_endpoint/"
       source_lang: "de"
 grouper_config:
   kinetic:

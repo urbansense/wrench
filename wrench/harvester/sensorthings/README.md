@@ -8,7 +8,6 @@ The SensorThings Harvester is a component designed to retrieve and process data 
 
 - Paginated data retrieval from SensorThings API endpoints
 - Support for customizable location models
-- Optional translation service integration
 - Automatic calculation of geographic extent and timeframes
 - Configurable pagination behavior
 
@@ -41,9 +40,6 @@ base_url: "https://your-sensorthings-api.com"
 identifier: "unique_identifier"
 title: "API Title"
 description: "API Description"
-translator:
-  url: "translation-service-url"
-  source_lang: "source-language-code"
 pagination:
   page_delay: 0.1
   timeout: 60
@@ -87,24 +83,6 @@ harvester = SensorThingsHarvester(
 )
 ```
 
-### Translation Integration
-
-The harvester supports automatic translation of text fields using a translation service:
-
-```yaml
-# In your config.yaml
-translator:
-  url: "http://translate-service.com"
-  source_lang: "de" # Source language code
-```
-
-When configured, the harvester will automatically translate:
-
-- Thing names and descriptions
-- Datastream information
-- Sensor descriptions
-- Properties
-
 ## Configuration Options
 
 ### Main Configuration
@@ -115,7 +93,6 @@ When configured, the harvester will automatically translate:
 | identifier    | str              | Unique identifier for the data source | Required |
 | title         | str              | Title for the API service             | Required |
 | description   | str              | Description of the API service        | Required |
-| translator    | TranslatorConfig | Translation service configuration     | Optional |
 | pagination    | PaginationConfig | Pagination settings                   | Optional |
 | default_limit | int              | Default fetch limit (-1 for no limit) | -1       |
 
