@@ -36,49 +36,16 @@ from wrench.harvester import BaseHarvester
 from wrench.log import logger
 from wrench.metadataenricher import BaseMetadataEnricher
 from wrench.pipeline.component import Component
-from wrench.pipeline.config.param_resolver import (
-    ParamConfig,
-    ParamToResolveConfig,
-    _convert_dict_to_param_config,
-)
 
 T = TypeVar("T")
-"""Generic type to help mypy with the parse method when we know the exact
-expected return type.
-"""
-
-
-def issubclass_safe(
-    cls: type[object], class_or_tuple: Union[type[object], tuple[type[object]]]
-) -> bool:
-    """Checks if subclass is safe."""
-    if isinstance(class_or_tuple, tuple):
-        return any(issubclass_safe(cls, base) for base in class_or_tuple)
-
-    if issubclass(cls, class_or_tuple):
-        return True
-
-    # Handle case where module was reloaded
-    cls_module = importlib.import_module(cls.__module__)
-    # Get the latest version of the base class from the module
-    latest_base = getattr(cls_module, class_or_tuple.__name__, None)
-    latest_base = cast(Union[tuple[type[object], ...], type[object]], latest_base)
-    if issubclass(cls, latest_base):
-        return True
-
-    return False
 
 
 class ObjectConfig(BaseModel, Generic[T]):
-    """Config of an object from a class name and its constructor parameters.
-
-    Provides methods to get a class from a string and resolve a parameter defined by
-    a dict with a 'resolver_' key.
-    """
+    """Config of an object from a class name and its constructor parameters."""
 
     class_: str | None = Field(default=None, validate_default=True)
     """Path to class to be instantiated."""
-    params_: dict[str, ParamConfig] = {}
+    params_: dict[str, Any] = {}
     """Initialization parameters."""
 
     DEFAULT_MODULE: ClassVar[str] = "."
@@ -88,63 +55,20 @@ class ObjectConfig(BaseModel, Generic[T]):
     REQUIRED_PARAMS: ClassVar[list[str]] = []
     """List of required parameters for this object constructor."""
 
-    _global_data: dict[str, Any] = PrivateAttr(default_factory=dict)
-    """Additional parameter ignored by all Pydantic model_* methods."""
     _logger = PrivateAttr()
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         self._logger = logger.getChild(self.__class__.__name__)
 
-    def resolve_param(self, param: ParamConfig) -> Any:
-        """Finds the parameter value from its definition."""
-        if not isinstance(param, ParamToResolveConfig):
-            # some parameters do not have to be resolved, real
-            # values are already provided
-            return param
-        return param.resolve(self._global_data)
-
-    def resolve_params(self, params: dict[str, ParamConfig]) -> dict[str, Any]:
-        """Resolve all parameters recursively."""
-        result = {}
-        for param_name, param in params.items():
-            if isinstance(param, dict):
-                # Recursively resolve nested dictionaries
-                result[param_name] = self._resolve_nested_param(param)
-            else:
-                result[param_name] = self.resolve_param(param)
-        return result
-
-    def _resolve_nested_param(self, param_dict: dict[str, Any]) -> dict[str, Any]:
-        """Recursively resolve parameters in nested dictionaries."""
-        result = {}
-        for key, value in param_dict.items():
-            if isinstance(value, dict):
-                # This nested dict should now contain properly converted ParamConfig
-                result[key] = self._resolve_nested_param(value)
-            else:
-                # This could be a ParamConfig object or regular value
-                result[key] = self.resolve_param(value)
-        return result
-
     @field_validator("params_")
     @classmethod
     def validate_params(cls, params_: dict[str, Any]) -> dict[str, Any]:
-        """
-        Make sure all required parameters are provided.
-
-        Recursively converts nested parameters
-        """
+        """Make sure all required parameters are provided."""
         for p in cls.REQUIRED_PARAMS:
             if p not in params_:
                 raise ValueError(f"Missing parameter {p}")
-
-        # Recursively convert nested dictionaries with resolver_ keys to ParamConfig
-        converted_params = {}
-        for key, value in params_.items():
-            converted_params[key] = _convert_dict_to_param_config(value)
-
-        return converted_params
+        return params_
 
     def get_module(self) -> str:
         return self.DEFAULT_MODULE
@@ -167,7 +91,6 @@ class ObjectConfig(BaseModel, Generic[T]):
         Raises:
             ValueError: if the class can't be imported, even using the optional module.
         """
-        # splits class path from module path
         *modules, class_name = class_path.rsplit(".", 1)
         module_name = modules[0] if modules else optional_module
 
@@ -176,7 +99,6 @@ class ObjectConfig(BaseModel, Generic[T]):
 
         try:
             module = importlib.import_module(module_name)
-            # get class_name from the module if available
             klass = getattr(module, class_name)
         except (ImportError, AttributeError):
             if optional_module and module_name != optional_module:
@@ -186,22 +108,20 @@ class ObjectConfig(BaseModel, Generic[T]):
 
         return cast(type, klass)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> T:
-        """Import `class_`, resolve `params_` and instantiate object."""
-        self._global_data = resolved_data or {}
-        self._logger.debug(f"OBJECT_CONFIG: parsing {self} using {resolved_data}")
+    def parse(self) -> T:
+        """Import `class_` and instantiate object with `params_`."""
+        self._logger.debug(f"OBJECT_CONFIG: parsing {self}")
 
         if self.class_ is None:
             raise ValueError(f"`class_` is required to parse object {self}")
         klass = self._get_class(self.class_, self.get_module())
-        if not issubclass_safe(klass, self.get_interface()):
+        if not issubclass(klass, self.get_interface()):
             raise ValueError(
-                f"""Invalid class '{klass}'. Expected a subclass of
-                    '{self.get_interface()}'"""
+                f"Invalid class '{klass}'. Expected a subclass \
+                    of '{self.get_interface()}'"
             )
-        params = self.resolve_params(self.params_)
         try:
-            obj = klass(**params)
+            obj = klass(**self.params_)
         except TypeError as e:
             self._logger.error(
                 "failed to instantiate object due to improperly configured parameters"
@@ -220,9 +140,7 @@ class HarvesterConfig(ObjectConfig[BaseHarvester]):
     INTERFACE = BaseHarvester
 
 
-def _validate_harvester_type(
-    v: Any,
-) -> Union[BaseHarvester, HarvesterConfig]:
+def _validate_harvester_type(v: Any) -> Union[BaseHarvester, HarvesterConfig]:
     """Validator for HarvesterType that handles both instances and config dicts."""
     if isinstance(v, BaseHarvester):
         return v
@@ -249,15 +167,14 @@ class HarvesterType(BaseModel):
         if root is not None:
             super().__init__(root=root, **data)
         elif data:
-            # Allow direct field initialization
             super().__init__(root=data, **{})
         else:
             super().__init__(root=root, **data)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> BaseHarvester:
+    def parse(self) -> BaseHarvester:
         if isinstance(self.root, BaseHarvester):
             return self.root
-        return self.root.parse(resolved_data)
+        return self.root.parse()
 
 
 class GrouperConfig(ObjectConfig[BaseGrouper]):
@@ -301,10 +218,10 @@ class GrouperType(BaseModel):
         else:
             super().__init__(root=root, **data)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> BaseGrouper:
+    def parse(self) -> BaseGrouper:
         if isinstance(self.root, BaseGrouper):
             return self.root
-        return self.root.parse(resolved_data)
+        return self.root.parse()
 
 
 class MetadataEnricherConfig(ObjectConfig[BaseMetadataEnricher]):
@@ -351,12 +268,10 @@ class MetadataEnricherType(BaseModel):
         else:
             super().__init__(root=root, **data)
 
-    def parse(
-        self, resolved_data: dict[str, Any] | None = None
-    ) -> BaseMetadataEnricher:
+    def parse(self) -> BaseMetadataEnricher:
         if isinstance(self.root, BaseMetadataEnricher):
             return self.root
-        return self.root.parse(resolved_data)
+        return self.root.parse()
 
 
 class CatalogerConfig(ObjectConfig[BaseCataloger]):
@@ -400,10 +315,10 @@ class CatalogerType(BaseModel):
         else:
             super().__init__(root=root, **data)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> BaseCataloger:
+    def parse(self) -> BaseCataloger:
         if isinstance(self.root, BaseCataloger):
             return self.root
-        return self.root.parse(resolved_data)
+        return self.root.parse()
 
 
 class ComponentConfig(ObjectConfig[Component]):
@@ -413,14 +328,13 @@ class ComponentConfig(ObjectConfig[Component]):
     that will be passed to the `run` method, ie `run_params_`.
     """
 
-    run_params_: dict[str, ParamConfig] = {}
+    run_params_: dict[str, Any] = {}
 
     DEFAULT_MODULE = "wrench.components"
     INTERFACE = Component
 
-    def get_run_params(self, resolved_data: dict[str, Any]) -> dict[str, Any]:
-        self._global_data = resolved_data
-        return self.resolve_params(self.run_params_)
+    def get_run_params(self) -> dict[str, Any]:
+        return self.run_params_
 
 
 def _validate_component_type(v: Any) -> Union[Component, ComponentConfig]:
@@ -451,12 +365,12 @@ class ComponentType(BaseModel):
         else:
             super().__init__(root=root, **data)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> Component:
+    def parse(self) -> Component:
         if isinstance(self.root, Component):
             return self.root
-        return self.root.parse(resolved_data)
+        return self.root.parse()
 
-    def get_run_params(self, resolved_data: dict[str, Any]) -> dict[str, Any]:
+    def get_run_params(self) -> dict[str, Any]:
         if isinstance(self.root, Component):
             return {}
-        return self.root.get_run_params(resolved_data)
+        return self.root.get_run_params()

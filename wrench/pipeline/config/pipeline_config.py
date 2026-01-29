@@ -8,7 +8,7 @@
 # needs of this project.
 
 import logging
-from typing import Any, ClassVar, Literal, Optional, Union
+from typing import Any, ClassVar, Literal, Union
 
 from pydantic import BaseModel, PrivateAttr, field_validator
 
@@ -29,10 +29,6 @@ from .object_config import (
     HarvesterType,
     MetadataEnricherType,
 )
-from .param_resolver import (
-    ParamConfig,
-    ParamToResolveConfig,
-)
 from .types import PipelineType
 
 logger = logging.getLogger(__name__)
@@ -44,7 +40,6 @@ class PipelineConfig(BaseModel):
 
     This is the base class for all pipeline configurations. It provides:
     - Configuration for harvesters, groupers, metadata enrichers, and catalogers
-    - Parameter resolution for cross-referencing values
     - Parsing of pipeline definitions
 
     For raw pipelines (non-template), use component_config and connection_config.
@@ -56,8 +51,6 @@ class PipelineConfig(BaseModel):
     grouper_config: dict[str, GrouperType] = {}
     metadataenricher_config: dict[str, MetadataEnricherType] = {}
     cataloger_config: dict[str, CatalogerType] = {}
-    extras: dict[str, ParamConfig] = {}
-    """Extra parameters that can be referenced in other parts of the config."""
 
     # For raw pipeline configs (non-template)
     component_config: dict[str, ComponentType] = {}
@@ -68,7 +61,7 @@ class PipelineConfig(BaseModel):
     """Name of the default item in dict."""
 
     _global_data: dict[str, Any] = PrivateAttr(default_factory=dict)
-    """Additional parameter ignored by all Pydantic model_* methods."""
+    """Stores parsed components for access via get_*_by_name methods."""
 
     @field_validator("harvester_config", mode="before")
     @classmethod
@@ -106,40 +99,11 @@ class PipelineConfig(BaseModel):
             return {cls.DEFAULT_NAME: cataloger}
         return cataloger
 
-    def resolve_param(self, param: ParamConfig) -> Any:
-        """Finds the parameter value from its definition."""
-        if not isinstance(param, ParamToResolveConfig):
-            return param
-        return param.resolve(self._global_data)
-
-    def resolve_params(self, params: dict[str, ParamConfig]) -> dict[str, Any]:
-        """Resolve all parameters recursively."""
-        result = {}
-        for param_name, param in params.items():
-            if isinstance(param, dict):
-                result[param_name] = self._resolve_nested_param(param)
-            else:
-                result[param_name] = self.resolve_param(param)
-        return result
-
-    def _resolve_nested_param(self, param_dict: dict[str, Any]) -> dict[str, Any]:
-        """Recursively resolve parameters in nested dictionaries."""
-        result = {}
-        for key, value in param_dict.items():
-            if isinstance(value, dict):
-                result[key] = self._resolve_nested_param(value)
-            else:
-                result[key] = self.resolve_param(value)
-        return result
-
     def _resolve_component_definition(
         self, name: str, config: ComponentType
     ) -> ComponentDefinition:
-        component = config.parse(self._global_data)
-        if hasattr(config.root, "run_params_"):
-            component_run_params = self.resolve_params(config.root.run_params_)
-        else:
-            component_run_params = {}
+        component = config.parse()
+        component_run_params = config.get_run_params()
         component_def = ComponentDefinition(
             name=name,
             component=component,
@@ -149,40 +113,27 @@ class PipelineConfig(BaseModel):
         return component_def
 
     def _parse_global_data(self) -> dict[str, Any]:
-        """
-        Global data contains data that can be referenced in other parts of the config.
-
-        Typically, harvesters, groupers, metadataenrichers, and catalogers can be
-        referenced in component input parameters.
-        """
-        extra_data = {
-            "extras": self.resolve_params(self.extras),
-        }
-        logger.debug(f"PIPELINE_CONFIG: resolved 'extras': {extra_data}")
+        """Parse and store all components for access via get_*_by_name methods."""
         harvesters: dict[str, BaseHarvester] = {
-            name: config.parse(extra_data)
-            for name, config in self.harvester_config.items()
+            name: config.parse() for name, config in self.harvester_config.items()
         }
         groupers: dict[str, BaseGrouper] = {
-            name: config.parse(extra_data)
-            for name, config in self.grouper_config.items()
+            name: config.parse() for name, config in self.grouper_config.items()
         }
         metadataenrichers: dict[str, BaseMetadataEnricher] = {
-            name: config.parse(extra_data)
+            name: config.parse()
             for name, config in self.metadataenricher_config.items()
         }
         catalogers: dict[str, BaseCataloger] = {
-            name: config.parse(extra_data)
-            for name, config in self.cataloger_config.items()
+            name: config.parse() for name, config in self.cataloger_config.items()
         }
         global_data = {
-            **extra_data,
             "harvester_config": harvesters,
             "grouper_config": groupers,
             "metadataenricher_config": metadataenrichers,
             "cataloger_config": catalogers,
         }
-        logger.debug(f"PIPELINE_CONFIG: resolved globals: {global_data}")
+        logger.debug(f"PIPELINE_CONFIG: parsed components: {global_data}")
         return global_data
 
     def _get_components(self) -> list[ComponentDefinition]:
@@ -196,9 +147,7 @@ class PipelineConfig(BaseModel):
         """Get connection definitions. Override in subclasses for template pipelines."""
         return self.connection_config
 
-    def parse(
-        self, resolved_data: Optional[dict[str, Any]] = None
-    ) -> PipelineDefinition:
+    def parse(self) -> PipelineDefinition:
         """
         Parse the full config and returns a PipelineDefinition object.
 
@@ -230,8 +179,8 @@ class PipelineConfig(BaseModel):
         return self.get_harvester_by_name(self.DEFAULT_NAME)
 
     def get_grouper_by_name(self, name: str) -> BaseGrouper:
-        llms: dict[str, BaseGrouper] = self._global_data.get("grouper_config", {})
-        return llms[name]
+        groupers: dict[str, BaseGrouper] = self._global_data.get("grouper_config", {})
+        return groupers[name]
 
     def get_default_grouper(self) -> BaseGrouper:
         return self.get_grouper_by_name(self.DEFAULT_NAME)
