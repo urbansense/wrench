@@ -70,16 +70,16 @@ class SensorPipelineConfig(PipelineConfig):
         return {}
 
     def _get_harvester(self) -> Harvester:
-        return Harvester(harvester=self.get_default_harvester())
+        return Harvester(harvester=self.get_harvester())
 
     def _get_grouper(self) -> Grouper:
-        return Grouper(grouper=self.get_default_grouper())
+        return Grouper(grouper=self.get_grouper())
 
     def _get_metadataenricher(self) -> MetadataEnricher:
-        return MetadataEnricher(metadataenricher=self.get_default_metadataenricher())
+        return MetadataEnricher(metadataenricher=self.get_metadataenricher())
 
     def _get_cataloger(self) -> Cataloger:
-        return Cataloger(cataloger=self.get_default_cataloger())
+        return Cataloger(cataloger=self.get_cataloger())
 
     def _get_connections(self) -> list[ConnectionDefinition]:
         connections = []
