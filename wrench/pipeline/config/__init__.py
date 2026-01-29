@@ -1,8 +1,8 @@
-from .base import AbstractConfig
 from .config_reader import ConfigReader
 from .object_config import (
     CatalogerConfig,
     CatalogerType,
+    ComponentConfig,
     ComponentType,
     GrouperConfig,
     GrouperType,
@@ -12,15 +12,15 @@ from .object_config import (
     MetadataEnricherType,
     ObjectConfig,
 )
-from .pipeline_config import AbstractPipelineConfig, PipelineConfig
+from .pipeline_config import PipelineConfig
 from .runner import PipelineRunner
-from .template_pipeline import SensorRegistrationPipelineConfig, TemplatePipelineConfig
+from .template_pipeline import SensorPipelineConfig, SensorRegistrationPipelineConfig
 
 __all__ = [
-    "AbstractConfig",
     "ConfigReader",
     "CatalogerConfig",
     "CatalogerType",
+    "ComponentConfig",
     "ComponentType",
     "GrouperConfig",
     "GrouperType",
@@ -29,9 +29,8 @@ __all__ = [
     "MetadataEnricherConfig",
     "MetadataEnricherType",
     "ObjectConfig",
-    "AbstractPipelineConfig",
     "PipelineConfig",
     "PipelineRunner",
+    "SensorPipelineConfig",
     "SensorRegistrationPipelineConfig",
-    "TemplatePipelineConfig",
 ]

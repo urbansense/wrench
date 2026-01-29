@@ -1,21 +1,8 @@
-from pathlib import Path
 from typing import Any
 
-import yaml
 from pydantic import BaseModel, Field
 
-
-class LLMConfig(BaseModel):
-    """Configuration for the LLM service."""
-
-    host: str = Field(description="LLM service host URL")
-    model: str = Field(description="Model to use for LLM enrichment")
-    prompt: str | None = Field(
-        default=None, description="Prompt to generate key terms for enrichment"
-    )
-    temperature: float = Field(
-        default=0.0, description="Temperature for LLM generation"
-    )
+from wrench.utils.config import LLMConfig
 
 
 class EmbeddingConfig(BaseModel):
@@ -66,10 +53,3 @@ class TELEClassConfig(BaseModel):
     taxonomy: list[dict[str, Any]] = Field(
         description="Taxonomy structure in hierarchical format"
     )
-
-    @classmethod
-    def from_yaml(cls, path: str | Path) -> "TELEClassConfig":
-        """Load config from YAML file."""
-        with open(path, "r") as f:
-            config_dict = yaml.safe_load(f)
-        return cls.model_validate(config_dict)

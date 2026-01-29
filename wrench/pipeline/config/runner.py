@@ -13,16 +13,14 @@ from pydantic import BaseModel, Discriminator, Field, Tag
 
 from wrench.log import logger
 from wrench.pipeline.config.config_reader import ConfigReader
-from wrench.pipeline.config.pipeline_config import AbstractPipelineConfig
+from wrench.pipeline.config.pipeline_config import PipelineConfig
 from wrench.pipeline.config.template_pipeline.sensor_pipeline import (
-    SensorRegistrationPipelineConfig,
+    SensorPipelineConfig,
 )
 from wrench.pipeline.config.types import PipelineType
 from wrench.pipeline.pipeline import Pipeline
 from wrench.pipeline.stores import FileStore
 from wrench.pipeline.types import PipelineDefinition
-
-from .pipeline_config import PipelineConfig
 
 
 def _get_discriminator_value(model: Any) -> PipelineType:
@@ -39,7 +37,7 @@ class PipelineConfigWrapper(BaseModel):
 
     config: (
         Annotated[PipelineConfig, Tag(PipelineType.NONE)]
-        | Annotated[SensorRegistrationPipelineConfig, Tag(PipelineType.SENSOR_PIPELINE)]
+        | Annotated[SensorPipelineConfig, Tag(PipelineType.SENSOR_PIPELINE)]
     ) = Field(discriminator=Discriminator(_get_discriminator_value))
 
     def parse(self, resolved_data: dict[str, Any] | None = None) -> PipelineDefinition:
@@ -60,7 +58,7 @@ class PipelineRunner:
 
     @classmethod
     def from_config(
-        cls, config: AbstractPipelineConfig | dict[str, Any], do_cleaning: bool = False
+        cls, config: PipelineConfig | dict[str, Any], do_cleaning: bool = False
     ) -> "PipelineRunner":
         wrapper = PipelineConfigWrapper.model_validate({"config": config})
         logger.debug(

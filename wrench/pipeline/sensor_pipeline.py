@@ -18,7 +18,7 @@ from wrench.log import logger
 from wrench.metadataenricher import BaseMetadataEnricher
 from wrench.pipeline.config import (
     PipelineRunner,
-    SensorRegistrationPipelineConfig,
+    SensorPipelineConfig,
 )
 from wrench.pipeline.exceptions import PipelineDefinitionError
 from wrench.pipeline.pipeline_graph import PipelineResult
@@ -37,7 +37,7 @@ class SensorRegistrationPipeline:
         scheduler_config: SchedulerConfig | None = None,
     ):
         try:
-            config = SensorRegistrationPipelineConfig(
+            config = SensorPipelineConfig(
                 # argument type are fixed in the Config object
                 harvester_config=harvester,  # type: ignore[arg-type]
                 grouper_config=grouper,  # type: ignore[arg-type]

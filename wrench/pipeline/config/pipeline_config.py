@@ -10,7 +10,7 @@
 import logging
 from typing import Any, ClassVar, Literal, Optional, Union
 
-from pydantic import field_validator
+from pydantic import BaseModel, PrivateAttr, field_validator
 
 from wrench.cataloger import BaseCataloger
 from wrench.grouper import BaseGrouper
@@ -22,7 +22,6 @@ from wrench.pipeline.types import (
     PipelineDefinition,
 )
 
-from .base import AbstractConfig
 from .object_config import (
     CatalogerType,
     ComponentType,
@@ -32,31 +31,44 @@ from .object_config import (
 )
 from .param_resolver import (
     ParamConfig,
+    ParamToResolveConfig,
 )
 from .types import PipelineType
 
 logger = logging.getLogger(__name__)
 
 
-class AbstractPipelineConfig(AbstractConfig):
+class PipelineConfig(BaseModel):
     """
-    This class defines the fields possibly used by all pipelines.
+    Configuration class for pipelines.
 
-    Harvester, Grouper, Cataloger. can be provided by user as a single item or a dict of
-    items. Validators deal with type conversion so that the field in all instances is a
-    dict of items.
+    This is the base class for all pipeline configurations. It provides:
+    - Configuration for harvesters, groupers, metadata enrichers, and catalogers
+    - Parameter resolution for cross-referencing values
+    - Parsing of pipeline definitions
+
+    For raw pipelines (non-template), use component_config and connection_config.
+    For template pipelines, subclass this and override _get_components
+    and _get_connections.
     """
 
     harvester_config: dict[str, HarvesterType] = {}
     grouper_config: dict[str, GrouperType] = {}
     metadataenricher_config: dict[str, MetadataEnricherType] = {}
     cataloger_config: dict[str, CatalogerType] = {}
-    # extra parameters values that can be used in different places of the config file
     extras: dict[str, ParamConfig] = {}
+    """Extra parameters that can be referenced in other parts of the config."""
+
+    # For raw pipeline configs (non-template)
+    component_config: dict[str, ComponentType] = {}
+    connection_config: list[ConnectionDefinition] = []
+    template_: Literal[PipelineType.NONE] = PipelineType.NONE
 
     DEFAULT_NAME: ClassVar[str] = "default"
-    """Name of the default item in dict
-    """
+    """Name of the default item in dict."""
+
+    _global_data: dict[str, Any] = PrivateAttr(default_factory=dict)
+    """Additional parameter ignored by all Pydantic model_* methods."""
 
     @field_validator("harvester_config", mode="before")
     @classmethod
@@ -94,6 +106,32 @@ class AbstractPipelineConfig(AbstractConfig):
             return {cls.DEFAULT_NAME: cataloger}
         return cataloger
 
+    def resolve_param(self, param: ParamConfig) -> Any:
+        """Finds the parameter value from its definition."""
+        if not isinstance(param, ParamToResolveConfig):
+            return param
+        return param.resolve(self._global_data)
+
+    def resolve_params(self, params: dict[str, ParamConfig]) -> dict[str, Any]:
+        """Resolve all parameters recursively."""
+        result = {}
+        for param_name, param in params.items():
+            if isinstance(param, dict):
+                result[param_name] = self._resolve_nested_param(param)
+            else:
+                result[param_name] = self.resolve_param(param)
+        return result
+
+    def _resolve_nested_param(self, param_dict: dict[str, Any]) -> dict[str, Any]:
+        """Recursively resolve parameters in nested dictionaries."""
+        result = {}
+        for key, value in param_dict.items():
+            if isinstance(value, dict):
+                result[key] = self._resolve_nested_param(value)
+            else:
+                result[key] = self.resolve_param(value)
+        return result
+
     def _resolve_component_definition(
         self, name: str, config: ComponentType
     ) -> ComponentDefinition:
@@ -117,10 +155,6 @@ class AbstractPipelineConfig(AbstractConfig):
         Typically, harvesters, groupers, metadataenrichers, and catalogers can be
         referenced in component input parameters.
         """
-        # 'extras' parameters can be referenced in other configs,
-        # that's why they are parsed before the others
-        # e.g., an API key used for both LLM and Embedder can be stored only
-        # once in extras.
         extra_data = {
             "extras": self.resolve_params(self.extras),
         }
@@ -152,10 +186,15 @@ class AbstractPipelineConfig(AbstractConfig):
         return global_data
 
     def _get_components(self) -> list[ComponentDefinition]:
-        return []
+        """Get component definitions. Override in subclasses for template pipelines."""
+        return [
+            self._resolve_component_definition(name, component_config)
+            for name, component_config in self.component_config.items()
+        ]
 
     def _get_connections(self) -> list[ConnectionDefinition]:
-        return []
+        """Get connection definitions. Override in subclasses for template pipelines."""
+        return self.connection_config
 
     def parse(
         self, resolved_data: Optional[dict[str, Any]] = None
@@ -214,24 +253,3 @@ class AbstractPipelineConfig(AbstractConfig):
 
     def get_default_cataloger(self) -> BaseCataloger:
         return self.get_cataloger_by_name(self.DEFAULT_NAME)
-
-
-class PipelineConfig(AbstractPipelineConfig):
-    """
-    Configuration class for raw pipelines.
-
-    Config must contain all components and connections.
-    """
-
-    component_config: dict[str, ComponentType]
-    connection_config: list[ConnectionDefinition]
-    template_: Literal[PipelineType.NONE] = PipelineType.NONE
-
-    def _get_connections(self) -> list[ConnectionDefinition]:
-        return self.connection_config
-
-    def _get_components(self) -> list[ComponentDefinition]:
-        return [
-            self._resolve_component_definition(name, component_config)
-            for name, component_config in self.component_config.items()
-        ]

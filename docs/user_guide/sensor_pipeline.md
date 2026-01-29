@@ -96,9 +96,7 @@ cataloger_config:
   class_: sddi.SDDICataloger
   params_:
     base_url: "your_sddi_catalog_endpoint"
-    api_key:
-      resolver_: ENV
-      var_: CKAN_API_TOKEN
+    api_key: ${CKAN_API_TOKEN}
 
 ```
 

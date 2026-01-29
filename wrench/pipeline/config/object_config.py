@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import importlib
 from typing import (
+    Annotated,
     Any,
     ClassVar,
     Generic,
@@ -21,10 +22,11 @@ from typing import (
 )
 
 from pydantic import (
+    BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     PrivateAttr,
-    RootModel,
     field_validator,
 )
 
@@ -34,9 +36,9 @@ from wrench.harvester import BaseHarvester
 from wrench.log import logger
 from wrench.metadataenricher import BaseMetadataEnricher
 from wrench.pipeline.component import Component
-from wrench.pipeline.config.base import AbstractConfig
 from wrench.pipeline.config.param_resolver import (
     ParamConfig,
+    ParamToResolveConfig,
     _convert_dict_to_param_config,
 )
 
@@ -67,13 +69,17 @@ def issubclass_safe(
     return False
 
 
-class ObjectConfig(AbstractConfig, Generic[T]):
-    """Config of an object from a class name and its constructor parameters."""
+class ObjectConfig(BaseModel, Generic[T]):
+    """Config of an object from a class name and its constructor parameters.
 
-    """Path to class to be instantiated."""
+    Provides methods to get a class from a string and resolve a parameter defined by
+    a dict with a 'resolver_' key.
+    """
+
     class_: str | None = Field(default=None, validate_default=True)
-    """Initialization parameters."""
+    """Path to class to be instantiated."""
     params_: dict[str, ParamConfig] = {}
+    """Initialization parameters."""
 
     DEFAULT_MODULE: ClassVar[str] = "."
     """Default module to import the class from."""
@@ -82,12 +88,44 @@ class ObjectConfig(AbstractConfig, Generic[T]):
     REQUIRED_PARAMS: ClassVar[list[str]] = []
     """List of required parameters for this object constructor."""
 
-    # Declare the logger as a private attribute
+    _global_data: dict[str, Any] = PrivateAttr(default_factory=dict)
+    """Additional parameter ignored by all Pydantic model_* methods."""
     _logger = PrivateAttr()
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         self._logger = logger.getChild(self.__class__.__name__)
+
+    def resolve_param(self, param: ParamConfig) -> Any:
+        """Finds the parameter value from its definition."""
+        if not isinstance(param, ParamToResolveConfig):
+            # some parameters do not have to be resolved, real
+            # values are already provided
+            return param
+        return param.resolve(self._global_data)
+
+    def resolve_params(self, params: dict[str, ParamConfig]) -> dict[str, Any]:
+        """Resolve all parameters recursively."""
+        result = {}
+        for param_name, param in params.items():
+            if isinstance(param, dict):
+                # Recursively resolve nested dictionaries
+                result[param_name] = self._resolve_nested_param(param)
+            else:
+                result[param_name] = self.resolve_param(param)
+        return result
+
+    def _resolve_nested_param(self, param_dict: dict[str, Any]) -> dict[str, Any]:
+        """Recursively resolve parameters in nested dictionaries."""
+        result = {}
+        for key, value in param_dict.items():
+            if isinstance(value, dict):
+                # This nested dict should now contain properly converted ParamConfig
+                result[key] = self._resolve_nested_param(value)
+            else:
+                # This could be a ParamConfig object or regular value
+                result[key] = self.resolve_param(value)
+        return result
 
     @field_validator("params_")
     @classmethod
@@ -182,15 +220,39 @@ class HarvesterConfig(ObjectConfig[BaseHarvester]):
     INTERFACE = BaseHarvester
 
 
-class HarvesterType(RootModel):  # type: ignore[type-arg]
+def _validate_harvester_type(
+    v: Any,
+) -> Union[BaseHarvester, HarvesterConfig]:
+    """Validator for HarvesterType that handles both instances and config dicts."""
+    if isinstance(v, BaseHarvester):
+        return v
+    if isinstance(v, HarvesterConfig):
+        return v
+    if isinstance(v, dict):
+        return HarvesterConfig.model_validate(v)
+    return v
+
+
+class HarvesterType(BaseModel):
     """A model to wrap BaseHarvester and HarvesterConfig objects.
 
     The `parse` method always returns an object inheriting from BaseHarvester.
     """
 
-    root: Union[BaseHarvester, HarvesterConfig]
+    root: Annotated[
+        Union[BaseHarvester, HarvesterConfig], BeforeValidator(_validate_harvester_type)
+    ]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def __init__(self, root: Any = None, **data: Any) -> None:
+        if root is not None:
+            super().__init__(root=root, **data)
+        elif data:
+            # Allow direct field initialization
+            super().__init__(root=data, **{})
+        else:
+            super().__init__(root=root, **data)
 
     def parse(self, resolved_data: dict[str, Any] | None = None) -> BaseHarvester:
         if isinstance(self.root, BaseHarvester):
@@ -208,15 +270,36 @@ class GrouperConfig(ObjectConfig[BaseGrouper]):
     INTERFACE = BaseGrouper
 
 
-class GrouperType(RootModel):  # type: ignore[type-arg]
+def _validate_grouper_type(v: Any) -> Union[BaseGrouper, GrouperConfig]:
+    """Validator for GrouperType that handles both instances and config dicts."""
+    if isinstance(v, BaseGrouper):
+        return v
+    if isinstance(v, GrouperConfig):
+        return v
+    if isinstance(v, dict):
+        return GrouperConfig.model_validate(v)
+    return v
+
+
+class GrouperType(BaseModel):
     """A model to wrap BaseGrouper and GrouperConfig objects.
 
     The `parse` method always returns an object inheriting from BaseGrouper.
     """
 
-    root: Union[BaseGrouper, GrouperConfig]
+    root: Annotated[
+        Union[BaseGrouper, GrouperConfig], BeforeValidator(_validate_grouper_type)
+    ]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def __init__(self, root: Any = None, **data: Any) -> None:
+        if root is not None:
+            super().__init__(root=root, **data)
+        elif data:
+            super().__init__(root=data, **{})
+        else:
+            super().__init__(root=root, **data)
 
     def parse(self, resolved_data: dict[str, Any] | None = None) -> BaseGrouper:
         if isinstance(self.root, BaseGrouper):
@@ -234,15 +317,39 @@ class MetadataEnricherConfig(ObjectConfig[BaseMetadataEnricher]):
     INTERFACE = BaseMetadataEnricher
 
 
-class MetadataEnricherType(RootModel):  # type: ignore[type-arg]
+def _validate_metadataenricher_type(
+    v: Any,
+) -> Union[BaseMetadataEnricher, MetadataEnricherConfig]:
+    """Validator for MetadataEnricherType."""
+    if isinstance(v, BaseMetadataEnricher):
+        return v
+    if isinstance(v, MetadataEnricherConfig):
+        return v
+    if isinstance(v, dict):
+        return MetadataEnricherConfig.model_validate(v)
+    return v
+
+
+class MetadataEnricherType(BaseModel):
     """A model to wrap BaseMetadataEnricher and MetadataEnricherConfig objects.
 
     The `parse` method always returns an object inheriting from BaseMetadataEnricher.
     """
 
-    root: Union[BaseMetadataEnricher, MetadataEnricherConfig]
+    root: Annotated[
+        Union[BaseMetadataEnricher, MetadataEnricherConfig],
+        BeforeValidator(_validate_metadataenricher_type),
+    ]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def __init__(self, root: Any = None, **data: Any) -> None:
+        if root is not None:
+            super().__init__(root=root, **data)
+        elif data:
+            super().__init__(root=data, **{})
+        else:
+            super().__init__(root=root, **data)
 
     def parse(
         self, resolved_data: dict[str, Any] | None = None
@@ -262,15 +369,36 @@ class CatalogerConfig(ObjectConfig[BaseCataloger]):
     INTERFACE = BaseCataloger
 
 
-class CatalogerType(RootModel):  # type: ignore[type-arg]
+def _validate_cataloger_type(v: Any) -> Union[BaseCataloger, CatalogerConfig]:
+    """Validator for CatalogerType."""
+    if isinstance(v, BaseCataloger):
+        return v
+    if isinstance(v, CatalogerConfig):
+        return v
+    if isinstance(v, dict):
+        return CatalogerConfig.model_validate(v)
+    return v
+
+
+class CatalogerType(BaseModel):
     """A model to wrap BaseCataloger and CatalogerConfig objects.
 
     The `parse` method always returns an object inheriting from BaseCataloger.
     """
 
-    root: Union[BaseCataloger, CatalogerConfig]
+    root: Annotated[
+        Union[BaseCataloger, CatalogerConfig], BeforeValidator(_validate_cataloger_type)
+    ]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def __init__(self, root: Any = None, **data: Any) -> None:
+        if root is not None:
+            super().__init__(root=root, **data)
+        elif data:
+            super().__init__(root=data, **{})
+        else:
+            super().__init__(root=root, **data)
 
     def parse(self, resolved_data: dict[str, Any] | None = None) -> BaseCataloger:
         if isinstance(self.root, BaseCataloger):
@@ -295,10 +423,33 @@ class ComponentConfig(ObjectConfig[Component]):
         return self.resolve_params(self.run_params_)
 
 
-class ComponentType(RootModel):  # type: ignore[type-arg]
-    root: Union[Component, ComponentConfig]
+def _validate_component_type(v: Any) -> Union[Component, ComponentConfig]:
+    """Validator for ComponentType."""
+    if isinstance(v, Component):
+        return v
+    if isinstance(v, ComponentConfig):
+        return v
+    if isinstance(v, dict):
+        return ComponentConfig.model_validate(v)
+    return v
+
+
+class ComponentType(BaseModel):
+    """A model to wrap Component and ComponentConfig objects."""
+
+    root: Annotated[
+        Union[Component, ComponentConfig], BeforeValidator(_validate_component_type)
+    ]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def __init__(self, root: Any = None, **data: Any) -> None:
+        if root is not None:
+            super().__init__(root=root, **data)
+        elif data:
+            super().__init__(root=data, **{})
+        else:
+            super().__init__(root=root, **data)
 
     def parse(self, resolved_data: dict[str, Any] | None = None) -> Component:
         if isinstance(self.root, Component):

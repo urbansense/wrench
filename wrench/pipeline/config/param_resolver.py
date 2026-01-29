@@ -8,14 +8,12 @@
 # needs of this project.
 
 import enum
-import os
 from typing import Any, ClassVar, Literal, Union
 
 from pydantic import BaseModel
 
 
 class ParamResolverEnum(str, enum.Enum):
-    ENV = "ENV"
     CONFIG_KEY = "CONFIG_KEY"
 
 
@@ -24,15 +22,9 @@ class ParamToResolveConfig(BaseModel):
         raise NotImplementedError
 
 
-class ParamFromEnvConfig(ParamToResolveConfig):
-    resolver_: Literal[ParamResolverEnum.ENV] = ParamResolverEnum.ENV
-    var_: str
-
-    def resolve(self, data: dict[str, Any]) -> Any:
-        return os.environ.get(self.var_)
-
-
 class ParamFromKeyConfig(ParamToResolveConfig):
+    """Resolver for cross-referencing values from other parts of the config."""
+
     resolver_: Literal[ParamResolverEnum.CONFIG_KEY] = ParamResolverEnum.CONFIG_KEY
     key_: str
 
@@ -47,11 +39,8 @@ class ParamFromKeyConfig(ParamToResolveConfig):
         return d
 
 
-# Union type for resolver validation (without dict catch-all)
-ResolverConfig = Union[
-    ParamFromEnvConfig,
-    ParamFromKeyConfig,
-]
+# Union type for resolver validation
+ResolverConfig = ParamFromKeyConfig
 
 
 def _convert_dict_to_param_config(value: Any) -> Any:
@@ -82,7 +71,6 @@ def _convert_dict_to_param_config(value: Any) -> Any:
 ParamConfig = Union[
     float,
     str,
-    ParamFromEnvConfig,
     ParamFromKeyConfig,
     dict[str, Any],
 ]

@@ -1,4 +1,3 @@
-from .base import TemplatePipelineConfig
-from .sensor_pipeline import SensorRegistrationPipelineConfig
+from .sensor_pipeline import SensorPipelineConfig, SensorRegistrationPipelineConfig
 
-__all__ = ["TemplatePipelineConfig", "SensorRegistrationPipelineConfig"]
+__all__ = ["SensorPipelineConfig", "SensorRegistrationPipelineConfig"]
