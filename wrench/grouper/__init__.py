@@ -1,7 +1,7 @@
 from .base import BaseGrouper
-from .teleclass import TELEClassGrouper
+from .kinetic import KINETIC
 
 __all__ = [
     "BaseGrouper",
-    "TELEClassGrouper",
+    "KINETIC",
 ]
