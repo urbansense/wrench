@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 
 import click
+from dotenv import load_dotenv
 from rich.console import Console
 
 from wrench.pipeline.config import ConfigReader
@@ -30,7 +31,13 @@ def pipeline():
     type=click.Path(),
     help="Save results to JSON file",
 )
-def run(config_path: str, once: bool, save_results: str):
+@click.option(
+    "--env",
+    "-e",
+    type=click.Path(),
+    help="Load env var from a .env file",
+)
+def run(config_path: str, once: bool, save_results: str, env: str = ""):
     """Run a pipeline from a configuration file.
 
     CONFIG_PATH: Path to pipeline configuration YAML file
@@ -43,6 +50,9 @@ def run(config_path: str, once: bool, save_results: str):
         # Load configuration
         config_reader = ConfigReader()
         config = config_reader.read(config_path)
+
+        if env != "":
+            load_dotenv(env)
 
         console.print("[bold]Configuration loaded:[/bold]")
         console.print(

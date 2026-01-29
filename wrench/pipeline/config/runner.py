@@ -73,7 +73,7 @@ class PipelineRunner:
         data = ConfigReader().read(file_path)
         return cls.from_config(data)
 
-    async def run(self, user_input: dict[str, Any]) -> dict[str, Any]:
+    async def run(self, user_input: dict[str, Any] | None = None) -> dict[str, Any]:
         """Run the pipeline with the given input."""
         # Merge config parameters with user input
         # Call pipeline.run() with the merged parameters
