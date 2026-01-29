@@ -10,7 +10,6 @@ from .object_config import (
     HarvesterType,
     MetadataEnricherConfig,
     MetadataEnricherType,
-    ObjectConfig,
 )
 from .pipeline_config import PipelineConfig
 from .runner import PipelineRunner
@@ -28,7 +27,6 @@ __all__ = [
     "HarvesterType",
     "MetadataEnricherConfig",
     "MetadataEnricherType",
-    "ObjectConfig",
     "PipelineConfig",
     "PipelineRunner",
     "SensorPipelineConfig",
