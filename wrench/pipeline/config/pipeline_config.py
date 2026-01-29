@@ -8,9 +8,9 @@
 # needs of this project.
 
 import logging
-from typing import Any, ClassVar, Literal, Optional, Union
+from typing import Any, Literal
 
-from pydantic import field_validator
+from pydantic import BaseModel, PrivateAttr
 
 from wrench.cataloger import BaseCataloger
 from wrench.grouper import BaseGrouper
@@ -22,150 +22,72 @@ from wrench.pipeline.types import (
     PipelineDefinition,
 )
 
-from .base import AbstractConfig
 from .object_config import (
-    CatalogerType,
-    ComponentType,
-    GrouperType,
-    HarvesterType,
-    MetadataEnricherType,
-)
-from .param_resolver import (
-    ParamConfig,
+    CatalogerConfig,
+    ComponentConfig,
+    GrouperConfig,
+    HarvesterConfig,
+    MetadataEnricherConfig,
 )
 from .types import PipelineType
 
 logger = logging.getLogger(__name__)
 
 
-class AbstractPipelineConfig(AbstractConfig):
+class PipelineConfig(BaseModel):
     """
-    This class defines the fields possibly used by all pipelines.
+    Configuration class for pipelines.
 
-    Harvester, Grouper, Cataloger. can be provided by user as a single item or a dict of
-    items. Validators deal with type conversion so that the field in all instances is a
-    dict of items.
-    """
-
-    harvester_config: dict[str, HarvesterType] = {}
-    grouper_config: dict[str, GrouperType] = {}
-    metadataenricher_config: dict[str, MetadataEnricherType] = {}
-    cataloger_config: dict[str, CatalogerType] = {}
-    # extra parameters values that can be used in different places of the config file
-    extras: dict[str, ParamConfig] = {}
-
-    DEFAULT_NAME: ClassVar[str] = "default"
-    """Name of the default item in dict
+    For template pipelines, subclass this and override _get_components
+    and _get_connections.
     """
 
-    @field_validator("harvester_config", mode="before")
-    @classmethod
-    def validate_harvesters(
-        cls, harvesters: Union[HarvesterType, dict[str, Any]]
-    ) -> dict[str, Any]:
-        if not isinstance(harvesters, dict) or "class_" in harvesters:
-            return {cls.DEFAULT_NAME: harvesters}
-        return harvesters
+    harvester_config: dict[str, Any] | None = None
+    grouper_config: dict[str, Any] | None = None
+    metadataenricher_config: dict[str, Any] | None = None
+    cataloger_config: dict[str, Any] | None = None
 
-    @field_validator("grouper_config", mode="before")
-    @classmethod
-    def validate_groupers(
-        cls, groupers: Union[GrouperType, dict[str, Any]]
-    ) -> dict[str, Any]:
-        if not isinstance(groupers, dict) or "class_" in groupers:
-            return {cls.DEFAULT_NAME: groupers}
-        return groupers
+    # For raw pipeline configs (non-template)
+    component_config: dict[str, ComponentConfig] = {}
+    connection_config: list[ConnectionDefinition] = []
+    template_: Literal[PipelineType.NONE] = PipelineType.NONE
 
-    @field_validator("metadataenricher_config", mode="before")
-    @classmethod
-    def validate_metadataenricher(
-        cls, metadataenricher: Union[MetadataEnricherType, dict[str, Any]]
-    ) -> dict[str, Any]:
-        if not isinstance(metadataenricher, dict) or "class_" in metadataenricher:
-            return {cls.DEFAULT_NAME: metadataenricher}
-        return metadataenricher
+    _harvester: BaseHarvester | None = PrivateAttr(default=None)
+    _grouper: BaseGrouper | None = PrivateAttr(default=None)
+    _metadataenricher: BaseMetadataEnricher | None = PrivateAttr(default=None)
+    _cataloger: BaseCataloger | None = PrivateAttr(default=None)
 
-    @field_validator("cataloger_config", mode="before")
-    @classmethod
-    def validate_cataloger(
-        cls, cataloger: Union[CatalogerType, dict[str, Any]]
-    ) -> dict[str, Any]:
-        if not isinstance(cataloger, dict) or "class_" in cataloger:
-            return {cls.DEFAULT_NAME: cataloger}
-        return cataloger
-
-    def _resolve_component_definition(
-        self, name: str, config: ComponentType
-    ) -> ComponentDefinition:
-        component = config.parse(self._global_data)
-        if hasattr(config.root, "run_params_"):
-            component_run_params = self.resolve_params(config.root.run_params_)
-        else:
-            component_run_params = {}
-        component_def = ComponentDefinition(
-            name=name,
-            component=component,
-            run_params=component_run_params,
-        )
-        logger.debug(f"PIPELINE_CONFIG: resolved component {component_def}")
-        return component_def
-
-    def _parse_global_data(self) -> dict[str, Any]:
-        """
-        Global data contains data that can be referenced in other parts of the config.
-
-        Typically, harvesters, groupers, metadataenrichers, and catalogers can be
-        referenced in component input parameters.
-        """
-        # 'extras' parameters can be referenced in other configs,
-        # that's why they are parsed before the others
-        # e.g., an API key used for both LLM and Embedder can be stored only
-        # once in extras.
-        extra_data = {
-            "extras": self.resolve_params(self.extras),
-        }
-        logger.debug(f"PIPELINE_CONFIG: resolved 'extras': {extra_data}")
-        harvesters: dict[str, BaseHarvester] = {
-            name: config.parse(extra_data)
-            for name, config in self.harvester_config.items()
-        }
-        groupers: dict[str, BaseGrouper] = {
-            name: config.parse(extra_data)
-            for name, config in self.grouper_config.items()
-        }
-        metadataenrichers: dict[str, BaseMetadataEnricher] = {
-            name: config.parse(extra_data)
-            for name, config in self.metadataenricher_config.items()
-        }
-        catalogers: dict[str, BaseCataloger] = {
-            name: config.parse(extra_data)
-            for name, config in self.cataloger_config.items()
-        }
-        global_data = {
-            **extra_data,
-            "harvester_config": harvesters,
-            "grouper_config": groupers,
-            "metadataenricher_config": metadataenrichers,
-            "cataloger_config": catalogers,
-        }
-        logger.debug(f"PIPELINE_CONFIG: resolved globals: {global_data}")
-        return global_data
+    def _parse_components(self) -> None:
+        """Parse all component configs into instances."""
+        if self.harvester_config:
+            self._harvester = HarvesterConfig(root=self.harvester_config).parse()
+        if self.grouper_config:
+            self._grouper = GrouperConfig(root=self.grouper_config).parse()
+        if self.metadataenricher_config:
+            self._metadataenricher = MetadataEnricherConfig(
+                root=self.metadataenricher_config
+            ).parse()
+        if self.cataloger_config:
+            self._cataloger = CatalogerConfig(root=self.cataloger_config).parse()
 
     def _get_components(self) -> list[ComponentDefinition]:
-        return []
+        """Get component definitions. Override in subclasses for template pipelines."""
+        return [
+            ComponentDefinition(
+                name=name,
+                component=config.parse(),
+                run_params=config.get_run_params(),
+            )
+            for name, config in self.component_config.items()
+        ]
 
     def _get_connections(self) -> list[ConnectionDefinition]:
-        return []
+        """Get connection definitions. Override in subclasses for template pipelines."""
+        return self.connection_config
 
-    def parse(
-        self, resolved_data: Optional[dict[str, Any]] = None
-    ) -> PipelineDefinition:
-        """
-        Parse the full config and returns a PipelineDefinition object.
-
-        Contains instantiated components and a list of connections.
-        """
-        self._global_data = self._parse_global_data()
+    def parse(self) -> PipelineDefinition:
+        """Parse the config and return a PipelineDefinition."""
+        self._parse_components()
         return PipelineDefinition(
             components=self._get_components(),
             connections=self._get_connections(),
@@ -174,64 +96,22 @@ class AbstractPipelineConfig(AbstractConfig):
     def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:
         return user_input
 
-    async def close(self) -> None:
-        drivers = self._global_data.get("wrench_config", {})
-        for driver_name in drivers:
-            driver = drivers[driver_name]
-            logger.debug(f"PIPELINE_CONFIG: closing driver {driver_name}: {driver}")
-            driver.close()
+    def get_harvester(self) -> BaseHarvester:
+        if self._harvester is None:
+            raise ValueError("No harvester configured")
+        return self._harvester
 
-    def get_harvester_by_name(self, name: str) -> BaseHarvester:
-        harvesters: dict[str, BaseHarvester] = self._global_data.get(
-            "harvester_config", {}
-        )
-        return harvesters[name]
+    def get_grouper(self) -> BaseGrouper:
+        if self._grouper is None:
+            raise ValueError("No grouper configured")
+        return self._grouper
 
-    def get_default_harvester(self) -> BaseHarvester:
-        return self.get_harvester_by_name(self.DEFAULT_NAME)
+    def get_metadataenricher(self) -> BaseMetadataEnricher:
+        if self._metadataenricher is None:
+            raise ValueError("No metadata enricher configured")
+        return self._metadataenricher
 
-    def get_grouper_by_name(self, name: str) -> BaseGrouper:
-        llms: dict[str, BaseGrouper] = self._global_data.get("grouper_config", {})
-        return llms[name]
-
-    def get_default_grouper(self) -> BaseGrouper:
-        return self.get_grouper_by_name(self.DEFAULT_NAME)
-
-    def get_metadataenricher_by_name(self, name: str) -> BaseMetadataEnricher:
-        metadataenricher: dict[str, BaseMetadataEnricher] = self._global_data.get(
-            "metadataenricher_config", {}
-        )
-        return metadataenricher[name]
-
-    def get_default_metadataenricher(self) -> BaseMetadataEnricher:
-        return self.get_metadataenricher_by_name(self.DEFAULT_NAME)
-
-    def get_cataloger_by_name(self, name: str) -> BaseCataloger:
-        cataloger: dict[str, BaseCataloger] = self._global_data.get(
-            "cataloger_config", {}
-        )
-        return cataloger[name]
-
-    def get_default_cataloger(self) -> BaseCataloger:
-        return self.get_cataloger_by_name(self.DEFAULT_NAME)
-
-
-class PipelineConfig(AbstractPipelineConfig):
-    """
-    Configuration class for raw pipelines.
-
-    Config must contain all components and connections.
-    """
-
-    component_config: dict[str, ComponentType]
-    connection_config: list[ConnectionDefinition]
-    template_: Literal[PipelineType.NONE] = PipelineType.NONE
-
-    def _get_connections(self) -> list[ConnectionDefinition]:
-        return self.connection_config
-
-    def _get_components(self) -> list[ComponentDefinition]:
-        return [
-            self._resolve_component_definition(name, component_config)
-            for name, component_config in self.component_config.items()
-        ]
+    def get_cataloger(self) -> BaseCataloger:
+        if self._cataloger is None:
+            raise ValueError("No cataloger configured")
+        return self._cataloger

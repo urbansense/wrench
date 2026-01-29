@@ -4,9 +4,10 @@ import asyncio
 from pathlib import Path
 
 import click
+from dotenv import load_dotenv
 from rich.console import Console
 
-from tools.core.config_loader import ConfigLoader
+from wrench.pipeline.config import ConfigReader
 
 console = Console()
 
@@ -30,7 +31,13 @@ def pipeline():
     type=click.Path(),
     help="Save results to JSON file",
 )
-def run(config_path: str, once: bool, save_results: str):
+@click.option(
+    "--env",
+    "-e",
+    type=click.Path(),
+    help="Load env var from a .env file",
+)
+def run(config_path: str, once: bool, save_results: str, env: str = ""):
     """Run a pipeline from a configuration file.
 
     CONFIG_PATH: Path to pipeline configuration YAML file
@@ -41,8 +48,11 @@ def run(config_path: str, once: bool, save_results: str):
         from wrench.pipeline.config import PipelineRunner
 
         # Load configuration
-        config_loader = ConfigLoader()
-        config = config_loader.load_yaml(config_path)
+        config_reader = ConfigReader()
+        config = config_reader.read(config_path)
+
+        if env != "":
+            load_dotenv(env)
 
         console.print("[bold]Configuration loaded:[/bold]")
         console.print(
@@ -121,8 +131,8 @@ def test(component_type: str, config_path: str, limit: int):
     )
 
     try:
-        config_loader = ConfigLoader()
-        config = config_loader.load_yaml(config_path)
+        config_reader = ConfigReader()
+        config = config_reader.read(config_path)
 
         if component_type == "harvester":
             _test_harvester(config, limit)
@@ -206,8 +216,22 @@ def _test_metadataenricher(config: dict):
 )
 def list_configs(component: str):
     """List available pipeline configuration files."""
-    config_loader = ConfigLoader()
-    configs = config_loader.list_configs(component)
+    configs = []
+
+    # Search test_script directory
+    test_script_dir = Path("test_script")
+    if test_script_dir.exists():
+        configs.extend(test_script_dir.glob("*_config.yaml"))
+
+    # Search tools/fixtures/configs
+    tools_config_dir = Path("tools/fixtures/configs")
+    if tools_config_dir.exists():
+        if component:
+            configs.extend((tools_config_dir / component).glob("*.yaml"))
+        else:
+            configs.extend(tools_config_dir.rglob("*.yaml"))
+
+    configs = sorted(set(configs))
 
     console.print("[bold]Available Configuration Files[/bold]\n")
 

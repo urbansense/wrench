@@ -9,24 +9,20 @@
 
 import asyncio
 
-from pydantic import ValidationError
-
 from wrench.cataloger import BaseCataloger
 from wrench.grouper import BaseGrouper
 from wrench.harvester import BaseHarvester
 from wrench.log import logger
 from wrench.metadataenricher import BaseMetadataEnricher
-from wrench.pipeline.config import (
-    PipelineRunner,
-    SensorRegistrationPipelineConfig,
-)
-from wrench.pipeline.exceptions import PipelineDefinitionError
+from wrench.pipeline.config import PipelineRunner
 from wrench.pipeline.pipeline_graph import PipelineResult
 from wrench.scheduler.config import SchedulerConfig
 
+from .config.template_pipeline.sensor_pipeline import SensorPipelineConfig
+
 
 class SensorRegistrationPipeline:
-    """A class to simplify building sensor registration pipeline."""
+    """A class to simplify building sensor registration pipeline programmatically."""
 
     def __init__(
         self,
@@ -36,16 +32,12 @@ class SensorRegistrationPipeline:
         cataloger: BaseCataloger,
         scheduler_config: SchedulerConfig | None = None,
     ):
-        try:
-            config = SensorRegistrationPipelineConfig(
-                # argument type are fixed in the Config object
-                harvester_config=harvester,  # type: ignore[arg-type]
-                grouper_config=grouper,  # type: ignore[arg-type]
-                metadataenricher_config=metadataenricher,  # type: ignore[arg-type]
-                cataloger_config=cataloger,  # type: ignore[arg-type]
-            )
-        except (ValidationError, ValueError) as e:
-            raise PipelineDefinitionError() from e
+        # Create config and set instances directly
+        config = SensorPipelineConfig()
+        config._harvester = harvester
+        config._grouper = grouper
+        config._metadataenricher = metadataenricher
+        config._cataloger = cataloger
 
         self.runner = PipelineRunner.from_config(config)
 

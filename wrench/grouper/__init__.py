@@ -1,7 +1,12 @@
 from .base import BaseGrouper
-from .teleclass import TELEClassGrouper
+from .kinetic import KINETIC
+
+GROUPERS: dict[str, type[BaseGrouper]] = {
+    "kinetic": KINETIC,
+}
 
 __all__ = [
     "BaseGrouper",
-    "TELEClassGrouper",
+    "KINETIC",
+    "GROUPERS",
 ]

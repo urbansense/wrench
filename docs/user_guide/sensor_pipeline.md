@@ -68,38 +68,31 @@ You can also define the pipeline from a configuration file such as YAML.
 # pipeline_config.yaml
 template_: SensorPipeline
 harvester_config:
-  class_: sensorthings.SensorThingsHarvester
-  params_:
+  sensorthings:
     base_url: "https://sensorthingsapiservice/v1.1"
     pagination_config:
       page_delay: 0.1
       timeout: 30
       batch_size: 120
-    translator_config:
-      translator_type: libre_translate # for now, only supports libre_translate, more to come
-      url: "http://your_libretranslate_endpoint/"
       source_lang: "de"
 grouper_config:
-  class_: teleclass.TELEClassGrouper
-  params_:
-    config: "./teleclass_config.yaml"
+  kinetic:
+    llm_config:
+      base_url: ${OLLAMA_URL}
+      model: ${OLLAMA_MODEL}
+      api_key: ${OLLAMA_API_KEY}
 metadataenricher_config:
-  class_: sensorthings.SensorThingsMetadataEnricher
-  params_:
+  sensorthings:
     base_url: "https://iot.hamburg.de/v1.1"
     title: "Hamburg FROST Server"
     description: "City of Hamburg FROST Server containing data collected from urban sensors around the city."
-    generator_config:
-      llm_host: "your_ollama_host_endpoint"
-      model: "llama3.3:70b-instruct-q4_K_M"
+    llm_config:
+      base_url: ${OLLAMA_URL}
+      model: ${OLLAMA_MODEL}
 cataloger_config:
-  class_: sddi.SDDICataloger
-  params_:
+  sddi:
     base_url: "your_sddi_catalog_endpoint"
-    api_key:
-      resolver_: ENV
-      var_: CKAN_API_TOKEN
-
+    api_key: ${CKAN_API_TOKEN}
 ```
 
 and you can also schedule it by creating an instance of scheduler and passing in the runner to the scheduler

@@ -79,7 +79,7 @@ class Device(BaseModel):
 
     properties: dict[str, Any] | None = None
 
-    _raw_data: dict[str, Any] = Field(default_factory=dict)
+    raw_data: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
