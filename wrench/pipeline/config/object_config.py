@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import Annotated, Any, Union
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, field_validator
 
 from wrench.cataloger import CATALOGERS, BaseCataloger
 from wrench.grouper import GROUPERS, BaseGrouper
@@ -34,92 +34,38 @@ def _parse_from_registry(
     return registry[name](**(params or {}))
 
 
-class HarvesterConfig(BaseModel):
-    """Wrapper for harvester configuration."""
+def _make_parser(registry: dict[str, type], base_type: type, type_name: str):
+    """Create a parser function for use with BeforeValidator."""
 
-    root: Union[BaseHarvester, dict[str, Any]]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @field_validator("root", mode="before")
-    @classmethod
-    def validate_root(cls, v: Any) -> Any:
-        if isinstance(v, BaseHarvester):
+    def parse(v: Any) -> Any:
+        if isinstance(v, base_type):
             return v
         if isinstance(v, dict):
-            return v
-        raise ValueError(f"Expected BaseHarvester or dict, got {type(v)}")
+            return _parse_from_registry(v, registry, type_name)
+        raise ValueError(f"Expected {base_type.__name__} or dict, got {type(v)}")
 
-    def parse(self) -> BaseHarvester:
-        if isinstance(self.root, BaseHarvester):
-            return self.root
-        return _parse_from_registry(self.root, HARVESTERS, "harvester")
+    return parse
 
 
-class GrouperConfig(BaseModel):
-    """Wrapper for grouper configuration."""
-
-    root: Union[BaseGrouper, dict[str, Any]]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @field_validator("root", mode="before")
-    @classmethod
-    def validate_root(cls, v: Any) -> Any:
-        if isinstance(v, BaseGrouper):
-            return v
-        if isinstance(v, dict):
-            return v
-        raise ValueError(f"Expected BaseGrouper or dict, got {type(v)}")
-
-    def parse(self) -> BaseGrouper:
-        if isinstance(self.root, BaseGrouper):
-            return self.root
-        return _parse_from_registry(self.root, GROUPERS, "grouper")
-
-
-class MetadataEnricherConfig(BaseModel):
-    """Wrapper for metadata enricher configuration."""
-
-    root: Union[BaseMetadataEnricher, dict[str, Any]]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @field_validator("root", mode="before")
-    @classmethod
-    def validate_root(cls, v: Any) -> Any:
-        if isinstance(v, BaseMetadataEnricher):
-            return v
-        if isinstance(v, dict):
-            return v
-        raise ValueError(f"Expected BaseMetadataEnricher or dict, got {type(v)}")
-
-    def parse(self) -> BaseMetadataEnricher:
-        if isinstance(self.root, BaseMetadataEnricher):
-            return self.root
-        return _parse_from_registry(self.root, METADATA_ENRICHERS, "metadata_enricher")
-
-
-class CatalogerConfig(BaseModel):
-    """Wrapper for cataloger configuration."""
-
-    root: Union[BaseCataloger, dict[str, Any]]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @field_validator("root", mode="before")
-    @classmethod
-    def validate_root(cls, v: Any) -> Any:
-        if isinstance(v, BaseCataloger):
-            return v
-        if isinstance(v, dict):
-            return v
-        raise ValueError(f"Expected BaseCataloger or dict, got {type(v)}")
-
-    def parse(self) -> BaseCataloger:
-        if isinstance(self.root, BaseCataloger):
-            return self.root
-        return _parse_from_registry(self.root, CATALOGERS, "cataloger")
+# Annotated types that auto-parse from dict config
+Harvester = Annotated[
+    BaseHarvester,
+    BeforeValidator(_make_parser(HARVESTERS, BaseHarvester, "harvester")),
+]
+Grouper = Annotated[
+    BaseGrouper,
+    BeforeValidator(_make_parser(GROUPERS, BaseGrouper, "grouper")),
+]
+MetadataEnricher = Annotated[
+    BaseMetadataEnricher,
+    BeforeValidator(
+        _make_parser(METADATA_ENRICHERS, BaseMetadataEnricher, "metadata_enricher")
+    ),
+]
+Cataloger = Annotated[
+    BaseCataloger,
+    BeforeValidator(_make_parser(CATALOGERS, BaseCataloger, "cataloger")),
+]
 
 
 class ComponentConfig(BaseModel):
