@@ -93,9 +93,6 @@ class PipelineConfig(BaseModel):
             connections=self._get_connections(),
         )
 
-    def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:
-        return user_input
-
     def get_harvester(self) -> BaseHarvester:
         if self._harvester is None:
             raise ValueError("No harvester configured")
