@@ -148,11 +148,3 @@ class ComponentConfig(BaseModel):
 
     def get_run_params(self) -> dict[str, Any]:
         return self.run_params
-
-
-# Type aliases for pipeline_config.py
-HarvesterType = HarvesterConfig
-GrouperType = GrouperConfig
-MetadataEnricherType = MetadataEnricherConfig
-CatalogerType = CatalogerConfig
-ComponentType = ComponentConfig
