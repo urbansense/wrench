@@ -7,7 +7,7 @@
 # Some modifications have been made to the original code to better suit the
 # needs of this project.
 
-from typing import Any, ClassVar, Literal
+from typing import ClassVar, Literal
 
 from wrench.components.cataloger import Cataloger
 from wrench.components.grouper import Grouper
@@ -89,6 +89,3 @@ class SensorPipelineConfig(PipelineConfig):
                 },
             ),
         ]
-
-    def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:
-        return {}
