@@ -1,7 +1,6 @@
 from .config_reader import ConfigReader
 from .object_config import (
     Cataloger,
-    ComponentConfig,
     Grouper,
     Harvester,
     MetadataEnricher,
@@ -13,7 +12,6 @@ from .template_pipeline import SensorPipelineConfig
 __all__ = [
     "ConfigReader",
     "Cataloger",
-    "ComponentConfig",
     "Grouper",
     "Harvester",
     "MetadataEnricher",

@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Union
+from typing import Annotated, Any
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, field_validator
+from pydantic import BeforeValidator
 
 from wrench.cataloger import CATALOGERS, BaseCataloger
 from wrench.grouper import GROUPERS, BaseGrouper
 from wrench.harvester import HARVESTERS, BaseHarvester
 from wrench.metadataenricher import METADATA_ENRICHERS, BaseMetadataEnricher
-from wrench.pipeline.component import Component
 
 
 def _parse_from_registry(
@@ -66,31 +65,3 @@ Cataloger = Annotated[
     BaseCataloger,
     BeforeValidator(_make_parser(CATALOGERS, BaseCataloger, "cataloger")),
 ]
-
-
-class ComponentConfig(BaseModel):
-    """Wrapper for pipeline component configuration."""
-
-    root: Union[Component, dict[str, Any]]
-    run_params: dict[str, Any] = {}
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @field_validator("root", mode="before")
-    @classmethod
-    def validate_root(cls, v: Any) -> Any:
-        if isinstance(v, Component):
-            return v
-        if isinstance(v, dict):
-            return v
-        raise ValueError(f"Expected Component or dict, got {type(v)}")
-
-    def parse(self) -> Component:
-        if isinstance(self.root, Component):
-            return self.root
-        # Components don't have a registry yet - they use class_ syntax still
-        # This can be simplified later if needed
-        raise NotImplementedError("Component parsing from dict not yet implemented")
-
-    def get_run_params(self) -> dict[str, Any]:
-        return self.run_params

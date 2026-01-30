@@ -24,7 +24,6 @@ from wrench.pipeline.types import (
 
 from .object_config import (
     Cataloger,
-    ComponentConfig,
     Grouper,
     Harvester,
     MetadataEnricher,
@@ -49,25 +48,15 @@ class PipelineConfig(BaseModel):
     metadataenricher: MetadataEnricher | None = None
     cataloger: Cataloger | None = None
 
-    # For raw pipeline configs (non-template)
-    component_config: dict[str, ComponentConfig] = {}
-    connection_config: list[ConnectionDefinition] = []
     template_: Literal[PipelineType.NONE] = PipelineType.NONE
 
     def _get_components(self) -> list[ComponentDefinition]:
         """Get component definitions. Override in subclasses for template pipelines."""
-        return [
-            ComponentDefinition(
-                name=name,
-                component=config.parse(),
-                run_params=config.get_run_params(),
-            )
-            for name, config in self.component_config.items()
-        ]
+        raise NotImplementedError("Subclasses must implement _get_components")
 
     def _get_connections(self) -> list[ConnectionDefinition]:
         """Get connection definitions. Override in subclasses for template pipelines."""
-        return self.connection_config
+        raise NotImplementedError("Subclasses must implement _get_connections")
 
     def parse(self) -> PipelineDefinition:
         """Parse the config and return a PipelineDefinition."""
