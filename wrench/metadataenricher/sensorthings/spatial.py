@@ -65,8 +65,9 @@ class PolygonalExtentCalculator(SpatialExtentCalculator):
         if not locations:
             raise ValueError("Locations cannot be extracted from Things")
 
-        # Update bounds for each location
-        for lng, lat in locations:
+        # Update bounds for each location (handle both 2D and 3D coordinates)
+        for coord in locations:
+            lng, lat = coord[0], coord[1]
             bounds["min_lat"] = min(bounds["min_lat"], lat)
             bounds["max_lat"] = max(bounds["max_lat"], lat)
             bounds["min_lng"] = min(bounds["min_lng"], lng)

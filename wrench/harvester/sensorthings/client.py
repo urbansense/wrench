@@ -8,6 +8,17 @@ from wrench.log import logger
 from .config import PaginationConfig
 from .models import SensorThingsBase, Thing
 
+ENDPOINT = """
+Things?$expand=Locations,
+Datastreams($expand=Sensor,ObservedProperty)
+"""
+
+ENDPOINT_WITH_MULTIDATASTREAM = """
+Things?$expand=Locations,
+Datastreams($expand=Sensor,ObservedProperty),
+MultiDatastreams($expand=Sensor,ObservedProperties)
+"""
+
 
 class SensorThingsClient:
     """
@@ -40,8 +51,11 @@ class SensorThingsClient:
             list[Thing]: List of fetched Things.
         """
         self.logger.debug(f"Fetching {limit if limit != -1 else 'all'} things")
+
         endpoint = (
-            "Things?$expand=Locations,Datastreams($expand=Sensor,ObservedProperty)"
+            ENDPOINT
+            if not self._check_multidatastream
+            else ENDPOINT_WITH_MULTIDATASTREAM
         )
 
         # Simply collect all items from the generator
@@ -111,3 +125,10 @@ class SensorThingsClient:
             except requests.RequestException as e:
                 self.logger.error(f"Failed to fetch page {page_count}: {str(e)}")
                 break
+
+    def _check_multidatastream(self) -> bool:
+        multidatastream_endpoint = "MultiDatastreams"
+        res = requests.get(f"{self.base_url}/{multidatastream_endpoint}")
+        if not res.ok:
+            return False
+        return True

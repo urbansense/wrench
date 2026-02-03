@@ -41,6 +41,18 @@ class Datastream(SensorThingsBase):
     )
 
 
+class MultiDatastream(SensorThingsBase):
+    observation_type: str
+    unit_of_measurements: list[dict]
+    observed_area: dict | None = None
+    phenomenon_time: str | None = None
+    result_time: str | None = None
+    sensor: Sensor = Field(alias="Sensor")
+    observed_properties: list[ObservedProperty] | None = Field(
+        default=None, alias="ObservedProperties"
+    )
+
+
 class Location(SensorThingsBase, WrenchLocation):
     pass
 
@@ -53,6 +65,9 @@ class Thing(SensorThingsBase):
     location: list[Location] = Field(
         default=[],
         alias="Locations",
+    )
+    multidatastreams: list[MultiDatastream] = Field(
+        default=[], alias="MultiDatastreams"
     )
 
     def __str__(self) -> str:
