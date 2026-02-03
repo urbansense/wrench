@@ -36,7 +36,7 @@ pip install 'auto-wrench[sensorthings]'
 pip install 'auto-wrench[kinetic]'
 
 # Multiple components
-pip install 'auto-wrench[teleclass,sensorthings,kinetic]'
+pip install 'auto-wrench[sensorthings,kinetic]'
 ```
 
 ## Core Components
@@ -52,7 +52,7 @@ Each component type follows a standardized interface, making it easy to extend w
 
 ## Quick Start
 
-The following example sets up a complete pipeline with a SensorThings API harvester, a TELEClass grouper for classification, and an SDDI cataloger for registration:
+The following example sets up a complete pipeline with a SensorThings API harvester, a KINETIC grouper for classification, and an SDDI cataloger for registration:
 
 ```python
 from wrench.cataloger.sddi import SDDICataloger
@@ -125,7 +125,6 @@ Harvesters connect to data sources and extract metadata. Wrench includes:
 
 Groupers organize sensors into logical groups using various machine learning approaches:
 
-- **TELEClassGrouper**: Taxonomy-enhanced classification using LLMs and corpus-based methods
 - **KINETIC**: Keyword-Informed, Network-Enhanced Topical Intelligence Classifier with hierarchical clustering
 - **LDAGrouper**: Latent Dirichlet Allocation for topic modeling and device grouping
 - **BERTopicGrouper**: BERTopic-based clustering with HDBSCAN and UMAP for topic discovery
@@ -153,10 +152,6 @@ Different groupers offer various approaches for sensor classification:
 
 ```python
 from wrench.utils.config import LLMConfig
-
-# TELEClass with taxonomy-enhanced learning
-from wrench.grouper.teleclass import TELEClassGrouper
-grouper = TELEClassGrouper(config="config/teleclass_config.yaml")
 
 # KINETIC for hierarchical topic clustering
 from wrench.grouper.kinetic import KINETIC
@@ -189,7 +184,7 @@ cd wrench
 make setup
 
 # Install component dependencies for development
-uv pip install -e ".[teleclass,sensorthings,kinetic]"
+uv pip install -e ".[sensorthings,kinetic]"
 ```
 
 ### Code Style and Testing
