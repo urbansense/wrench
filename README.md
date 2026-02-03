@@ -29,9 +29,6 @@ pip install auto-wrench
 To install with specific component dependencies:
 
 ```bash
-# For TELEClass grouper
-pip install 'auto-wrench[teleclass]'
-
 # For SensorThings support
 pip install 'auto-wrench[sensorthings]'
 
@@ -59,7 +56,7 @@ The following example sets up a complete pipeline with a SensorThings API harves
 
 ```python
 from wrench.cataloger.sddi import SDDICataloger
-from wrench.grouper.teleclass import TELEClassGrouper
+from wrench.grouper.kinetic import KINETIC
 from wrench.harvester.sensorthings import SensorThingsHarvester
 from wrench.metadataenricher.sensorthings import SensorThingsMetadataEnricher
 from wrench.pipeline.sensor_pipeline import SensorRegistrationPipeline
@@ -70,12 +67,16 @@ harvester = SensorThingsHarvester(
     base_url="https://example.org/v1.1",
     pagination_config={"page_delay": 0.2, "timeout": 60, "batch_size": 100}
 )
-grouper = TELEClassGrouper(config="config/teleclass_config.yaml")
+grouper = KINETIC(llm_config=LLMConfig(
+    base_url="https://my-llm.com",
+    embedder="intfloat/multilingual-e5-large-instruct"),
+    resolution=1,
+)
 metadata_enricher = SensorThingsMetadataEnricher(
     base_url="https://example.org/v1.1",
     title="City Sensor Network",
     description="Environmental sensors across the city",
-    llm_config=LLMConfig(provider="openai", model="gpt-4")
+    llm_config=LLMConfig(base_url="https://my-llm.com", model="myllmmodel")
 )
 cataloger = SDDICataloger(
     base_url="https://catalog.example.org",
