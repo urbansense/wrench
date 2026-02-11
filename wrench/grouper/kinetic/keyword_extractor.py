@@ -133,6 +133,7 @@ class YAKEAdapter(KeywordExtractorAdapter):
     ) -> list[list[str]]:
         results = [self.yake_extractor.extract_keywords(t) for t in text]
 
-        # Take top_n results and extract keywords
-        sorted_results = sorted(results, key=lambda x: x[0])[:top_n]
-        return [keyword for keyword, _ in sorted_results]  # type: ignore
+        # For each document, take top_n keywords
+        return [
+            [keyword for keyword, _ in doc_results[:top_n]] for doc_results in results
+        ]
