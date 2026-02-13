@@ -5,6 +5,7 @@ from pathlib import Path
 
 import openai
 
+from wrench.exceptions import GrouperError
 from wrench.log import logger
 from wrench.models import Device
 from wrench.utils.prompt_manager import PromptManager
@@ -74,8 +75,9 @@ class LLMTopicGenerator:
             self.logger.info("Generated topics: %s", root_topics.topics)
 
             self._save_topics(root_topics.topics)
-
             return root_topics.topics
+        else:
+            raise GrouperError("LLM generated 0 topics.")
 
     def _save_topics(self, topics: list[Topic]):
         with open(self.cache_topics, "w") as f:

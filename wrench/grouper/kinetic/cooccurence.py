@@ -9,8 +9,8 @@ from .models import Cluster
 
 def build_cooccurence_network(
     keywords_per_doc: list[list[str]], top_n=7, resolution=1
-) -> list[Cluster]:
-    """Builds a keyword co-occurrence network and visualizes it.
+) -> tuple[list[Cluster], nx.Graph, dict[str, int]]:
+    """Builds a keyword co-occurrence network.
 
     The function identifies communities (clusters) of keywords and extracts the most
     central keywords from each community.
@@ -24,8 +24,10 @@ def build_cooccurence_network(
             in Networks", R. Lambiotte, J.-C. Delvenne, M. Barahona
 
     Returns:
-        A dictionary where keys are cluster identifiers (e.g., 'cluster_0') and
-        values are lists of the top n most central keywords in that cluster.
+        A tuple of (clusters, graph, partition) where:
+            - clusters: List of Cluster objects with top keywords per community.
+            - graph: The co-occurrence networkx Graph.
+            - partition: Mapping of keyword to community id.
     """
     G = nx.Graph()
 
@@ -50,9 +52,10 @@ def build_cooccurence_network(
         top = sorted(deg, key=deg.get, reverse=True)[:top_n]
         essential[f"cluster_{comm_id}"] = top
 
-    return [
+    clusters = [
         Cluster(cluster_id=id, keywords=keywords) for id, keywords in essential.items()
     ]
+    return clusters, G, partition
 
 
 def visualize_cooccurence_network(G: nx.Graph, partition: dict):

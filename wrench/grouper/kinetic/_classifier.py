@@ -21,6 +21,7 @@ class Classifier:
     ):
         self._embedder = embedder
         self._logger = wrench_logger.getChild(self.__class__.__name__)
+        self.doc_embeddings: np.ndarray | None = None
 
         self.cache_dir = Path(".kineticache")
         self.cache_dir.mkdir(exist_ok=True)
@@ -81,6 +82,7 @@ class Classifier:
         cluster_embeddings = self._check_cache(clusters)
 
         doc_embeddings = self._embed_docs(docs)
+        self.doc_embeddings = doc_embeddings
 
         # Calculate both embedding and substring similarities
         embedding_sim_scores = self._calc_similarity(doc_embeddings, cluster_embeddings)
