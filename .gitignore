@@ -21,3 +21,12 @@ docs/_build/
 *.log
 
 uv.lock
+
+# Experiment tracking
+.experiments/
+
+# Scattered result files
+result_*.html
+result_*.json
+agentic_results/
+kinetic_results/

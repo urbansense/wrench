@@ -6,6 +6,7 @@ import click
 from tools.commands.catalog import catalog
 from tools.commands.data import data
 from tools.commands.evaluate import evaluate
+from tools.commands.experiment import experiment
 from tools.commands.pipeline import pipeline
 
 
@@ -23,6 +24,7 @@ def cli():
 # Register command groups
 cli.add_command(data)
 cli.add_command(evaluate)
+cli.add_command(experiment)
 cli.add_command(catalog)
 cli.add_command(pipeline)
 
