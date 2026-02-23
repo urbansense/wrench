@@ -3,10 +3,39 @@
 import click
 from ckanapi.errors import NotFound
 from dotenv import load_dotenv
-from rich.console import Console
-from rich.table import Table
 
-console = Console()
+from tools.core.console import console
+
+
+def _create_cataloger(base_url: str, api_key: str):
+    """Create an SDDICataloger instance with dotenv loaded."""
+    from wrench.cataloger.sddi import SDDICataloger
+
+    load_dotenv("test_script/.env")
+    return SDDICataloger(base_url=base_url, api_key=api_key)
+
+
+def _delete_packages(cataloger, package_ids: list[str]) -> tuple[int, int]:
+    """Delete a list of packages, returning (success_count, error_count)."""
+    success_count = 0
+    error_count = 0
+
+    with console.status("[bold green]Deleting packages...") as status:
+        for i, package_id in enumerate(package_ids, 1):
+            status.update(f"[bold green]Deleting {i}/{len(package_ids)}: {package_id}")
+            try:
+                cataloger.delete_resource(package_id)
+                success_count += 1
+            except NotFound:
+                console.print(
+                    f"[yellow]Package '{package_id}' not found, skipping[/yellow]"
+                )
+                error_count += 1
+            except Exception as e:
+                console.print(f"[red]Error deleting '{package_id}': {e}[/red]")
+                error_count += 1
+
+    return success_count, error_count
 
 
 @click.group()
@@ -35,11 +64,7 @@ def catalog():
 )
 def list(base_url: str, api_key: str, pattern: str):
     """List packages in the SDDI catalog."""
-    from wrench.cataloger.sddi import SDDICataloger
-
-    load_dotenv("test_script/.env")
-
-    cataloger = SDDICataloger(base_url=base_url, api_key=api_key)
+    cataloger = _create_cataloger(base_url, api_key)
 
     try:
         with console.status("[bold green]Fetching catalog packages..."):
@@ -82,11 +107,9 @@ def show(package_id: str, base_url: str, api_key: str):
 
     PACKAGE_ID: The package identifier
     """
-    from wrench.cataloger.sddi import SDDICataloger
+    from rich.table import Table
 
-    load_dotenv("test_script/.env")
-
-    cataloger = SDDICataloger(base_url=base_url, api_key=api_key)
+    cataloger = _create_cataloger(base_url, api_key)
 
     try:
         package = cataloger._get_package(package_id)
@@ -152,24 +175,16 @@ def delete(package_id: str, base_url: str, api_key: str, force: bool):
 
     PACKAGE_ID: The package identifier to delete
     """
-    from wrench.cataloger.sddi import SDDICataloger
-
-    load_dotenv("test_script/.env")
-
     if not force:
         if not click.confirm(f"Are you sure you want to delete '{package_id}'?"):
             console.print("[yellow]Deletion cancelled.[/yellow]")
             return
 
-    cataloger = SDDICataloger(base_url=base_url, api_key=api_key)
+    cataloger = _create_cataloger(base_url, api_key)
+    success, errors = _delete_packages(cataloger, [package_id])
 
-    try:
-        cataloger.delete_resource(package_id)
+    if success:
         console.print(f"[green]✓[/green] Deleted package '{package_id}'")
-    except NotFound:
-        console.print(f"[red]Package '{package_id}' not found.[/red]")
-    except Exception as e:
-        console.print(f"[red]Error deleting package: {e}[/red]")
 
 
 @catalog.command(name="delete-batch")
@@ -197,10 +212,6 @@ def delete_batch(package_file: str, base_url: str, api_key: str, force: bool):
 
     PACKAGE_FILE: Path to file containing package IDs (one per line)
     """
-    from wrench.cataloger.sddi import SDDICataloger
-
-    load_dotenv("test_script/.env")
-
     with open(package_file) as f:
         package_ids = [
             line.strip() for line in f if line.strip() and not line.startswith("#")
@@ -219,29 +230,12 @@ def delete_batch(package_file: str, base_url: str, api_key: str, force: bool):
             console.print("[yellow]Deletion cancelled.[/yellow]")
             return
 
-    cataloger = SDDICataloger(base_url=base_url, api_key=api_key)
+    cataloger = _create_cataloger(base_url, api_key)
+    success, errors = _delete_packages(cataloger, package_ids)
 
-    success_count = 0
-    error_count = 0
-
-    with console.status("[bold green]Deleting packages...") as status:
-        for i, package_id in enumerate(package_ids, 1):
-            status.update(f"[bold green]Deleting {i}/{len(package_ids)}: {package_id}")
-            try:
-                cataloger.delete_resource(package_id)
-                success_count += 1
-            except NotFound:
-                console.print(
-                    f"[yellow]Package '{package_id}' not found, skipping[/yellow]"
-                )
-                error_count += 1
-            except Exception as e:
-                console.print(f"[red]Error deleting '{package_id}': {e}[/red]")
-                error_count += 1
-
-    console.print(f"\n[green]✓[/green] Deleted {success_count} packages")
-    if error_count > 0:
-        console.print(f"[yellow]⚠[/yellow] {error_count} packages had errors")
+    console.print(f"\n[green]✓[/green] Deleted {success} packages")
+    if errors > 0:
+        console.print(f"[yellow]⚠[/yellow] {errors} packages had errors")
 
 
 @catalog.command(name="clean-all")
@@ -267,11 +261,7 @@ def clean_all(base_url: str, api_key: str, pattern: str):
 
     This is a destructive operation. Use with caution!
     """
-    from wrench.cataloger.sddi import SDDICataloger
-
-    load_dotenv("test_script/.env")
-
-    cataloger = SDDICataloger(base_url=base_url, api_key=api_key)
+    cataloger = _create_cataloger(base_url, api_key)
 
     try:
         packages = cataloger.ckan.action.package_list()
@@ -303,22 +293,11 @@ def clean_all(base_url: str, api_key: str, pattern: str):
             console.print("[yellow]Operation cancelled.[/yellow]")
             return
 
-        success_count = 0
-        error_count = 0
+        success, errors = _delete_packages(cataloger, packages)
 
-        with console.status("[bold green]Deleting packages...") as status:
-            for i, package_id in enumerate(packages, 1):
-                status.update(f"[bold green]Deleting {i}/{len(packages)}: {package_id}")
-                try:
-                    cataloger.delete_resource(package_id)
-                    success_count += 1
-                except Exception as e:
-                    console.print(f"[red]Error deleting '{package_id}': {e}[/red]")
-                    error_count += 1
-
-        console.print(f"\n[green]✓[/green] Deleted {success_count} packages")
-        if error_count > 0:
-            console.print(f"[yellow]⚠[/yellow] {error_count} packages had errors")
+        console.print(f"\n[green]✓[/green] Deleted {success} packages")
+        if errors > 0:
+            console.print(f"[yellow]⚠[/yellow] {errors} packages had errors")
 
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")

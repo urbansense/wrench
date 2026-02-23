@@ -1,13 +1,11 @@
 """Data management commands."""
 
 import click
-from rich.console import Console
 from rich.table import Table
 
 from tools.core.cache import DataCache
+from tools.core.console import console
 from tools.fixtures.data_sources import KNOWN_SOURCES, get_source, list_sources
-
-console = Console()
 
 
 @click.group()
