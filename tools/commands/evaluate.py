@@ -5,13 +5,11 @@ from __future__ import annotations
 import json
 
 import click
-from rich.console import Console
 from rich.table import Table
 
+from tools.core.console import console
 from tools.core.ground_truth import GroundTruthBuilder
 from tools.fixtures.data_sources import get_source
-
-console = Console()
 
 
 @click.group()
@@ -196,6 +194,8 @@ def compute_metrics(ground_truth: str, results: str, output: str, handle_missing
         normalized_mutual_info_score,
     )
 
+    from tools.core.metrics import dicts_to_labels
+
     console.print("[bold blue]Computing Clustering Metrics[/bold blue]\n")
 
     # Load data
@@ -209,7 +209,7 @@ def compute_metrics(ground_truth: str, results: str, output: str, handle_missing
     console.print(f"Result clusters: {len(result_data)}")
 
     # Convert to labels
-    x, y_true, y_pred = _dicts_to_labels(gt_data, result_data, handle_missing)
+    x, y_true, y_pred = dicts_to_labels(gt_data, result_data, handle_missing)
 
     console.print(f"Comparing {len(x)} items\n")
 
@@ -325,60 +325,6 @@ def compare_results(ground_truth: str, results: str, detailed: bool):
                     console.print(
                         f"  Missing from results: {diff['only_in_json1'][:5]}..."
                     )
-
-
-def _dicts_to_labels(true_dict, pred_dict, handle_missing="skip"):
-    """Convert cluster dictionaries to label arrays for sklearn metrics."""
-    all_items = set()
-    for items in true_dict.values():
-        all_items.update(items)
-    for items in pred_dict.values():
-        all_items.update(items)
-
-    all_items = sorted(list(all_items))
-
-    # Create reverse mappings
-    true_item_to_cluster = {}
-    for cluster, items in true_dict.items():
-        for item in items:
-            true_item_to_cluster[item] = cluster
-
-    pred_item_to_cluster = {}
-    for cluster, items in pred_dict.items():
-        for item in items:
-            pred_item_to_cluster[item] = cluster
-
-    # Handle missing items
-    if handle_missing == "skip":
-        valid_items = [
-            item
-            for item in all_items
-            if item in true_item_to_cluster and item in pred_item_to_cluster
-        ]
-        all_items = valid_items
-    elif handle_missing == "assign_new_cluster":
-        next_true_cluster = f"missing_true_{len(true_dict)}"
-        next_pred_cluster = f"missing_pred_{len(pred_dict)}"
-
-        for item in all_items:
-            if item not in true_item_to_cluster:
-                true_item_to_cluster[item] = next_true_cluster
-            if item not in pred_item_to_cluster:
-                pred_item_to_cluster[item] = next_pred_cluster
-
-    # Create label mappings
-    all_true_clusters = list(set(true_item_to_cluster.values()))
-    all_pred_clusters = list(set(pred_item_to_cluster.values()))
-
-    true_cluster_to_label = {cluster: i for i, cluster in enumerate(all_true_clusters)}
-    pred_cluster_to_label = {cluster: i for i, cluster in enumerate(all_pred_clusters)}
-
-    # Create label arrays
-    x = all_items
-    y_true = [true_cluster_to_label[true_item_to_cluster[item]] for item in all_items]
-    y_pred = [pred_cluster_to_label[pred_item_to_cluster[item]] for item in all_items]
-
-    return x, y_true, y_pred
 
 
 def _compare_json_lists(json1, json2):

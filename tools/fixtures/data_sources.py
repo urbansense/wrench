@@ -37,6 +37,13 @@ KNOWN_SOURCES = {
         title="City of München FROST Server",
         description="City of München FROST Server containing data collected from urban sensors around the city.",
     ),
+    "nordicpath": DataSource(
+        name="nordicpath",
+        base_url="https://nsdpstaplus.nilu.no/FROST-Server/v1.1",
+        identifier="nordicpath_frost_server",
+        title="Nordic Path FROST Server",
+        description="Nordic Path FROST Server containing data collected from urban sensors around the city.",
+    ),
 }
 
 
