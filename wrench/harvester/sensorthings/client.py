@@ -8,16 +8,13 @@ from wrench.log import logger
 from .config import PaginationConfig
 from .models import SensorThingsBase, Thing
 
-ENDPOINT = """
-Things?$expand=Locations,
-Datastreams($expand=Sensor,ObservedProperty)
-"""
+ENDPOINT = "Things?$expand=Locations,Datastreams($expand=Sensor,ObservedProperty)"
 
-ENDPOINT_WITH_MULTIDATASTREAM = """
-Things?$expand=Locations,
-Datastreams($expand=Sensor,ObservedProperty),
-MultiDatastreams($expand=Sensor,ObservedProperties)
-"""
+ENDPOINT_WITH_MULTIDATASTREAM = (
+    "Things?$expand=Locations,"
+    "Datastreams($expand=Sensor,ObservedProperty),"
+    "MultiDatastreams($expand=Sensor,ObservedProperties)"
+)
 
 
 class SensorThingsClient:
@@ -54,7 +51,7 @@ class SensorThingsClient:
 
         endpoint = (
             ENDPOINT
-            if not self._check_multidatastream
+            if not self._check_multidatastream()
             else ENDPOINT_WITH_MULTIDATASTREAM
         )
 
