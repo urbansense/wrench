@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 import numpy as np
 
@@ -173,8 +174,10 @@ class Classifier:
             keyword_matches = np.zeros(num_docs)
 
             for keyword in cluster_keywords:
-                # Vectorized count occurrences for frequency weighting
-                keyword_counts = np.array([doc.count(keyword) for doc in docs_lower])
+                pattern = re.compile(rf"\b{re.escape(keyword)}\b")
+                keyword_counts = np.array(
+                    [len(pattern.findall(doc)) for doc in docs_lower]
+                )
                 keyword_matches += keyword_counts
 
             # Normalize by number of keywords in cluster
