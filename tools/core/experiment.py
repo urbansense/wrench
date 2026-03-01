@@ -22,6 +22,8 @@ class ExperimentTracker:
         results: dict[str, list[str]],
         config: dict[str, Any] | None = None,
         metrics: dict[str, float] | None = None,
+        similarity_scores: dict | None = None,
+        trace: dict | None = None,
     ) -> Path:
         """
         Save an experiment with its results and metadata.
@@ -59,9 +61,17 @@ class ExperimentTracker:
             metadata["config"] = config
         if metrics:
             metadata["metrics"] = metrics
+        if similarity_scores:
+            metadata["similarity_scores"] = similarity_scores
 
         with open(exp_dir / "metadata.json", "w") as f:
             json.dump(metadata, f, indent=2)
+
+        if trace:
+            from wrench.grouper.kinetic.tracer import _json_default
+
+            with open(exp_dir / "trace.json", "w") as f:
+                json.dump(trace, f, indent=2, ensure_ascii=False, default=_json_default)
 
         return exp_dir
 

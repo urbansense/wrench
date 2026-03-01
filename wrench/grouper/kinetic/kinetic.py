@@ -100,6 +100,13 @@ class KINETIC(BaseGrouper):
         self.cache_doc_embeddings = cache_doc_embeddings
         self.enable_trace = enable_trace
         self.save_results = save_results
+        self.lang = lang
+        self._llm_model = llm_config.model
+
+        self._last_tracer: KineticTracer | None = None
+        self._last_clusters: list[Cluster] | None = None
+        self._last_devices: list[Device] | None = None
+        self._last_doc_assignment: dict[int, str] | None = None
 
         self.logger = logger.getChild(self.__class__.__name__)
 
@@ -159,7 +166,19 @@ class KINETIC(BaseGrouper):
         for c, ids in zip(clusters, doc_ids):
             c._devices = [devices[i] for i in ids]
 
+        self._last_clusters = clusters
+        self._last_devices = devices
+
         topic_dict = self.generate_topics(clusters)
+
+        device_id_to_topic = {
+            dev.id: topic_obj.name
+            for topic_obj, topic_devices in topic_dict.items()
+            for dev in topic_devices
+        }
+        self._last_doc_assignment = {
+            i: device_id_to_topic.get(dev.id, "—") for i, dev in enumerate(devices)
+        }
 
         if tracer:
             tracer.trace_topics(list(topic_dict.keys()))
@@ -167,6 +186,8 @@ class KINETIC(BaseGrouper):
             trace_path = self.classifier.cache_dir / "trace.json"
             tracer.save(str(trace_path))
             self.logger.info("Saved pipeline trace to %s", trace_path)
+
+        self._last_tracer = tracer
 
         groups = []
         for topic_obj, topic_devices in topic_dict.items():
@@ -205,6 +226,41 @@ class KINETIC(BaseGrouper):
         with open(path, "w") as f:
             json.dump(output, f, indent=2)
         self.logger.info("Saved grouping results to %s", path)
+
+    def get_config(self) -> dict:
+        return {
+            "llm_model": self._llm_model,
+            "resolution": self.resolution,
+            "lang": self.lang,
+        }
+
+    def get_similarity_scores(self) -> dict:
+        if self._last_clusters is None or self._last_devices is None:
+            return {}
+        if not hasattr(self.classifier, "combined_sim_scores"):
+            return {}
+
+        cluster_labels = [c.cluster_id for c in self._last_clusters]
+        doc_details = []
+        for i, device in enumerate(self._last_devices):
+            doc_details.append(
+                {
+                    "device_name": device.name,
+                    "assigned_topic": self._last_doc_assignment.get(i, "—")
+                    if self._last_doc_assignment
+                    else "—",
+                    "embedding_sims": self.classifier.embedding_sim_scores[i].tolist(),
+                    "substring_sims": self.classifier.substring_sim_scores[i].tolist(),
+                    "combined_sims": self.classifier.combined_sim_scores[i].tolist(),
+                }
+            )
+        return {"cluster_labels": cluster_labels, "doc_details": doc_details}
+
+    @property
+    def last_trace(self) -> dict | None:
+        if self._last_tracer is None:
+            return None
+        return self._last_tracer.trace.to_dict()
 
     def _save_doc_embeddings(self):
         """Save document embeddings from the classifier to .kineticache/."""
