@@ -1,6 +1,5 @@
 import json
 import os
-from pathlib import Path
 
 import numpy as np
 
@@ -8,6 +7,12 @@ from wrench.grouper.kinetic.embedder import BaseEmbedder
 from wrench.log import logger as wrench_logger
 from wrench.utils.prompt_manager import PromptManager
 
+from .defaults import (
+    CACHE_DIR,
+    OUTLIER_IQR_MULTIPLIER,
+    OUTLIER_PERCENTILE_HIGH,
+    OUTLIER_PERCENTILE_LOW,
+)
 from .models import Cluster
 
 _CLUSTER_PROMPT = PromptManager.get_prompt("embed_topics.txt")
@@ -23,10 +28,10 @@ class Classifier:
         self._logger = wrench_logger.getChild(self.__class__.__name__)
         self.doc_embeddings: np.ndarray | None = None
 
-        self.cache_dir = Path(".kineticache")
+        self.cache_dir = CACHE_DIR
         self.cache_dir.mkdir(exist_ok=True)
         self.cache_clusters = self.cache_dir / "clusters.json"
-        self.cache_embeddings = self.cache_dir / "embeddings.npz"
+        self.cache_embeddings = self.cache_dir / "cluster_embeddings.npz"
 
     def _embed_clusters(self, cluster_kws: list[list[str]]) -> np.ndarray:
         # embeddings shape is [num_clusters, D]
@@ -93,14 +98,19 @@ class Classifier:
             (embedding_sim_scores**2 + substring_sim_scores**2) / 2
         )
 
+        # Store per-document scores for experiment tracking
+        self.embedding_sim_scores = embedding_sim_scores
+        self.substring_sim_scores = substring_sim_scores
+        self.combined_sim_scores = all_sim_scores
+
         max_scores = np.max(all_sim_scores, axis=1)
         max_indices = np.argmax(all_sim_scores, axis=1)
 
         # detect outliers using IQR method
-        q1 = np.percentile(max_scores, 10)
-        q3 = np.percentile(max_scores, 90)
+        q1 = np.percentile(max_scores, OUTLIER_PERCENTILE_LOW)
+        q3 = np.percentile(max_scores, OUTLIER_PERCENTILE_HIGH)
         iqr = q3 - q1
-        lower_bound = q1 - 1.5 * iqr
+        lower_bound = q1 - OUTLIER_IQR_MULTIPLIER * iqr
 
         # classify documents that are not statistical outliers
         is_inlier = max_scores >= lower_bound

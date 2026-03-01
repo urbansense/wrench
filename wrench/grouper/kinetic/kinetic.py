@@ -14,6 +14,7 @@ from wrench.utils.config import LLMConfig
 
 from ._classifier import Classifier
 from .cooccurence import build_cooccurence_network
+from .defaults import DEFAULT_EMBEDDER_MODEL
 from .embedder import OllamaEmbedder, SentenceTransformerEmbedder
 from .keyword_extractor import KeyBERTAdapter
 from .llm_topic_generator import LLMTopicGenerator
@@ -47,7 +48,7 @@ class KINETIC(BaseGrouper):
         lang: Literal["de", "en"] = "de",
         resolution: int = 1,
         cache_doc_embeddings: bool = False,
-        trace_path: str | None = None,
+        enable_trace: bool = False,
         save_results: str | None = None,
     ):
         """
@@ -67,8 +68,8 @@ class KINETIC(BaseGrouper):
             resolution (int): The resolution of the clusters, larger than 1 for smaller
                 clusters, smaller than 1 for bigger clusters.
             cache_doc_embeddings (bool): Save doc_embeddings.
-            trace_path (str | None): Path to save a full pipeline trace as JSON.
-                If None, no trace is saved.
+            enable_trace (bool): Capture a full pipeline trace and save it to
+                ``.kineticache/trace.json``. Defaults to False.
             save_results (str | None): Path to save grouping results as JSON
                 (topic name -> device IDs). If None, no results are saved.
         """
@@ -80,9 +81,7 @@ class KINETIC(BaseGrouper):
                     api_key=llm_config.api_key,
                 )
             else:
-                embedder = SentenceTransformerEmbedder(
-                    "intfloat/multilingual-e5-large-instruct"
-                )
+                embedder = SentenceTransformerEmbedder(DEFAULT_EMBEDDER_MODEL)
         elif isinstance(embedder, str):
             embedder = SentenceTransformerEmbedder(embedder)
 
@@ -99,7 +98,7 @@ class KINETIC(BaseGrouper):
 
         self.resolution = resolution
         self.cache_doc_embeddings = cache_doc_embeddings
-        self.trace_path = trace_path
+        self.enable_trace = enable_trace
         self.save_results = save_results
 
         self.logger = logger.getChild(self.__class__.__name__)
@@ -137,7 +136,7 @@ class KINETIC(BaseGrouper):
             for device in devices
         ]
 
-        tracer = KineticTracer() if self.trace_path else None
+        tracer = KineticTracer() if self.enable_trace else None
 
         doc_keywords: list[list[str]] | None = None
 
@@ -165,8 +164,9 @@ class KINETIC(BaseGrouper):
         if tracer:
             tracer.trace_topics(list(topic_dict.keys()))
             tracer.set_metadata(resolution=self.resolution)
-            tracer.save(self.trace_path)
-            self.logger.info("Saved pipeline trace to %s", self.trace_path)
+            trace_path = self.classifier.cache_dir / "trace.json"
+            tracer.save(str(trace_path))
+            self.logger.info("Saved pipeline trace to %s", trace_path)
 
         groups = []
         for topic_obj, topic_devices in topic_dict.items():

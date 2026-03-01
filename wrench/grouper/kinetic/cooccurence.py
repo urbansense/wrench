@@ -4,11 +4,12 @@ import community as cd
 import matplotlib.pyplot as plt
 import networkx as nx
 
+from .defaults import COOCCURRENCE_TOP_N
 from .models import Cluster
 
 
 def build_cooccurence_network(
-    keywords_per_doc: list[list[str]], top_n=7, resolution=1
+    keywords_per_doc: list[list[str]], top_n=COOCCURRENCE_TOP_N, resolution=1
 ) -> tuple[list[Cluster], nx.Graph, dict[str, int]]:
     """Builds a keyword co-occurrence network.
 

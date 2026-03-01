@@ -1,7 +1,6 @@
 import json
 import os
 from collections import defaultdict
-from pathlib import Path
 
 import openai
 
@@ -10,6 +9,7 @@ from wrench.log import logger
 from wrench.models import Device
 from wrench.utils.prompt_manager import PromptManager
 
+from .defaults import CACHE_DIR, LLM_MAX_TOKENS, LLM_TEMPERATURE
 from .models import Cluster, Topic, TopicList
 
 SEED_PROMPT = PromptManager.get_prompt("generate_seed_topics.txt")
@@ -27,7 +27,7 @@ class LLMTopicGenerator:
         self.topic_model = None
         self.merged_topics: list[int] = []
         self.logger = logger.getChild(self.__class__.__name__)
-        self.cache_dir = Path(".kineticache")
+        self.cache_dir = CACHE_DIR
         self.cache_dir.mkdir(exist_ok=True)
         self.cache_topics = self.cache_dir / "topics.json"
 
@@ -66,8 +66,8 @@ class LLMTopicGenerator:
                 },
             ],
             response_format=TopicList,
-            temperature=0.0,
-            max_tokens=4096,
+            temperature=LLM_TEMPERATURE,
+            max_tokens=LLM_MAX_TOKENS,
         )
 
         root_topics = completion.choices[0].message.parsed
