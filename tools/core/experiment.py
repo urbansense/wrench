@@ -22,11 +22,11 @@ class ExperimentTracker:
         results: dict[str, list[str]],
         config: dict[str, Any] | None = None,
         metrics: dict[str, float] | None = None,
-        similarity_scores: dict[str, Any] | None = None,
+        similarity_scores: dict | None = None,
         trace: dict | None = None,
-        embeddings_html: str | None = None,
     ) -> Path:
-        """Save an experiment with its results and metadata.
+        """
+        Save an experiment with its results and metadata.
 
         Args:
             name: Experiment name (e.g., "osnabrueck_kinetic_v1")
@@ -35,9 +35,6 @@ class ExperimentTracker:
             results: Topic -> device IDs mapping
             config: Grouper configuration used
             metrics: Evaluation metrics (if ground truth available)
-            similarity_scores: Cosine similarity and keyword overlap stats
-            trace: Full KINETIC trace dict (if enabled)
-            embeddings_html: Path to an existing UMAP visualization HTML file
 
         Returns:
             Path to the experiment directory
@@ -52,7 +49,7 @@ class ExperimentTracker:
             json.dump(results, f, indent=2)
 
         # Save metadata
-        metadata: dict[str, Any] = {
+        metadata = {
             "name": name,
             "source": source,
             "grouper": grouper,
@@ -68,16 +65,13 @@ class ExperimentTracker:
             metadata["similarity_scores"] = similarity_scores
 
         with open(exp_dir / "metadata.json", "w") as f:
-            json.dump(metadata, f, indent=2, default=str)
+            json.dump(metadata, f, indent=2)
 
-        # Save trace if provided
         if trace:
-            with open(exp_dir / "trace.json", "w") as f:
-                json.dump(trace, f, indent=2, default=str)
+            from wrench.grouper.kinetic.tracer import _json_default
 
-        # Copy embeddings HTML if provided
-        if embeddings_html and Path(embeddings_html).exists():
-            shutil.copy2(embeddings_html, exp_dir / "embeddings.html")
+            with open(exp_dir / "trace.json", "w") as f:
+                json.dump(trace, f, indent=2, ensure_ascii=False, default=_json_default)
 
         return exp_dir
 
@@ -104,7 +98,8 @@ class ExperimentTracker:
         return experiments
 
     def get_experiment(self, exp_id: str) -> tuple[dict, dict]:
-        """Get experiment metadata and results.
+        """
+        Get experiment metadata and results.
 
         Returns:
             Tuple of (metadata, results)
@@ -125,19 +120,6 @@ class ExperimentTracker:
     def get_results_path(self, exp_id: str) -> Path:
         """Get path to results.json for an experiment."""
         return self.experiments_dir / exp_id / "results.json"
-
-    def get_trace(self, exp_id: str) -> dict | None:
-        """Load trace data for an experiment, if available."""
-        trace_path = self.experiments_dir / exp_id / "trace.json"
-        if not trace_path.exists():
-            return None
-        with open(trace_path) as f:
-            return json.load(f)
-
-    def get_embeddings_html_path(self, exp_id: str) -> Path | None:
-        """Get path to embeddings.html for an experiment, if available."""
-        html_path = self.experiments_dir / exp_id / "embeddings.html"
-        return html_path if html_path.exists() else None
 
     def delete_experiment(self, exp_id: str):
         """Delete an experiment."""

@@ -1,6 +1,5 @@
 import json
 import os
-from pathlib import Path
 
 import numpy as np
 
@@ -8,6 +7,13 @@ from wrench.grouper.kinetic.embedder import BaseEmbedder
 from wrench.log import logger as wrench_logger
 from wrench.utils.prompt_manager import PromptManager
 
+from .defaults import (
+    CACHE_DIR,
+    OUTLIER_IQR_MULTIPLIER,
+    OUTLIER_PERCENTILE_HIGH,
+    OUTLIER_PERCENTILE_LOW,
+    SIMILARITY_TEMPERATURE,
+)
 from .models import Cluster
 
 _CLUSTER_PROMPT = PromptManager.get_prompt("embed_topics.txt")
@@ -21,11 +27,12 @@ class Classifier:
     ):
         self._embedder = embedder
         self._logger = wrench_logger.getChild(self.__class__.__name__)
+        self.doc_embeddings: np.ndarray | None = None
 
-        self.cache_dir = Path(".kineticache")
+        self.cache_dir = CACHE_DIR
         self.cache_dir.mkdir(exist_ok=True)
         self.cache_clusters = self.cache_dir / "clusters.json"
-        self.cache_embeddings = self.cache_dir / "embeddings.npz"
+        self.cache_embeddings = self.cache_dir / "cluster_embeddings.npz"
 
     def _embed_clusters(self, cluster_kws: list[list[str]]) -> np.ndarray:
         # embeddings shape is [num_clusters, D]
@@ -81,24 +88,26 @@ class Classifier:
         cluster_embeddings = self._check_cache(clusters)
 
         doc_embeddings = self._embed_docs(docs)
+        self.doc_embeddings = doc_embeddings
 
-        # Calculate both embedding and substring similarities
-        embedding_sim_scores = self._calc_similarity(doc_embeddings, cluster_embeddings)
-        substring_sim_scores = self._calc_substring_similarity(docs, clusters)
+        all_sim_scores = self._calc_similarity(doc_embeddings, cluster_embeddings)
+        scaled_scores = self._apply_temperature_softmax(all_sim_scores)
 
-        # Combine similarities using root mean square
-        all_sim_scores = np.sqrt(
-            (embedding_sim_scores**2 + substring_sim_scores**2) / 2
-        )
+        # Store per-document scores for experiment tracking
+        self.embedding_sim_scores = scaled_scores
+        self.substring_sim_scores = np.zeros_like(scaled_scores)
+        self.combined_sim_scores = scaled_scores
 
+        # Raw cosine scores for outlier detection (IQR is calibrated for [-1, 1] space)
+        # Scaled scores for argmax (better discrimination between similar clusters)
         max_scores = np.max(all_sim_scores, axis=1)
-        max_indices = np.argmax(all_sim_scores, axis=1)
+        max_indices = np.argmax(scaled_scores, axis=1)
 
         # detect outliers using IQR method
-        q1 = np.percentile(max_scores, 10)
-        q3 = np.percentile(max_scores, 90)
+        q1 = np.percentile(max_scores, OUTLIER_PERCENTILE_LOW)
+        q3 = np.percentile(max_scores, OUTLIER_PERCENTILE_HIGH)
         iqr = q3 - q1
-        lower_bound = q1 - 1.5 * iqr
+        lower_bound = q1 - OUTLIER_IQR_MULTIPLIER * iqr
 
         # classify documents that are not statistical outliers
         is_inlier = max_scores >= lower_bound
@@ -141,34 +150,23 @@ class Classifier:
         self._save_clusters(clusters, cluster_embeddings)
         return cluster_embeddings
 
-    def _calc_substring_similarity(
-        self, docs: list[str], clusters: list[Cluster]
-    ) -> np.ndarray:
-        """Calculate substring matching similarity using vectorized numpy operations."""
-        num_docs = len(docs)
-        num_clusters = len(clusters)
+    def _apply_temperature_softmax(self, scores: np.ndarray) -> np.ndarray:
+        """Apply temperature-scaled softmax to a similarity matrix.
 
-        # Convert documents to lowercase numpy array
-        docs_lower = np.array([doc.lower() for doc in docs])
+        Amplifies small differences between cosine similarity scores, which tend
+        to saturate near 1.0 for L2-normalized embeddings in high dimensions.
 
-        # Initialize similarity matrix
-        substring_matrix = np.zeros((num_docs, num_clusters))
+        Args:
+            scores: Similarity matrix of shape (n_docs, n_clusters).
 
-        for cluster_idx, cluster in enumerate(clusters):
-            cluster_keywords = [kw.lower() for kw in cluster.keywords]
-
-            # Sum keyword matches across all keywords in cluster
-            keyword_matches = np.zeros(num_docs)
-
-            for keyword in cluster_keywords:
-                # Vectorized count occurrences for frequency weighting
-                keyword_counts = np.array([doc.count(keyword) for doc in docs_lower])
-                keyword_matches += keyword_counts
-
-            # Normalize by number of keywords in cluster
-            substring_matrix[:, cluster_idx] = keyword_matches / len(cluster_keywords)
-
-        return substring_matrix
+        Returns:
+            Softmax-scaled scores of same shape, each row summing to 1.
+        """
+        scaled = scores / SIMILARITY_TEMPERATURE
+        # Subtract row max for numerical stability before exp
+        shifted = scaled - scaled.max(axis=1, keepdims=True)
+        exp_scores = np.exp(shifted)
+        return exp_scores / exp_scores.sum(axis=1, keepdims=True)
 
     def _calc_similarity(
         self, doc_embeddings: np.ndarray, cluster_embeddings: np.ndarray

@@ -37,11 +37,25 @@ def pipeline():
     type=click.Path(),
     help="Load env var from a .env file",
 )
-def run(config_path: str, once: bool, save_results: str, env: str = ""):
+@click.option(
+    "--clean-cache",
+    is_flag=True,
+    help="Remove KINETIC cache files and pipeline store before running",
+)
+def run(
+    config_path: str,
+    once: bool,
+    save_results: str,
+    env: str = "",
+    clean_cache: bool = False,
+):
     """Run a pipeline from a configuration file.
 
     CONFIG_PATH: Path to pipeline configuration YAML file
     """
+    if clean_cache:
+        _clean_cache()
+
     console.print(f"[bold blue]Running pipeline from {config_path}[/bold blue]\n")
 
     try:
@@ -75,19 +89,23 @@ def run(config_path: str, once: bool, save_results: str, env: str = ""):
 
             if result:
                 console.print("\n[green]✓[/green] Pipeline completed successfully")
-                console.print(
-                    f"  Items processed: {len(result.items) if hasattr(result, 'items') else 'N/A'}"
-                )
-                console.print(
-                    f"  Groups created: {len(result.groups) if hasattr(result, 'groups') else 'N/A'}"
-                )
 
-                if save_results and hasattr(result, "groups"):
+                groups = _extract_groups(result)
+                harvester_result = result.results.get("harvester")
+                num_items = (
+                    len(harvester_result.devices)
+                    if harvester_result and hasattr(harvester_result, "devices")
+                    else "N/A"
+                )
+                console.print(f"  Items processed: {num_items}")
+                console.print(f"  Groups created: {len(groups) if groups else 'N/A'}")
+
+                if save_results and groups:
                     import json
 
                     output = {
-                        group.name: [str(item.id) for item in group.items]
-                        for group in result.groups
+                        group.name: [str(d.id) for d in group.devices]
+                        for group in groups
                     }
                     Path(save_results).parent.mkdir(parents=True, exist_ok=True)
                     with open(save_results, "w") as f:
@@ -146,6 +164,46 @@ def test(component_type: str, config_path: str, limit: int):
     except Exception as e:
         console.print(f"\n[red]Error testing component: {e}[/red]")
         raise
+
+
+def _extract_groups(result):
+    """Extract Group objects from a PipelineResult."""
+    grouper_result = result.results.get("grouper")
+    if grouper_result and hasattr(grouper_result, "groups"):
+        return grouper_result.groups
+    return None
+
+
+def _clean_cache():
+    """Remove KINETIC cache files and pipeline store directory."""
+    import shutil
+
+    cache_dir = Path(".kineticache")
+    store_dir = Path(".pipeline_store")
+
+    files_to_remove = [
+        cache_dir / "clusters.json",
+        cache_dir / "cluster_embeddings.npz",
+        cache_dir / "doc_embeddings.npz",
+        cache_dir / "topics.json",
+    ]
+
+    removed = []
+    for f in files_to_remove:
+        if f.exists():
+            f.unlink()
+            removed.append(str(f))
+
+    if store_dir.exists():
+        shutil.rmtree(store_dir)
+        removed.append(str(store_dir))
+
+    if removed:
+        console.print("[green]Cleaned cache:[/green]")
+        for r in removed:
+            console.print(f"  {r}")
+    else:
+        console.print("[yellow]Nothing to clean.[/yellow]")
 
 
 def _test_harvester(config: dict, limit: int | None):

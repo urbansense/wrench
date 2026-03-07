@@ -40,6 +40,15 @@ kinetic = [
     "networkx>=3.4.2",
     "python-louvain>=0.16",
 ]
+lda = [
+    "scikit-learn>=1.5.0",
+    "numpy>=2.2.1",
+]
+bertopic = [
+    "bertopic>=0.16.0",
+    "umap-learn>=0.5.0",
+    "hdbscan>=0.8.0",
+]
 
 [dependency-groups]
 test = [

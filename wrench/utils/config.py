@@ -27,3 +27,8 @@ class LLMConfig(BaseModel):
         default=None,
         description="Optional prompt template",
     )
+    embedding_model: str | None = Field(
+        default=None,
+        description="Remote embedding model to use (e.g. for Ollama). "
+        "If not specified, a local SentenceTransformers model will be used.",
+    )

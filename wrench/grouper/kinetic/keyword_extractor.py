@@ -1,6 +1,4 @@
-import os
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Literal
 
 import numpy as np
@@ -12,23 +10,7 @@ from keybert.llm import OpenAI
 from wrench.grouper.kinetic.embedder import BaseEmbedder
 from wrench.utils.config import LLMConfig
 
-SEED_KEYWORDS = [
-    "mobility",
-    "environment",
-    "energy",
-    "administration",
-    "living",
-    "education",
-    "work",
-    "culture",
-    "trade",
-    "construction",
-    "health",
-    "agriculture",
-    "craft",
-    "tourism",
-    "information technology",
-]
+from .defaults import SEED_KEYWORDS, load_stopwords
 
 
 class KeywordExtractorAdapter(ABC):
@@ -54,17 +36,7 @@ class KeyLLMAdapter(KeywordExtractorAdapter):
         )
 
         self.embedder = embedder
-
-        dir_path = Path(__file__).parent / "stopwords"
-        stopwords_path = os.path.join(dir_path, "stopwords-%s.txt" % lang[:2].lower())
-
-        if not os.path.exists(stopwords_path):
-            stop_words = []
-        else:
-            with open(stopwords_path) as f:
-                stop_words = [line.rstrip("\n") for line in f]
-
-        self.stop_words = stop_words
+        self.stop_words = load_stopwords(lang)
         self.seed_keywords = seed_keywords
 
     def extract_keywords(self, text, **kwargs):
@@ -84,17 +56,7 @@ class KeyBERTAdapter(KeywordExtractorAdapter):
         seed_keywords: list[str] = SEED_KEYWORDS,
     ):
         self.keybert = KeyBERT(model=embedder.embedding_model)  # type: ignore
-
-        dir_path = Path(__file__).parent / "stopwords"
-        stopwords_path = os.path.join(dir_path, "stopwords-%s.txt" % lang[:2].lower())
-
-        if not os.path.exists(stopwords_path):
-            stop_words = []
-        else:
-            with open(stopwords_path) as f:
-                stop_words = [line.rstrip("\n") for line in f]
-
-        self.stop_words = stop_words
+        self.stop_words = load_stopwords(lang)
         self.seed_keywords = seed_keywords
 
     def extract_keywords(

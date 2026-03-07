@@ -100,20 +100,21 @@ def run(
         devices = cache.load_devices(source)
     console.print(f"[green]✓[/green] Loaded {len(devices)} devices from cache\n")
 
-    # Build LLM config
-    llm_cfg = resolve_llm_config(llm_base_url, llm_model, llm_api_key, embedding_model)
+    # Build LLM config (embedding_model is passed separately to KINETIC)
+    llm_cfg = resolve_llm_config(llm_base_url, llm_model, llm_api_key)
 
     console.print(f"[dim]LLM base_url:       {llm_cfg.base_url}[/dim]")
     console.print(f"[dim]LLM model:          {llm_cfg.model}[/dim]")
     console.print(
-        f"[dim]Embedding model:    {llm_cfg.embedding_model or 'local (e5-large)'}[/dim]"
+        f"[dim]Embedding model:    {embedding_model or llm_cfg.embedding_model or 'local (e5-large)'}[/dim]"
     )
     console.print(f"[dim]LLM api_key:        {llm_cfg.api_key[:8]}...[/dim]\n")
 
-    # Instantiate KINETIC
+    # Instantiate KINETIC — pass embedding_model as embedder string for
+    # SentenceTransformers, or None to let KINETIC resolve from llm_config
     kinetic = KINETIC(
         llm_config=llm_cfg,
-        embedder=None,
+        embedder=embedding_model,
         lang=lang,
         resolution=resolution,
         enable_trace=True,

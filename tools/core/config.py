@@ -12,7 +12,7 @@ _ENV_PREFIXES = ("LLM", "OLLAMA", "GEMINI")
 
 # Mapping from config field to (env var suffix, default value).
 _FIELD_ENV: dict[str, tuple[str, str | None]] = {
-    "base_url": ("BASE_URL", "http://localhost:11434/v1"),
+    "base_url": ("URL", "http://localhost:11434/v1"),
     "model": ("MODEL", "llama3.3:70b-instruct-q4_K_M"),
     "api_key": ("API_KEY", "ollama"),
     "embedding_model": ("EMBEDDING_MODEL", None),
