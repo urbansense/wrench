@@ -21,6 +21,27 @@ from .llm_topic_generator import LLMTopicGenerator
 from .tracer import KineticTracer
 
 
+def _build_doc(device: Device) -> str:
+    parts = [device.name, device.description]
+
+    if device.observed_properties:
+        parts.append("Observed: " + ", ".join(sorted(device.observed_properties)))
+
+    props = device.properties or {}
+    if props.get("keywords"):
+        keywords = props["keywords"]
+        if isinstance(keywords, list):
+            keywords = ", ".join(keywords)
+        parts.append("Keywords: " + keywords)
+    if props.get("topic"):
+        topic = props["topic"]
+        if isinstance(topic, list):
+            topic = ", ".join(topic)
+        parts.append("Topic: " + topic)
+
+    return "\n".join(parts)
+
+
 class KINETIC(BaseGrouper):
     """
     KINETIC: Keyword-Informed, Network-Enhanced Topical Intelligence Classifier.
@@ -128,20 +149,7 @@ class KINETIC(BaseGrouper):
         return topic_dict
 
     def group_devices(self, devices: list[Device]) -> list[Group]:
-        docs = [
-            device.to_string(
-                exclude=[
-                    "id",
-                    "observed_properties",
-                    "locations",
-                    "time_frame",
-                    "properties",
-                    "_raw_data",
-                    "sensors",
-                ]
-            )
-            for device in devices
-        ]
+        docs = [_build_doc(device) for device in devices]
 
         tracer = KineticTracer() if self.enable_trace else None
 

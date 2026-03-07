@@ -25,6 +25,12 @@ OUTLIER_PERCENTILE_LOW = 10
 OUTLIER_PERCENTILE_HIGH = 90
 OUTLIER_IQR_MULTIPLIER = 1.5
 
+# -- Classifier similarity scoring --
+# Temperature for softmax applied to cosine similarity scores.
+# Values < 1 sharpen the distribution (amplify small differences between scores).
+# Typical range: 0.01 – 0.1. Lower = more aggressive separation.
+SIMILARITY_TEMPERATURE = 0.05
+
 # -- LLM generation --
 LLM_TEMPERATURE = 0.0
 LLM_MAX_TOKENS = 8192
