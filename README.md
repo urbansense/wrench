@@ -52,11 +52,13 @@ Wrench consists of four main component types that can be combined in a pipeline:
 
 Each component type follows a standardized interface, making it easy to extend with custom implementations.
 
-## Quick Start
+## Quick start
 
 The following example sets up a complete pipeline with a SensorThings API harvester, a KINETIC grouper for classification, and an SDDI cataloger for registration:
 
 ```python
+import asyncio
+
 from wrench.cataloger.sddi import SDDICataloger
 from wrench.grouper.kinetic import KINETIC
 from wrench.harvester.sensorthings import SensorThingsHarvester
@@ -64,26 +66,28 @@ from wrench.metadataenricher.sensorthings import SensorThingsMetadataEnricher
 from wrench.pipeline.sensor_pipeline import SensorRegistrationPipeline
 from wrench.utils.config import LLMConfig
 
-# Initialize components with their configurations
+llm_config = LLMConfig(base_url="https://my-llm.com", model="llama3.3:70b-instruct-q4_K_M")
+
+# Initialize components
 harvester = SensorThingsHarvester(
     base_url="https://example.org/v1.1",
-    pagination_config={"page_delay": 0.2, "timeout": 60, "batch_size": 100}
+    pagination_config={"page_delay": 0.2, "timeout": 60, "batch_size": 100},
 )
-grouper = KINETIC(llm_config=LLMConfig(
-    base_url="https://my-llm.com",
-    embedder="intfloat/multilingual-e5-large-instruct"),
+grouper = KINETIC(
+    llm_config=llm_config,
+    embedder="intfloat/multilingual-e5-large-instruct",
     resolution=1,
 )
 metadata_enricher = SensorThingsMetadataEnricher(
     base_url="https://example.org/v1.1",
     title="City Sensor Network",
     description="Environmental sensors across the city",
-    llm_config=LLMConfig(base_url="https://my-llm.com", model="myllmmodel")
+    llm_config=llm_config,
 )
 cataloger = SDDICataloger(
     base_url="https://catalog.example.org",
     api_key="your-api-key",
-    owner_org="your-organization"
+    owner_org="your-organization",
 )
 
 # Assemble and run the pipeline
@@ -91,27 +95,59 @@ pipeline = SensorRegistrationPipeline(
     harvester=harvester,
     grouper=grouper,
     metadataenricher=metadata_enricher,
-    cataloger=cataloger
+    cataloger=cataloger,
 )
 
-result = await pipeline.run_async()
+result = asyncio.run(pipeline.run_async())
 ```
 
 ## Configuration
 
-Each component can be configured via YAML files. Here's a basic example for the SensorThings harvester:
+Wrench supports YAML-based pipeline configuration through `PipelineRunner.from_config_file()`.
+The top-level `template_` key selects the pipeline template. Environment variables are
+resolved using `${VAR_NAME}` syntax.
 
 ```yaml
-# sta_config.yaml
-base_url: "https://example.org/v1.1"
-identifier: "city_sensors"
-title: "City Sensor Network"
-description: "Environmental sensors across the city"
+# pipeline_config.yaml
+template_: SensorPipeline
 
-pagination:
-  page_delay: 0.2
-  timeout: 60
-  batch_size: 100
+harvester:
+  sensorthings:
+    base_url: "https://example.org/v1.1"
+    pagination_config:
+      page_delay: 0.2
+      timeout: 60
+      batch_size: 100
+
+grouper:
+  kinetic:
+    llm_config:
+      model: ${OLLAMA_MODEL}
+      base_url: ${OLLAMA_URL}
+      api_key: ${OLLAMA_API_KEY}
+
+metadataenricher:
+  sensorthings:
+    base_url: "https://example.org/v1.1"
+    title: "City Sensor Network"
+    description: "Environmental sensors across the city"
+    llm_config:
+      model: ${OLLAMA_MODEL}
+      base_url: ${OLLAMA_URL}
+      api_key: ${OLLAMA_API_KEY}
+
+cataloger:
+  noop: {}
+```
+
+Run a YAML-configured pipeline with:
+
+```python
+import asyncio
+from wrench.pipeline.config import PipelineRunner
+
+runner = PipelineRunner.from_config_file("pipeline_config.yaml")
+result = asyncio.run(runner.run({}))
 ```
 
 ## Component Overview
@@ -148,7 +184,7 @@ Catalogers register metadata into data catalogs:
 
 ## Advanced Features
 
-### Advanced Grouping with ML
+### Advanced grouping with ML
 
 Different groupers offer various approaches for sensor classification:
 
@@ -158,19 +194,21 @@ from wrench.utils.config import LLMConfig
 # KINETIC for hierarchical topic clustering
 from wrench.grouper.kinetic import KINETIC
 grouper = KINETIC(
-    llm_config=LLMConfig(provider="openai", model="gpt-4"),
+    llm_config=LLMConfig(base_url="https://my-llm.com", model="llama3.3:70b-instruct-q4_K_M"),
     embedder="intfloat/multilingual-e5-large-instruct",
     lang="en",
-    resolution=1
+    resolution=1,
 )
 
-# LDA for topic modeling
+# LDA for topic modeling (no extra dependencies required)
 from wrench.grouper.lda import LDAGrouper
-grouper = LDAGrouper(config="config/lda_config.yaml")
+from wrench.grouper.lda.models import LDAConfig
+grouper = LDAGrouper(config=LDAConfig(n_topics=10, alpha=0.1, beta=0.01))
 
-# BERTopic for advanced clustering
+# BERTopic for density-based clustering (requires sentence-transformers, hdbscan, umap-learn, bertopic)
 from wrench.grouper.bertopic import BERTopicGrouper
-grouper = BERTopicGrouper(config="config/bertopic_config.yaml")
+from wrench.grouper.bertopic.models import BERTopicConfig
+grouper = BERTopicGrouper(config=BERTopicConfig(min_topic_size=10))
 ```
 
 ## Development
@@ -228,5 +266,5 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 For support, please:
 
 - Open an issue in the GitHub repository
-- Check the [documentation](docs/README.md)
+- Check the [documentation](docs/index.md)
 - Contact the development team at [jeffrey.limnardy@tum.de](mailto:jeffrey.limnardy@tum.de)

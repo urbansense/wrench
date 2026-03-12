@@ -115,7 +115,8 @@ ignore = [
 convention = "google"  # Use Google-style docstrings
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D"]  # Disable docstring checks for tests
+"tests/*" = ["D"]     # Disable docstring checks for tests
+"examples/*" = ["D"]  # Disable docstring checks for example scripts
 
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,*.json,_dist,build,*.pyc,.venv,*.txt'

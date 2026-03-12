@@ -18,6 +18,27 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+nav:
+  - Home: index.md
+  - User Guide:
+      - Components: components.md
+      - Sensor Pipeline: user_guide/sensor_pipeline.md
+      - Scheduler: scheduler.md
+  - Examples:
+      - Creating a Pipeline: examples/creating_pipeline.md
+      - Pipeline Config: examples/pipeline_config.md
+      - Sensor Pipeline: examples/sensor_pipeline.md
+  - API Reference:
+      - Harvester: API_reference/harvester.md
+      - Grouper: API_reference/grouper.md
+      - Cataloger: API_reference/cataloger.md
+      - MetadataEnricher: API_reference/MetadataEnricher.md
+      - Pipeline: API_reference/pipeline.md
+      - Scheduler: API_reference/scheduler.md
+      - Utils: API_reference/utils.md
+  - Contributor Guide:
+      - Creating Components: contributor/creating_components.md
+
 plugins:
   - mkdocstrings:
 markdown_extensions:
