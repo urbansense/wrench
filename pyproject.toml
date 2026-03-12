@@ -7,7 +7,28 @@ authors = [
 ]
 license = {text = "Apache-2.0"}
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12"
+keywords = ["IoT", "sensors", "metadata", "catalog", "SensorThings", "urban", "pipeline"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/urbansense/wrench"
+Repository = "https://github.com/urbansense/wrench"
+Documentation = "https://urbansense.github.io/wrench"
+"Bug Tracker" = "https://github.com/urbansense/wrench/issues"
+Changelog = "https://github.com/urbansense/wrench/blob/main/CHANGELOG.md"
 dependencies = [
     "pydantic>=2.10.4,<3.0.0",
     "requests>=2.32.3,<3.0.0",
@@ -66,8 +87,6 @@ dev = [
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
-[tool.uv.sources]
-wrench = { path = "./wrench", editable = true }
 
 [tool.ruff]
 line-length = 88
