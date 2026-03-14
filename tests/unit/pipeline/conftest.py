@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest
 
-from wrench.pipeline.component import Component, DataModel
+from wrench.pipeline.component import Component, DataModel, StatefulComponent
 from wrench.pipeline.stores import InMemoryStore
 
 
@@ -48,12 +48,10 @@ class StubFailingComponent(Component):
         raise RuntimeError("Component exploded")
 
 
-class StubStatefulComponent(Component):
-    async def run(self, state: dict[str, Any] | None = None) -> StubOutput:
-        return StubOutput(
-            value="stateful",
-            state={"counter": (state or {}).get("counter", 0) + 1},
-        )
+class StubStatefulComponent(StatefulComponent):
+    async def run(self) -> StubOutput:
+        self.state["counter"] = self.state.get("counter", 0) + 1
+        return StubOutput(value="stateful")
 
 
 @pytest.fixture()

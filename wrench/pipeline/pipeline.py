@@ -467,9 +467,12 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
                 run_id, node_name, global_inputs
             )
 
-            # Load component state
-            component_state = await self.state_manager.get_component_state(node_name)
-            node_inputs["state"] = component_state
+            # Load component state (only for stateful components)
+            component = node.component
+            if hasattr(component, "state"):
+                component.state = await self.state_manager.get_component_state(
+                    node_name
+                )
 
             # Run the component
             self.logger.debug("Running component %s", node_name)
@@ -481,14 +484,10 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
                     run_id, node_name, run_result.result.model_dump(mode="json")
                 )
 
-            # Stage component state if provided
-            if (
-                run_result.result is not None
-                and hasattr(run_result.result, "state")
-                and run_result.result.state is not None
-            ):
+            # Stage state if the component updated it
+            if hasattr(component, "state") and component.state:
                 await self.state_manager.stage_component_state(
-                    node_name, run_result.result.model_dump(mode="json")["state"]
+                    node_name, component.state
                 )
 
             # Update status
