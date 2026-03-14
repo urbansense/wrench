@@ -7,7 +7,7 @@
 # Some modifications have been made to the original code to better suit the
 # needs of this project.
 
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 from wrench.components.cataloger import Cataloger
 from wrench.components.grouper import Grouper
@@ -28,7 +28,7 @@ class SensorPipelineConfig(PipelineConfig):
         "cataloger",
     ]
 
-    template_: Literal[PipelineType.SENSOR_PIPELINE] = PipelineType.SENSOR_PIPELINE  # type: ignore[assignment]
+    template_: PipelineType = PipelineType.SENSOR_PIPELINE
 
     def _get_components(self) -> list[ComponentDefinition]:
         """Get all component definitions for the pipeline."""

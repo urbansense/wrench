@@ -263,7 +263,7 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
                 ]
                 target_type = component.component_inputs[target_param]["annotation"]
 
-                if not self._check_type_compatibility(source_type, target_type):  # type: ignore
+                if not self._check_type_compatibility(source_type, target_type):  # type: ignore[arg-type]
                     raise ValidationError(
                         f"Type mismatch: {source_component}.{output_field}"
                         f"({source_type}) is not compatible with "

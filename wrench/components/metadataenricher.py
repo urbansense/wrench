@@ -99,5 +99,5 @@ class MetadataEnricher(Component):
                 )
 
         log_performance_metrics(metrics, self.logger)
-        result._performance_metrics = metrics  # type: ignore[attr-defined]
+        result._performance_metrics = metrics
         return result

@@ -59,7 +59,7 @@ class Harvester(Component):
                     operations=operations,
                     state={"previous_devices": current_devices},
                 )
-                result._performance_metrics = metrics  # type: ignore[attr-defined]
+                result._performance_metrics = metrics
                 return result
 
             previous_devices = [
@@ -93,7 +93,7 @@ class Harvester(Component):
                 operations=operations,
                 state={"previous_devices": current_devices},
             )
-            result._performance_metrics = metrics  # type: ignore[attr-defined]
+            result._performance_metrics = metrics
             return result
 
         except Exception as e:

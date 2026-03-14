@@ -40,7 +40,7 @@ class Grouper(Component):
 
                 log_performance_metrics(metrics, self.logger)
                 result = Groups(groups=groups, state={"previous_groups": groups})
-                result._performance_metrics = metrics  # type: ignore[attr-defined]
+                result._performance_metrics = metrics
                 return result
             except GrouperError as e:
                 raise ComponentExecutionError(
@@ -67,7 +67,7 @@ class Grouper(Component):
         result = Groups(
             groups=affected_groups, state={"previous_groups": current_groups}
         )
-        result._performance_metrics = metrics  # type: ignore[attr-defined]
+        result._performance_metrics = metrics
         return result
 
     def _apply_operations(

@@ -11,7 +11,7 @@ import inspect
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 from typing_extensions import get_type_hints
 
 from .exceptions import PipelineDefinitionError
@@ -22,6 +22,7 @@ class DataModel(BaseModel):
 
     state: dict[str, Any] | None = None
     stop_pipeline: bool = False
+    _performance_metrics: Any = PrivateAttr(default=None)
 
 
 class ComponentMeta(ABCMeta):
@@ -41,7 +42,7 @@ class ComponentMeta(ABCMeta):
                 if param.name not in ("self", "kwargs")
             }
         # extract returned fields from the run method return type hint
-        return_model = get_type_hints(run_method).get("return")  # type: ignore
+        return_model = get_type_hints(run_method).get("return")  # type: ignore[arg-type]
         if return_model is None:
             raise PipelineDefinitionError(
                 f"The run method return type must be annotated in {name}"

@@ -32,12 +32,12 @@ class SensorRegistrationPipeline:
         cataloger: BaseCataloger,
         scheduler_config: SchedulerConfig | None = None,
     ):
-        # Create config and set instances directly
-        config = SensorPipelineConfig()
-        config.harvester = harvester  # type: ignore[assignment]
-        config.grouper = grouper  # type: ignore[assignment]
-        config.metadataenricher = metadataenricher  # type: ignore[assignment]
-        config.cataloger = cataloger  # type: ignore[assignment]
+        config = SensorPipelineConfig(
+            harvester=harvester,
+            grouper=grouper,
+            metadataenricher=metadataenricher,
+            cataloger=cataloger,
+        )
 
         self.runner = PipelineRunner.from_config(config)
 

@@ -56,5 +56,5 @@ class Cataloger(Component):
             groups=[group.identifier for group in group_metadata],
             state={"previous_registries": current_registries},
         )
-        result._performance_metrics = metrics  # type: ignore[attr-defined]
+        result._performance_metrics = metrics
         return result

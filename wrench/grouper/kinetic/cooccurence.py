@@ -76,7 +76,9 @@ def visualize_cooccurence_network(G: nx.Graph, partition: dict):
     sizes = [max(100, centrality.get(node, 0) * 300) for node in G.nodes()]
 
     # Draw nodes
-    nx.draw_networkx_nodes(G, pos, node_color=colors, node_size=sizes, cmap=plt.cm.Set3)  # type: ignore[attr-defined]
+    nx.draw_networkx_nodes(
+        G, pos, node_color=colors, node_size=sizes, cmap=plt.colormaps["Set3"]
+    )
 
     # Draw edges
     nx.draw_networkx_edges(G, pos, alpha=0.5)
