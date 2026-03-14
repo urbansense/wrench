@@ -23,12 +23,6 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-[project.urls]
-Homepage = "https://github.com/urbansense/wrench"
-Repository = "https://github.com/urbansense/wrench"
-Documentation = "https://urbansense.github.io/wrench"
-"Bug Tracker" = "https://github.com/urbansense/wrench/issues"
-Changelog = "https://github.com/urbansense/wrench/blob/main/CHANGELOG.md"
 dependencies = [
     "pydantic>=2.10.4,<3.0.0",
     "requests>=2.32.3,<3.0.0",
@@ -42,6 +36,13 @@ dependencies = [
     "matplotlib>=3.10.1",
     "psutil>=6.1.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/urbansense/wrench"
+Repository = "https://github.com/urbansense/wrench"
+Documentation = "https://urbansense.github.io/wrench"
+"Bug Tracker" = "https://github.com/urbansense/wrench/issues"
+Changelog = "https://github.com/urbansense/wrench/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 teleclass = [
@@ -68,6 +69,7 @@ test = [
     "pytest-mock",
     "pytest-cov>=4.1.0",
     "pytest-asyncio>=0.25.3",
+    "responses>=0.25.0",
 ]
 lint = [
     "ruff<1.0.0,>=0.5.0",
@@ -126,8 +128,13 @@ check-hidden = true
 
 [tool.pytest.ini_options]
 addopts = "-v --cov=wrench --cov-report=term-missing"
-testpaths = ["tests"]
+testpaths = ["tests/unit", "tests/integration"]
 python_files = ["test_*.py"]
+asyncio_mode = "auto"
+markers = [
+    "e2e: end-to-end tests requiring live services",
+    "slow: tests that take more than a few seconds",
+]
 
 [tool.coverage.run]
 source = ["wrench"]

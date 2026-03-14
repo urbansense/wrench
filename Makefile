@@ -1,4 +1,4 @@
-.PHONY: setup clean install test test_unit test_e2e lint lint_src lint_tests lint_types lint-fix format spell_check spell_fix help
+.PHONY: setup clean install test test_unit test_integration test_e2e lint lint_src lint_tests lint_types lint-fix format spell_check spell_fix help
 
 setup:
 	rm -rf .venv/
@@ -20,13 +20,16 @@ install: clean
 	uv pip install -e "."
 
 test:
-	uv run pytest -v --cov-report=term-missing
+	uv run pytest tests/unit tests/integration -v --cov=wrench --cov-report=term-missing
 
 test_unit:
-	uv run pytest ./tests/unit-test --doctest-modules --junitxml="junit/test-results.xml" --cov=wrench --cov-report=xml --cov-report=html
+	uv run pytest tests/unit -v --cov=wrench --cov-report=term-missing
+
+test_integration:
+	uv run pytest tests/integration -v --cov=wrench --cov-report=term-missing
 
 test_e2e:
-	uv run pytest ./tests/e2e --doctest-modules --junitxml="junit/test-results.xml" --cov=wrench --cov-report=xml --cov-report=html
+	uv run pytest tests/e2e -v --cov=wrench --cov-report=term-missing
 
 # Check source code
 lint_src:
@@ -69,9 +72,10 @@ help:
 	@echo "  make clean       - Remove build artifacts and caches"
 	@echo ""
 	@echo "Testing:"
-	@echo "  make test        - Run full test suite with coverage"
-	@echo "  make test_unit   - Run unit tests only"
-	@echo "  make test_e2e    - Run end-to-end tests only"
+	@echo "  make test            - Run unit + integration tests with coverage"
+	@echo "  make test_unit       - Run unit tests only"
+	@echo "  make test_integration - Run integration tests only"
+	@echo "  make test_e2e        - Run end-to-end tests only"
 	@echo ""
 	@echo "Linting:"
 	@echo "  make lint        - Run all lint checks (src + tests)"

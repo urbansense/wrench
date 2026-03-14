@@ -1,0 +1,62 @@
+{
+  "value": [
+    {
+      "@iot.id": "10",
+      "name": "Multi-Parameter Station",
+      "description": "Station measuring multiple parameters simultaneously",
+      "properties": null,
+      "Locations": [
+        {
+          "@iot.id": "loc-10",
+          "name": "Park Entrance",
+          "description": "Near the main park entrance",
+          "encodingType": "application/geo+json",
+          "location": {
+            "type": "Point",
+            "coordinates": [11.600, 48.160]
+          }
+        }
+      ],
+      "Datastreams": [],
+      "MultiDatastreams": [
+        {
+          "@iot.id": "mds-1",
+          "name": "Temperature and Humidity Combined",
+          "description": "Combined temperature and humidity measurement",
+          "observationType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_ComplexObservation",
+          "unitOfMeasurements": [
+            {
+              "name": "Celsius",
+              "symbol": "\u00b0C",
+              "definition": "http://unitsofmeasure.org/ucum.html"
+            },
+            {
+              "name": "Percent",
+              "symbol": "%",
+              "definition": "http://unitsofmeasure.org/ucum.html"
+            }
+          ],
+          "phenomenonTime": "2023-01-01T00:00:00Z/2024-12-31T23:59:59Z",
+          "Sensor": {
+            "@iot.id": "sensor-10",
+            "name": "BME280",
+            "description": "Environmental sensor",
+            "encodingType": "application/pdf"
+          },
+          "ObservedProperties": [
+            {
+              "@iot.id": "op-10",
+              "name": "Temperature",
+              "description": "Air temperature"
+            },
+            {
+              "@iot.id": "op-11",
+              "name": "Humidity",
+              "description": "Relative humidity"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
