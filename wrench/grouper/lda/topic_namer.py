@@ -157,7 +157,7 @@ Weighted Keywords: {"; ".join(weighted_keywords)}
 
 def create_topic_namer(
     use_llm: bool,
-    llm_config: LLMConfig = None,
+    llm_config: LLMConfig | None = None,
     temperature: float = 0.3,
 ) -> BaseTopicNamer:
     """Factory function to create appropriate topic namer.

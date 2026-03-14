@@ -73,5 +73,5 @@ class Thing(SensorThingsBase):
     def __str__(self) -> str:
         return self.model_dump_json(by_alias=True, exclude_none=True)
 
-    def __hash__(self) -> str:
-        return xxhash.xxh32(str(self)).hexdigest()
+    def __hash__(self) -> int:
+        return int(xxhash.xxh32(str(self)).intdigest())

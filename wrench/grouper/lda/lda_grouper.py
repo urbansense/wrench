@@ -2,7 +2,7 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 from pydantic import validate_call
@@ -58,7 +58,7 @@ class LDAGrouper(BaseGrouper):
         # Create topic namer
         self.topic_namer = create_topic_namer(
             use_llm=config.use_llm_naming and llm_config is not None,
-            llm_config=llm_config,
+            llm_config=llm_config,  # type: ignore[arg-type]
             temperature=0.1,
         )
 
@@ -173,7 +173,7 @@ class LDAGrouper(BaseGrouper):
         )
 
     def _extract_topic_keywords(
-        self, topic_idx: int, n_words: int = None
+        self, topic_idx: int, n_words: int | None = None
     ) -> tuple[list[str], dict[str, float]]:
         """Extract top keywords for a topic.
 
@@ -187,6 +187,8 @@ class LDAGrouper(BaseGrouper):
         if n_words is None:
             n_words = self.config.top_words
 
+        assert self.lda_model is not None
+        assert self.lda_result is not None
         topic_dist = self.lda_model.components_[topic_idx]
         feature_names = self.lda_result.feature_names
 
@@ -266,6 +268,7 @@ class LDAGrouper(BaseGrouper):
         Returns:
             Topics with assigned devices
         """
+        assert self.lda_result is not None
         document_topic_matrix = self.lda_result.document_topic_matrix
 
         for device_idx, device in enumerate(devices):
@@ -334,11 +337,12 @@ class LDAGrouper(BaseGrouper):
                 f"beta={best_config.beta}, perplexity={best_metrics.perplexity:.2f}"
             )
 
-    def group_devices(self, devices: list[Device]) -> list[Group]:
+    def group_devices(self, devices: list[Device], **kwargs: Any) -> list[Group]:
         """Group devices using LDA topic modeling.
 
         Args:
             devices: List of devices to group
+            **kwargs: Accepted for interface compatibility; not used.
 
         Returns:
             List of groups representing discovered topics
@@ -430,6 +434,7 @@ class LDAGrouper(BaseGrouper):
         topic_probs = self.lda_model.transform(text_vector)[0]
 
         # Map to consolidated topic names
+        assert self.lda_result is not None
         topic_predictions = {}
         for topic in self.lda_result.topics:
             # Calculate max probability among original topics
@@ -568,7 +573,7 @@ class LDAGrouper(BaseGrouper):
 
         self.logger.info(f"Topic device assignments saved to {output_path}")
 
-    def analyze_topic_quality(self) -> dict:
+    def analyze_topic_quality(self) -> dict[str, Any]:
         """Analyze the quality and characteristics of discovered topics.
 
         Returns:
@@ -578,22 +583,19 @@ class LDAGrouper(BaseGrouper):
             self.logger.warning("No topics available. Run group_devices() first.")
             return {}
 
-        analysis = {
-            "total_topics": len(self.lda_result.topics),
-            "total_devices_assigned": sum(
-                len(topic.devices) for topic in self.lda_result.topics
-            ),
-            "topics_with_devices": sum(
-                1 for topic in self.lda_result.topics if topic.devices
-            ),
-            "average_devices_per_topic": 0,
-            "topic_details": [],
-        }
+        total_devices_assigned = sum(
+            len(topic.devices) for topic in self.lda_result.topics
+        )
+        topics_with_devices = sum(
+            1 for topic in self.lda_result.topics if topic.devices
+        )
+        avg_devices = (
+            total_devices_assigned / topics_with_devices
+            if topics_with_devices > 0
+            else 0
+        )
 
-        if analysis["topics_with_devices"] > 0:
-            analysis["average_devices_per_topic"] = (
-                analysis["total_devices_assigned"] / analysis["topics_with_devices"]
-            )
+        topic_details: list[dict[str, Any]] = []
 
         for topic in self.lda_result.topics:
             if not topic.devices:
@@ -615,7 +617,15 @@ class LDAGrouper(BaseGrouper):
                 "top_words": list(topic.keywords[:5]),  # Top 5 keywords
                 "original_topic_ids": topic.original_topic_ids,
             }
-            analysis["topic_details"].append(topic_detail)
+            topic_details.append(topic_detail)
+
+        analysis: dict[str, Any] = {
+            "total_topics": len(self.lda_result.topics),
+            "total_devices_assigned": total_devices_assigned,
+            "topics_with_devices": topics_with_devices,
+            "average_devices_per_topic": avg_devices,
+            "topic_details": topic_details,
+        }
 
         return analysis
 
@@ -655,10 +665,10 @@ class LDAGrouper(BaseGrouper):
         output_path.mkdir(exist_ok=True)
 
         # Save all analysis files
-        self.save_topic_words(output_path / "topic_words.txt")
-        self.save_topic_words_json(output_path / "topic_words.json")
-        self.save_topic_devices(output_path / "topic_devices.txt")
-        self.save_topic_analysis(output_path / "topic_analysis.json")
+        self.save_topic_words(str(output_path / "topic_words.txt"))
+        self.save_topic_words_json(str(output_path / "topic_words.json"))
+        self.save_topic_devices(str(output_path / "topic_devices.txt"))
+        self.save_topic_analysis(str(output_path / "topic_analysis.json"))
 
         self.logger.info(f"All topic analysis saved to {output_path}/")
 

@@ -62,13 +62,13 @@ class SensorThingsHarvester(BaseHarvester):
                 id=thing.id,
                 name=thing.name,
                 description=thing.description,
-                locations=thing.location,
+                locations=[loc for loc in thing.location],
                 time_frame=time_frame,
                 datastreams=datastreams,
                 sensors=sensors,
                 observed_properties=observed_properties,
                 properties=thing.properties,
-                _raw_data=thing.model_dump(),
+                raw_data=thing.model_dump(),
             )
 
             devices.append(device)
@@ -104,7 +104,11 @@ class SensorThingsHarvester(BaseHarvester):
             return (
                 {ds.name for ds in thing.datastreams},
                 {ds.sensor.name for ds in thing.datastreams},
-                {ds.observed_property.name for ds in thing.datastreams},
+                {
+                    ds.observed_property.name
+                    for ds in thing.datastreams
+                    if ds.observed_property is not None
+                },
             )
 
         if thing.multidatastreams:
@@ -114,6 +118,7 @@ class SensorThingsHarvester(BaseHarvester):
                 {
                     op.name
                     for mds in thing.multidatastreams
+                    if mds.observed_properties is not None
                     for op in mds.observed_properties
                 },
             )

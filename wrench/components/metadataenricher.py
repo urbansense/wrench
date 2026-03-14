@@ -24,7 +24,7 @@ class MetadataEnricher(Component):
         self.logger = logger.getChild(self.__class__.__name__)
 
     @validate_call
-    async def run(
+    async def run(  # type: ignore[override]
         self,
         devices: list[Device],
         operations: list[Operation],
@@ -34,7 +34,7 @@ class MetadataEnricher(Component):
         """Run the metadata builder."""
         state = state or {}
         monitor = MemoryMonitor()
-        prev_group_metadata: dict = state.get("prev_group_metadata")
+        prev_group_metadata: dict | None = state.get("prev_group_metadata")
 
         with monitor.track_component("MetadataEnricher") as metrics:
             # always rebuild service_metadata
@@ -99,5 +99,5 @@ class MetadataEnricher(Component):
                 )
 
         log_performance_metrics(metrics, self.logger)
-        result._performance_metrics = metrics
+        result._performance_metrics = metrics  # type: ignore[attr-defined]
         return result

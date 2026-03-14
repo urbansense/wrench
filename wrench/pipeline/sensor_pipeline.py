@@ -34,10 +34,10 @@ class SensorRegistrationPipeline:
     ):
         # Create config and set instances directly
         config = SensorPipelineConfig()
-        config._harvester = harvester
-        config._grouper = grouper
-        config._metadataenricher = metadataenricher
-        config._cataloger = cataloger
+        config.harvester = harvester  # type: ignore[assignment]
+        config.grouper = grouper  # type: ignore[assignment]
+        config.metadataenricher = metadataenricher  # type: ignore[assignment]
+        config.cataloger = cataloger  # type: ignore[assignment]
 
         self.runner = PipelineRunner.from_config(config)
 
@@ -47,7 +47,7 @@ class SensorRegistrationPipeline:
 
         self.logger = logger.getChild(self.__class__.__name__)
 
-    async def run_async(self) -> PipelineResult:
+    async def run_async(self) -> PipelineResult | None:
         """
         Asynchronously runs the sensor pipeline building process.
 
@@ -63,3 +63,4 @@ class SensorRegistrationPipeline:
             await asyncio.Event().wait()
         except (KeyboardInterrupt, SystemExit):
             self.scheduler.shutdown()
+        return None

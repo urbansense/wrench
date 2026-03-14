@@ -22,7 +22,7 @@ class Grouper(Component):
         self.logger = logger.getChild(self.__class__.__name__)
 
     @validate_call(config={"extra": "allow", "arbitrary_types_allowed": True})
-    async def run(
+    async def run(  # type: ignore[override]
         self,
         devices: list[Device],
         operations: list[Operation],
@@ -40,7 +40,7 @@ class Grouper(Component):
 
                 log_performance_metrics(metrics, self.logger)
                 result = Groups(groups=groups, state={"previous_groups": groups})
-                result._performance_metrics = metrics
+                result._performance_metrics = metrics  # type: ignore[attr-defined]
                 return result
             except GrouperError as e:
                 raise ComponentExecutionError(
@@ -67,7 +67,7 @@ class Grouper(Component):
         result = Groups(
             groups=affected_groups, state={"previous_groups": current_groups}
         )
-        result._performance_metrics = metrics
+        result._performance_metrics = metrics  # type: ignore[attr-defined]
         return result
 
     def _apply_operations(

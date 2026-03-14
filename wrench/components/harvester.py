@@ -25,7 +25,7 @@ class Harvester(Component):
         self.logger = logger.getChild(self.__class__.__name__)
 
     @validate_call
-    async def run(self, state: dict[str, Any] | None = None) -> Items:
+    async def run(self, state: dict[str, Any] | None = None) -> Items:  # type: ignore[override]
         """
         Run the harvester and detect changes compared to previous run.
 
@@ -59,7 +59,7 @@ class Harvester(Component):
                     operations=operations,
                     state={"previous_devices": current_devices},
                 )
-                result._performance_metrics = metrics
+                result._performance_metrics = metrics  # type: ignore[attr-defined]
                 return result
 
             previous_devices = [
@@ -93,7 +93,7 @@ class Harvester(Component):
                 operations=operations,
                 state={"previous_devices": current_devices},
             )
-            result._performance_metrics = metrics
+            result._performance_metrics = metrics  # type: ignore[attr-defined]
             return result
 
         except Exception as e:

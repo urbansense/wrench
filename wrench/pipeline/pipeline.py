@@ -483,7 +483,8 @@ class Pipeline(PipelineGraph[TaskNode, PipelineEdge]):
 
             # Stage component state if provided
             if (
-                hasattr(run_result.result, "state")
+                run_result.result is not None
+                and hasattr(run_result.result, "state")
                 and run_result.result.state is not None
             ):
                 await self.state_manager.stage_component_state(

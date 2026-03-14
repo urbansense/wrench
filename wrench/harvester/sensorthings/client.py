@@ -54,7 +54,7 @@ class SensorThingsClient:
 
         endpoint = (
             ENDPOINT
-            if not self._check_multidatastream
+            if not self._check_multidatastream()
             else ENDPOINT_WITH_MULTIDATASTREAM
         )
 

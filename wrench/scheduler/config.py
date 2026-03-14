@@ -48,7 +48,7 @@ class CronSchedulerConfig(BaseSchedulerConfig):
     month: int = 0
     day: int = 0
     week: int = 0
-    day_of_week: int | str = None
+    day_of_week: int | str | None = None
     hour: int = 0
     minute: int = 0
     second: int = 0

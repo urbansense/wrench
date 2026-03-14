@@ -47,7 +47,11 @@ class ConfigReader:
             load_dotenv(env_file)
         else:
             # Try common locations
-            for location in [".env", "test_script/.env", Path.home() / ".wrench.env"]:
+            for location in [
+                ".env",
+                "test_script/.env",
+                str(Path.home() / ".wrench.env"),
+            ]:
                 if Path(location).exists():
                     load_dotenv(location)
                     break

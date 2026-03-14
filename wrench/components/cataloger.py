@@ -27,7 +27,7 @@ class Cataloger(Component):
         self.logger = logger.getChild(self.__class__.__name__)
 
     @validate_call
-    async def run(
+    async def run(  # type: ignore[override]
         self,
         service_metadata: CommonMetadata | None,
         group_metadata: list[CommonMetadata],
@@ -56,5 +56,5 @@ class Cataloger(Component):
             groups=[group.identifier for group in group_metadata],
             state={"previous_registries": current_registries},
         )
-        result._performance_metrics = metrics
+        result._performance_metrics = metrics  # type: ignore[attr-defined]
         return result

@@ -28,7 +28,7 @@ class SensorPipelineConfig(PipelineConfig):
         "cataloger",
     ]
 
-    template_: Literal[PipelineType.SENSOR_PIPELINE] = PipelineType.SENSOR_PIPELINE
+    template_: Literal[PipelineType.SENSOR_PIPELINE] = PipelineType.SENSOR_PIPELINE  # type: ignore[assignment]
 
     def _get_components(self) -> list[ComponentDefinition]:
         """Get all component definitions for the pipeline."""
