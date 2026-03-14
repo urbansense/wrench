@@ -48,9 +48,20 @@ def _make_client(base_url=BASE_URL, config=None):
     )
 
 
+def _mock_multidatastream_check(available: bool = True):
+    """Register a mock for the MultiDatastreams probe for fetch_things() call."""
+    responses.add(
+        responses.GET,
+        f"{BASE_URL}/MultiDatastreams",
+        json={"value": []},
+        status=200 if available else 404,
+    )
+
+
 class TestFetchThingsSinglePage:
     @responses.activate
     def test_single_page_returns_all_things(self, page1_json):
+        _mock_multidatastream_check()
         single_page = {**page1_json, "@iot.nextLink": None}
         responses.add(
             responses.GET,
@@ -65,6 +76,7 @@ class TestFetchThingsSinglePage:
 
     @responses.activate
     def test_single_page_thing_ids(self, page1_json):
+        _mock_multidatastream_check()
         single_page = {**page1_json}
         single_page.pop("@iot.nextLink", None)
         responses.add(
@@ -82,6 +94,7 @@ class TestFetchThingsSinglePage:
 class TestFetchThingsMultiPage:
     @responses.activate
     def test_multi_page_pagination(self, page1_json, page2_json):
+        _mock_multidatastream_check()
         responses.add(
             responses.GET,
             _prepared_url(),
@@ -102,6 +115,7 @@ class TestFetchThingsMultiPage:
 
     @responses.activate
     def test_pagination_respects_limit(self, page1_json):
+        _mock_multidatastream_check()
         responses.add(
             responses.GET,
             _prepared_url(),
@@ -117,6 +131,7 @@ class TestFetchThingsMultiPage:
 class TestFetchThingsEmptyResponse:
     @responses.activate
     def test_empty_value_list(self):
+        _mock_multidatastream_check()
         responses.add(
             responses.GET,
             _prepared_url(),
@@ -131,6 +146,7 @@ class TestFetchThingsEmptyResponse:
 class TestPaginateErrorHandling:
     @responses.activate
     def test_request_exception_stops_pagination(self):
+        _mock_multidatastream_check()
         responses.add(
             responses.GET,
             _prepared_url(),
@@ -142,6 +158,7 @@ class TestPaginateErrorHandling:
 
     @responses.activate
     def test_http_error_stops_pagination(self):
+        _mock_multidatastream_check()
         responses.add(
             responses.GET,
             _prepared_url(),
@@ -154,6 +171,7 @@ class TestPaginateErrorHandling:
 
     @responses.activate
     def test_missing_value_field_stops_pagination(self):
+        _mock_multidatastream_check()
         responses.add(
             responses.GET,
             _prepared_url(),
@@ -167,6 +185,7 @@ class TestPaginateErrorHandling:
     @responses.activate
     def test_validation_failure_skips_item(self, page1_json):
         """Items that fail Pydantic validation are skipped, not fatal."""
+        _mock_multidatastream_check()
         bad_page = {
             "value": [
                 {"@iot.id": "1"},  # Missing required fields
@@ -185,6 +204,7 @@ class TestPaginateErrorHandling:
 
     @responses.activate
     def test_error_on_second_page_returns_first_page_results(self, page1_json):
+        _mock_multidatastream_check()
         responses.add(
             responses.GET,
             _prepared_url(),
