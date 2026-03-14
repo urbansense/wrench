@@ -141,3 +141,19 @@ source = ["wrench"]
 
 [tool.mypy]
 disable_error_code = ["import-untyped"]
+
+# Optional extras not installed in the lint environment
+[[tool.mypy.overrides]]
+module = [
+    "fsspec",
+    "fsspec.implementations.local",
+    "sentence_transformers",
+    "sklearn.decomposition",
+    "sklearn.feature_extraction.text",
+    "sklearn.metrics",
+    "community",
+    "yake",
+    "keybert",
+    "keybert.llm",
+]
+ignore_missing_imports = true
