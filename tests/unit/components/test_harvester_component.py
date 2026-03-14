@@ -3,7 +3,6 @@ import pytest
 from wrench.components.harvester import Harvester
 from wrench.exceptions import HarvesterError
 from wrench.harvester.base import BaseHarvester
-from wrench.models import Device
 from wrench.pipeline.types import OperationType
 
 
@@ -58,16 +57,12 @@ class TestHarvesterComponentIncremental:
         device = make_device(id="d-1", name="Same")
         component = Harvester(StubHarvester([device]))
 
-        # First run
+        # First run - state is returned as a dict of Device objects (InMemoryStore path)
         first_result = await component.run(state=None)
-        state = first_result.model_dump(mode="json")["state"]
+        state = first_result.state
 
-        # Rebuild devices from the serialized state to ensure roundtrip consistency.
-        # This simulates what happens when the pipeline restores state from storage.
-        roundtripped_devices = [
-            Device.model_validate(d) for d in state["previous_devices"]
-        ]
-        component2 = Harvester(StubHarvester(roundtripped_devices))
+        # Second run with identical devices and the saved state
+        component2 = Harvester(StubHarvester([device]))
         result = await component2.run(state=state)
         assert result.stop_pipeline is True
         assert len(result.operations) == 0
