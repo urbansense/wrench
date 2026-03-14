@@ -5,6 +5,81 @@ base class you subclass. Follow the steps below for the type you want to add.
 
 ---
 
+## Stateful vs stateless pipeline components
+
+Every pipeline component subclasses one of two base classes defined in
+`wrench/pipeline/component.py`. Choose the right one before writing any code.
+
+### `Component` — stateless
+
+Use `Component` when your `run()` method needs only the inputs passed to it on
+the current run. No memory of previous runs is required.
+
+```python
+from wrench.pipeline.component import Component, DataModel
+
+
+class PublishStatus(DataModel):
+    published: int
+
+
+class PublishingComponent(Component):
+    async def run(self, records: list[dict]) -> PublishStatus:
+        count = self._client.publish_all(records)
+        return PublishStatus(published=count)
+```
+
+### `StatefulComponent` — stateful
+
+Use `StatefulComponent` when `run()` needs to remember data from a previous
+run — for example, to detect changes, avoid re-processing unchanged items, or
+accumulate counts over time.
+
+The pipeline loads the component's previous state into `self.state` before each
+`run()` call and saves whatever is in `self.state` afterwards. On the first run,
+`self.state` is `{}`.
+
+```python
+from wrench.pipeline.component import DataModel, StatefulComponent
+
+
+class HarvestResult(DataModel):
+    devices: list[dict]
+    new_count: int
+
+
+class IncrementalHarvester(StatefulComponent):
+    async def run(self) -> HarvestResult:
+        # Read state written by the previous run (empty dict on first run).
+        seen_ids: set[str] = set(self.state.get("seen_ids", []))
+
+        current = self._source.fetch()
+        new_devices = [d for d in current if d["id"] not in seen_ids]
+
+        # Mutate self.state — the pipeline persists this automatically.
+        self.state["seen_ids"] = [d["id"] for d in current]
+
+        return HarvestResult(devices=current, new_count=len(new_devices))
+```
+
+### Persisting state: the only mechanism
+
+> **Warning:** do not add a `state` field to your `DataModel` subclass and
+> return state through `run()`'s return value. `DataModel` has no `state` field,
+> and the pipeline does not read state from the return value. Mutating
+> `self.state` inside `run()` is the only supported mechanism.
+
+**Quick reference**
+
+| | `Component` | `StatefulComponent` |
+|---|---|---|
+| Cross-run memory | No | Yes — via `self.state` |
+| `self.state` available | No | Yes (`{}` on first run) |
+| State persistence | Not applicable | Automatic — load before run, save after |
+| Typical use cases | Publishing, transforming, enriching | Change detection, deduplication, counters |
+
+---
+
 ## Adding a new Harvester
 
 A Harvester connects to a data source and returns a list of `Device` objects.
