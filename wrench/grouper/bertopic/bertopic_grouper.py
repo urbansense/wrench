@@ -4,7 +4,7 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import validate_call
 
@@ -16,10 +16,10 @@ from wrench.utils.config import LLMConfig
 from .models import BERTopicConfig, BERTopicResult, BERTopicTopic
 
 try:
-    from bertopic import BERTopic
-    from hdbscan import HDBSCAN
+    from bertopic import BERTopic  # type: ignore[import-not-found]
+    from hdbscan import HDBSCAN  # type: ignore[import-not-found]
     from sentence_transformers import SentenceTransformer
-    from umap import UMAP
+    from umap import UMAP  # type: ignore[import-not-found]
 except ImportError as e:
     raise ImportError(
         "BERTopic dependencies not installed. \
@@ -256,6 +256,7 @@ class BERTopicGrouper(BaseGrouper):
         Returns:
             Topics with assigned devices
         """
+        assert self.bertopic_result is not None
         topic_assignments = self.bertopic_result.topic_assignments
         probabilities = self.bertopic_result.probabilities
 
@@ -305,11 +306,12 @@ class BERTopicGrouper(BaseGrouper):
 
         return topics
 
-    def group_devices(self, devices: list[Device]) -> list[Group]:
+    def group_devices(self, devices: list[Device], **kwargs: Any) -> list[Group]:
         """Group devices using BERTopic clustering.
 
         Args:
             devices: List of devices to group
+            **kwargs: Accepted for interface compatibility; not used.
 
         Returns:
             List of groups representing discovered topics
@@ -411,6 +413,7 @@ class BERTopicGrouper(BaseGrouper):
 
     def _save_topic_info(self, output_file: Path) -> None:
         """Save topic information as JSON."""
+        assert self.bertopic_result is not None
         topic_data = {}
         for topic in self.bertopic_result.topics:
             topic_data[f"topic_{topic.id}"] = {
@@ -428,6 +431,7 @@ class BERTopicGrouper(BaseGrouper):
 
     def _save_topic_words(self, output_file: Path) -> None:
         """Save topic words to text file."""
+        assert self.bertopic_result is not None
         with open(output_file, "w", encoding="utf-8") as f:
             f.write("=== BERTopic Topic Words ===\n\n")
 
@@ -445,6 +449,7 @@ class BERTopicGrouper(BaseGrouper):
 
     def _save_device_assignments(self, output_file: Path) -> None:
         """Save device assignments to text file."""
+        assert self.bertopic_result is not None
         with open(output_file, "w", encoding="utf-8") as f:
             f.write("=== BERTopic Device Assignments ===\n\n")
 

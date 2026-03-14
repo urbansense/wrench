@@ -1,6 +1,7 @@
 import requests
 
 from wrench.harvester.base import BaseHarvester
+from wrench.models import Device as WrenchDevice
 
 from .models import Device
 
@@ -20,6 +21,6 @@ class OpenSensorWebHarvester(BaseHarvester):
 
         return devices
 
-    def return_devices(self) -> list[Device]:
+    def return_devices(self) -> list[WrenchDevice]:  # type: ignore[override]
         """Returns devices."""
-        return self.devices
+        return self.devices  # type: ignore[return-value]

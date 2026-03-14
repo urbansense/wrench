@@ -1,0 +1,119 @@
+{
+  "value": [
+    {
+      "@iot.id": "1",
+      "name": "Weather Station Alpha",
+      "description": "Rooftop weather station in city center",
+      "properties": {
+        "owner": "City Council",
+        "deployment_date": "2022-01-15"
+      },
+      "Locations": [
+        {
+          "@iot.id": "loc-1",
+          "name": "City Center Rooftop",
+          "description": "On top of city hall",
+          "encodingType": "application/geo+json",
+          "location": {
+            "type": "Point",
+            "coordinates": [11.576, 48.137]
+          }
+        }
+      ],
+      "Datastreams": [
+        {
+          "@iot.id": "ds-1",
+          "name": "Air Temperature",
+          "description": "Temperature measured in Celsius",
+          "unitOfMeasurement": {
+            "name": "Celsius",
+            "symbol": "\u00b0C",
+            "definition": "http://unitsofmeasure.org/ucum.html#para-30"
+          },
+          "observedArea": {
+            "type": "Point",
+            "coordinates": [11.576, 48.137]
+          },
+          "phenomenonTime": "2022-01-15T00:00:00Z/2024-06-15T23:59:59Z",
+          "resultTime": "2022-01-15T00:00:00Z/2024-06-15T23:59:59Z",
+          "Sensor": {
+            "@iot.id": "sensor-1",
+            "name": "DHT22",
+            "description": "Digital temperature and humidity sensor",
+            "encodingType": "application/pdf"
+          },
+          "ObservedProperty": {
+            "@iot.id": "op-1",
+            "name": "Temperature",
+            "description": "Air temperature"
+          }
+        },
+        {
+          "@iot.id": "ds-2",
+          "name": "Relative Humidity",
+          "description": "Humidity measured in percent",
+          "unitOfMeasurement": {
+            "name": "Percent",
+            "symbol": "%",
+            "definition": "http://unitsofmeasure.org/ucum.html#para-29"
+          },
+          "phenomenonTime": "2022-01-15T00:00:00Z/2024-06-15T23:59:59Z",
+          "Sensor": {
+            "@iot.id": "sensor-1",
+            "name": "DHT22",
+            "description": "Digital temperature and humidity sensor",
+            "encodingType": "application/pdf"
+          },
+          "ObservedProperty": {
+            "@iot.id": "op-2",
+            "name": "Humidity",
+            "description": "Relative air humidity"
+          }
+        }
+      ]
+    },
+    {
+      "@iot.id": "2",
+      "name": "Air Quality Station Beta",
+      "description": "Street-level air quality monitoring",
+      "properties": null,
+      "Locations": [
+        {
+          "@iot.id": "loc-2",
+          "name": "Main Street",
+          "description": "Lamppost on main street",
+          "encodingType": "application/geo+json",
+          "location": {
+            "type": "Point",
+            "coordinates": [11.582, 48.145]
+          }
+        }
+      ],
+      "Datastreams": [
+        {
+          "@iot.id": "ds-3",
+          "name": "PM2.5 Concentration",
+          "description": "Fine particulate matter",
+          "unitOfMeasurement": {
+            "name": "Microgram per cubic meter",
+            "symbol": "\u00b5g/m\u00b3",
+            "definition": "http://unitsofmeasure.org/ucum.html"
+          },
+          "phenomenonTime": "2023-03-01T00:00:00Z/2024-08-20T23:59:59Z",
+          "Sensor": {
+            "@iot.id": "sensor-2",
+            "name": "SDS011",
+            "description": "Laser dust sensor",
+            "encodingType": "application/pdf"
+          },
+          "ObservedProperty": {
+            "@iot.id": "op-3",
+            "name": "PM2.5",
+            "description": "Particulate matter 2.5 micrometers"
+          }
+        }
+      ]
+    }
+  ],
+  "@iot.nextLink": "https://example.com/FROST/v1.1/Things?$skip=2&$top=2"
+}

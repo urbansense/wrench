@@ -47,7 +47,7 @@ def build_cooccurence_network(
     for comm_id, kws in comms.items():
         # compute weighted degree
         deg = {kw: G.degree(kw, weight="weight") for kw in kws}
-        top = sorted(deg, key=deg.get, reverse=True)[:top_n]
+        top = sorted(deg, key=lambda k: deg[k], reverse=True)[:top_n]
         essential[f"cluster_{comm_id}"] = top
 
     return [
@@ -76,7 +76,9 @@ def visualize_cooccurence_network(G: nx.Graph, partition: dict):
     sizes = [max(100, centrality.get(node, 0) * 300) for node in G.nodes()]
 
     # Draw nodes
-    nx.draw_networkx_nodes(G, pos, node_color=colors, node_size=sizes, cmap=plt.cm.Set3)
+    nx.draw_networkx_nodes(
+        G, pos, node_color=colors, node_size=sizes, cmap=plt.colormaps["Set3"]
+    )
 
     # Draw edges
     nx.draw_networkx_edges(G, pos, alpha=0.5)

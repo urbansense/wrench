@@ -122,7 +122,7 @@ class PipelineRunTracker:
 
     async def record_run_completion(
         self, run_id: str, stopped_early: bool = False
-    ) -> RunRecord:
+    ) -> RunRecord | None:
         """Record successful completion of a run."""
         record = await self._find_run_record(run_id)
         if record:
@@ -136,7 +136,7 @@ class PipelineRunTracker:
             await self._save_history()
         return record
 
-    async def record_run_failure(self, run_id: str, error: str) -> RunRecord:
+    async def record_run_failure(self, run_id: str, error: str) -> RunRecord | None:
         """Record failure of a run."""
         record = await self._find_run_record(run_id)
         if record:
@@ -151,7 +151,7 @@ class PipelineRunTracker:
 
     async def record_component_performance(
         self, run_id: str, metrics: ComponentPerformanceMetrics
-    ) -> RunRecord:
+    ) -> RunRecord | None:
         """Record performance metrics for a component."""
         record = await self._find_run_record(run_id)
         if record:
@@ -162,7 +162,7 @@ class PipelineRunTracker:
 
     async def update_pipeline_memory_peak(
         self, run_id: str, memory_peak_mb: float
-    ) -> RunRecord:
+    ) -> RunRecord | None:
         """Update the pipeline-level memory peak."""
         record = await self._find_run_record(run_id)
         if record:

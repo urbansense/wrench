@@ -40,7 +40,8 @@ class LLMTopicGenerator:
         for c in clusters:
             for topic in topics:
                 if topic.cluster_id.lower() == c.cluster_id:
-                    mappings[topic].extend(c._devices)
+                    if c._devices is not None:
+                        mappings[topic].extend(c._devices)
 
         return mappings
 
@@ -76,6 +77,8 @@ class LLMTopicGenerator:
             self._save_topics(root_topics.topics)
 
             return root_topics.topics
+
+        return []
 
     def _save_topics(self, topics: list[Topic]):
         with open(self.cache_topics, "w") as f:

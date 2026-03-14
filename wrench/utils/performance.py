@@ -63,6 +63,7 @@ class MemoryMonitor:
                 rss_mb=0.0, vms_mb=0.0, percent=0.0, timestamp=time.time()
             )
 
+        assert self._process is not None
         memory_info = self._process.memory_info()
         memory_percent = self._process.memory_percent()
 

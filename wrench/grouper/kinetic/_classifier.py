@@ -62,7 +62,7 @@ class Classifier:
     def classify(
         self,
         docs: list[str],
-        clusters: list[Cluster] | None = None,
+        clusters: list[Cluster],
     ) -> list[np.ndarray]:
         """
         Classifies documents against a list of topics.

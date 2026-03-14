@@ -1,6 +1,5 @@
 import hashlib
 import json
-from typing import Any
 
 from pydantic import validate_call
 
@@ -9,15 +8,15 @@ from wrench.exceptions import HarvesterError
 from wrench.harvester import BaseHarvester
 from wrench.log import logger
 from wrench.models import Device
+from wrench.pipeline.component import StatefulComponent
 from wrench.pipeline.types import (
-    Component,
     Operation,
     OperationType,
 )
 from wrench.utils.performance import MemoryMonitor, log_performance_metrics
 
 
-class Harvester(Component):
+class Harvester(StatefulComponent):
     """Harvester that determines operations by comparing with previous state."""
 
     def __init__(self, harvester: BaseHarvester):
@@ -25,7 +24,7 @@ class Harvester(Component):
         self.logger = logger.getChild(self.__class__.__name__)
 
     @validate_call
-    async def run(self, state: dict[str, Any] | None = None) -> Items:
+    async def run(self) -> Items:  # type: ignore[override]
         """
         Run the harvester and detect changes compared to previous run.
 
@@ -35,9 +34,8 @@ class Harvester(Component):
         Raises:
             HarvesterError: If there's an issue retrieving items from the harvester
         """
-        state = state or {}
         monitor = MemoryMonitor()
-        previous_devices = state.get("previous_devices")
+        previous_devices = self.state.get("previous_devices")
 
         try:
             with monitor.track_component("Harvester") as metrics:
@@ -54,10 +52,10 @@ class Harvester(Component):
                     Operation(type=OperationType.ADD, device=item)
                     for item in current_devices
                 ]
+                self.state["previous_devices"] = current_devices
                 result = Items(
                     devices=current_devices,
                     operations=operations,
-                    state={"previous_devices": current_devices},
                 )
                 result._performance_metrics = metrics
                 return result
@@ -88,10 +86,10 @@ class Harvester(Component):
                     stop_pipeline=True,
                 )
 
+            self.state["previous_devices"] = current_devices
             result = Items(
                 devices=current_devices,
                 operations=operations,
-                state={"previous_devices": current_devices},
             )
             result._performance_metrics = metrics
             return result

@@ -77,13 +77,13 @@ class ContentGenerator:
                     num_devices=len(group.devices),
                     data=[
                         dev.model_dump_json(
-                            include=[
+                            include={  # type: ignore[arg-type]
                                 "name",
                                 "description",
                                 "datastreams",
                                 "sensors",
                                 "observed_properties",
-                            ]
+                            }
                         )
                         for dev in group.representative_devices
                     ],
@@ -92,7 +92,7 @@ class ContentGenerator:
         ]
 
         response = self.client.beta.chat.completions.parse(
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
             model=self.model,
             response_format=Content,
             temperature=0,

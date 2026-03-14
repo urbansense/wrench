@@ -70,6 +70,6 @@ class PipelineRunner:
         data = ConfigReader().read(file_path)
         return cls.from_config(data)
 
-    async def run(self, user_input: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def run(self, user_input: dict[str, Any] | None = None) -> Any:
         """Run the pipeline."""
         return await self.pipeline.run(user_input)

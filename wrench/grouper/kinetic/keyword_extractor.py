@@ -83,7 +83,7 @@ class KeyBERTAdapter(KeywordExtractorAdapter):
         lang: Literal["en", "de"] = "en",
         seed_keywords: list[str] = SEED_KEYWORDS,
     ):
-        self.keybert = KeyBERT(model=embedder.embedding_model)  # type: ignore
+        self.keybert = KeyBERT(model=embedder.embedding_model)  # type: ignore[arg-type]
 
         dir_path = Path(__file__).parent / "stopwords"
         stopwords_path = os.path.join(dir_path, "stopwords-%s.txt" % lang[:2].lower())

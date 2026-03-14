@@ -42,7 +42,7 @@ class SDDICataloger(BaseCataloger):
 
         self.ckan_server = RemoteCKAN(address=self.endpoint, apikey=self.api_key)
         self.owner_org = owner_org
-        self._registries = set()
+        self._registries: set[str] = set()
 
     def register(
         self,
@@ -214,7 +214,10 @@ class SDDICataloger(BaseCataloger):
                 start_date = group.temporal_extent.start_time.strftime("%Y-%m-%d")
                 latest_date = group.temporal_extent.latest_time.strftime("%Y-%m-%d")
 
-            if group.temporal_extent.latest_time.date() == datetime.today().date():
+            if (
+                group.temporal_extent is not None
+                and group.temporal_extent.latest_time.date() == datetime.today().date()
+            ):
                 latest_date = ""
 
             device_group = DeviceGroup(

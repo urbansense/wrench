@@ -12,6 +12,8 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,9 +31,12 @@ jobs:
       - name: Run linting
         run: |
           make lint
-      - name: Format after lint
+      - name: Check formatting
         run: |
-          make format
+          uv run --group lint ruff format --diff wrench tests
       - name: Add spellcheck
         run: |
           make spell_check
+      - name: Type checking
+        run: |
+          make lint_types

@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from wrench.models import Device, Group
 
 
 class BaseGrouper(ABC):
     @abstractmethod
-    def group_devices(self, devices: list[Device], **kwargs) -> list[Group]:
+    def group_devices(self, devices: list[Device], **kwargs: Any) -> list[Group]:
         """
         Groups the given list of items into a list of Group objects.
 
@@ -26,7 +27,7 @@ class BaseGrouper(ABC):
         deleted_devices: list[Device],
     ) -> tuple[list[Group], list[Group]]:
         # Set to track which groups were affected
-        affected_group_names = set()
+        affected_group_names: set[str] = set()
 
         if new_devices or updated_devices:
             # Create new groups from added and updated items

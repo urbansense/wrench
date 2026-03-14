@@ -1,29 +1,34 @@
 repos:
+  # General file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+
   # Codespell for common misspellings
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.1.0
+    rev: v2.4.1
     hooks:
       - id: codespell
         files: ^.*\.(py|c|h|md|rst|yml)$
+
   # Ruff for Python formatting and linting
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version.
-    rev: v0.9.6
+    rev: v0.11.2
     hooks:
       # Run the linter.
       - id: ruff
         types_or: [python, pyi]
         args: ["--fix"]
         stages: [pre-commit]
-        exclude: ^tools/  # Skip tools directory entirely
+        exclude: ^tools/
       # Run the formatter.
       - id: ruff-format
         types_or: [python, pyi]
         stages: [pre-commit]
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0 # the release, git tag, or commit you want to use
-    hooks:
-      - id: check-toml
-      - id: check-yaml
-      - id: end-of-file-fixer
-      - id: trailing-whitespace

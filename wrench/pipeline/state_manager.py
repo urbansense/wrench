@@ -32,7 +32,7 @@ class PipelineStateManager:
         """Prepare for a new state version."""
         # Use run_id as version identifier for traceability
         self.pending_version = run_id
-        self.pending_states = {}
+        self.pending_states: dict[str, dict[str, Any]] = {}
         self.logger.debug(f"Prepared new state version for run {run_id}")
 
     async def stage_component_state(self, component_name: str, state: dict[str, Any]):

@@ -1,7 +1,5 @@
 __pycache__/
 .teleclass_cache*/
-.kineticache/
-*.json
 *.egg-info
 dist/
 .coverage
@@ -20,7 +18,6 @@ docs/_build/
 
 *.log
 
-uv.lock
 
 # Experiment tracking
 .experiments/
@@ -28,5 +25,25 @@ uv.lock
 # Scattered result files
 result_*.html
 result_*.json
+validated.json
 agentic_results/
 kinetic_results/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+.embeddingcache/
+.kineticache/
+.pdm-build/
+
+# OS files
+.DS_Store

@@ -267,6 +267,8 @@ class LDAHyperparameterOptimizer:
                 f"beta={config.beta}, score={score:.3f}"
             )
 
+        assert best_config is not None
+        assert best_metrics is not None
         self.logger.info(
             f"Optimization complete. Best config: n_topics={best_config.n_topics}, "
             f"alpha={best_config.alpha}, beta={best_config.beta}, "
@@ -311,7 +313,7 @@ class LDAHyperparameterOptimizer:
                 # Higher is better for other metrics
                 best_config, best_value = max(metric_values, key=lambda x: x[1])
 
-            analysis["best_configs_by_metric"][metric_name] = {
+            analysis["best_configs_by_metric"][metric_name] = {  # type: ignore[index]
                 "config": best_config,
                 "value": best_value,
             }

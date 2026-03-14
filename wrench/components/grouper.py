@@ -1,5 +1,4 @@
 import copy
-from typing import Any
 
 from pydantic import validate_call
 
@@ -8,13 +7,13 @@ from wrench.exceptions import GrouperError
 from wrench.grouper import BaseGrouper
 from wrench.log import logger
 from wrench.models import Device, Group
-from wrench.pipeline.component import Component
+from wrench.pipeline.component import StatefulComponent
 from wrench.pipeline.exceptions import ComponentExecutionError
 from wrench.pipeline.types import Operation, OperationType
 from wrench.utils.performance import MemoryMonitor, log_performance_metrics
 
 
-class Grouper(Component):
+class Grouper(StatefulComponent):
     """Grouper that handles operations on Groups."""
 
     def __init__(self, grouper: BaseGrouper):
@@ -22,16 +21,14 @@ class Grouper(Component):
         self.logger = logger.getChild(self.__class__.__name__)
 
     @validate_call(config={"extra": "allow", "arbitrary_types_allowed": True})
-    async def run(
+    async def run(  # type: ignore[override]
         self,
         devices: list[Device],
         operations: list[Operation],
-        state: dict[str, Any] | None = None,
     ) -> Groups:
-        state = state or {}
         monitor = MemoryMonitor()
         # Case 1: Incremental update - apply operations to existing groups
-        previous_groups = state.get("previous_groups")
+        previous_groups = self.state.get("previous_groups")
 
         if not previous_groups:
             try:
@@ -39,7 +36,8 @@ class Grouper(Component):
                     groups = self._grouper.group_devices(devices)
 
                 log_performance_metrics(metrics, self.logger)
-                result = Groups(groups=groups, state={"previous_groups": groups})
+                self.state["previous_groups"] = groups
+                result = Groups(groups=groups)
                 result._performance_metrics = metrics
                 return result
             except GrouperError as e:
@@ -50,7 +48,6 @@ class Grouper(Component):
         if not operations:
             return Groups(
                 groups=[],
-                state={"previous_groups": previous_groups},
                 stop_pipeline=True,
             )
 
@@ -64,9 +61,8 @@ class Grouper(Component):
 
         log_performance_metrics(metrics, self.logger)
         # Return only the affected groups
-        result = Groups(
-            groups=affected_groups, state={"previous_groups": current_groups}
-        )
+        self.state["previous_groups"] = current_groups
+        result = Groups(groups=affected_groups)
         result._performance_metrics = metrics
         return result
 

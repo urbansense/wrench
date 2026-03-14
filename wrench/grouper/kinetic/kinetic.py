@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 import openai
 from pydantic import validate_call
@@ -90,7 +90,7 @@ class KINETIC(BaseGrouper):
 
         return topic_dict
 
-    def group_devices(self, devices: list[Device]) -> list[Group]:
+    def group_devices(self, devices: list[Device], **kwargs: Any) -> list[Group]:
         docs = [
             device.to_string(
                 exclude=[

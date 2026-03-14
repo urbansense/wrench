@@ -1,0 +1,48 @@
+{
+  "value": [
+    {
+      "@iot.id": "3",
+      "name": "Noise Monitor Gamma",
+      "description": "Urban noise level monitoring station",
+      "properties": {
+        "installation": "wall-mounted"
+      },
+      "Locations": [
+        {
+          "@iot.id": "loc-3",
+          "name": "Residential Area",
+          "description": "Near school zone",
+          "encodingType": "application/geo+json",
+          "location": {
+            "type": "Point",
+            "coordinates": [11.590, 48.150]
+          }
+        }
+      ],
+      "Datastreams": [
+        {
+          "@iot.id": "ds-4",
+          "name": "Noise Level",
+          "description": "Sound pressure level in dB(A)",
+          "unitOfMeasurement": {
+            "name": "Decibel A-weighted",
+            "symbol": "dB(A)",
+            "definition": "http://unitsofmeasure.org/ucum.html"
+          },
+          "phenomenonTime": "2023-06-01T00:00:00Z/2024-12-01T23:59:59Z",
+          "Sensor": {
+            "@iot.id": "sensor-3",
+            "name": "SPH0645",
+            "description": "MEMS microphone sensor",
+            "encodingType": "application/pdf"
+          },
+          "ObservedProperty": {
+            "@iot.id": "op-4",
+            "name": "Sound Pressure Level",
+            "description": "Environmental noise level"
+          }
+        }
+      ]
+    }
+  ]
+}

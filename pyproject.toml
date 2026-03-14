@@ -7,7 +7,22 @@ authors = [
 ]
 license = {text = "Apache-2.0"}
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12"
+keywords = ["IoT", "sensors", "metadata", "catalog", "SensorThings", "urban", "pipeline"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
 dependencies = [
     "pydantic>=2.10.4,<3.0.0",
     "requests>=2.32.3,<3.0.0",
@@ -21,6 +36,13 @@ dependencies = [
     "matplotlib>=3.10.1",
     "psutil>=6.1.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/urbansense/wrench"
+Repository = "https://github.com/urbansense/wrench"
+Documentation = "https://urbansense.github.io/wrench"
+"Bug Tracker" = "https://github.com/urbansense/wrench/issues"
+Changelog = "https://github.com/urbansense/wrench/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 teleclass = [
@@ -47,6 +69,7 @@ test = [
     "pytest-mock",
     "pytest-cov>=4.1.0",
     "pytest-asyncio>=0.25.3",
+    "responses>=0.25.0",
 ]
 lint = [
     "ruff<1.0.0,>=0.5.0",
@@ -66,8 +89,6 @@ dev = [
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
-[tool.uv.sources]
-wrench = { path = "./wrench", editable = true }
 
 [tool.ruff]
 line-length = 88
@@ -96,7 +117,8 @@ ignore = [
 convention = "google"  # Use Google-style docstrings
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D"]  # Disable docstring checks for tests
+"tests/*" = ["D"]     # Disable docstring checks for tests
+"examples/*" = ["D"]  # Disable docstring checks for example scripts
 
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,*.json,_dist,build,*.pyc,.venv,*.txt'
@@ -106,11 +128,32 @@ check-hidden = true
 
 [tool.pytest.ini_options]
 addopts = "-v --cov=wrench --cov-report=term-missing"
-testpaths = ["tests"]
+testpaths = ["tests/unit", "tests/integration"]
 python_files = ["test_*.py"]
+asyncio_mode = "auto"
+markers = [
+    "e2e: end-to-end tests requiring live services",
+    "slow: tests that take more than a few seconds",
+]
 
 [tool.coverage.run]
 source = ["wrench"]
 
 [tool.mypy]
 disable_error_code = ["import-untyped"]
+
+# Optional extras not installed in the lint environment
+[[tool.mypy.overrides]]
+module = [
+    "fsspec",
+    "fsspec.implementations.local",
+    "sentence_transformers",
+    "sklearn.decomposition",
+    "sklearn.feature_extraction.text",
+    "sklearn.metrics",
+    "community",
+    "yake",
+    "keybert",
+    "keybert.llm",
+]
+ignore_missing_imports = true

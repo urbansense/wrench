@@ -1,16 +1,15 @@
-from typing import Any
-
 from pydantic import validate_call
 
 from wrench.components.types import Metadata
 from wrench.log import logger
 from wrench.metadataenricher import BaseMetadataEnricher
 from wrench.models import Device, Group
-from wrench.pipeline.types import Component, Operation
+from wrench.pipeline.component import StatefulComponent
+from wrench.pipeline.types import Operation
 from wrench.utils.performance import MemoryMonitor, log_performance_metrics
 
 
-class MetadataEnricher(Component):
+class MetadataEnricher(StatefulComponent):
     """
     Component for creating metadata builder component from any metadata builder.
 
@@ -24,17 +23,15 @@ class MetadataEnricher(Component):
         self.logger = logger.getChild(self.__class__.__name__)
 
     @validate_call
-    async def run(
+    async def run(  # type: ignore[override]
         self,
         devices: list[Device],
         operations: list[Operation],
         groups: list[Group],
-        state: dict[str, Any] | None = None,
     ) -> Metadata:
         """Run the metadata builder."""
-        state = state or {}
         monitor = MemoryMonitor()
-        prev_group_metadata: dict = state.get("prev_group_metadata")
+        prev_group_metadata: dict | None = self.state.get("prev_group_metadata")
 
         with monitor.track_component("MetadataEnricher") as metrics:
             # always rebuild service_metadata
@@ -47,15 +44,13 @@ class MetadataEnricher(Component):
                     for group in groups
                 ]
 
+                self.state["prev_group_metadata"] = {
+                    group.name: [meta.title, meta.description]
+                    for group, meta in zip(groups, group_metadata)
+                }
                 result = Metadata(
                     service_metadata=service_metadata,
                     group_metadata=group_metadata,
-                    state={
-                        "prev_group_metadata": {
-                            group.name: [meta.title, meta.description]
-                            for group, meta in zip(groups, group_metadata)
-                        }
-                    },
                 )
 
             elif not operations:
@@ -63,9 +58,6 @@ class MetadataEnricher(Component):
                 result = Metadata(
                     service_metadata=None,
                     group_metadata=[],
-                    state={
-                        "prev_group_metadata": prev_group_metadata,
-                    },
                 )
 
             else:
@@ -87,15 +79,13 @@ class MetadataEnricher(Component):
                             )
                         )
 
+                self.state["prev_group_metadata"] = {
+                    group.name: [meta.title, meta.description]
+                    for group, meta in zip(groups, group_metadata)
+                }
                 result = Metadata(
                     service_metadata=service_metadata,
                     group_metadata=group_metadata,
-                    state={
-                        "prev_group_metadata": {
-                            group.name: [meta.title, meta.description]
-                            for group, meta in zip(groups, group_metadata)
-                        }
-                    },
                 )
 
         log_performance_metrics(metrics, self.logger)

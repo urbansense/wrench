@@ -28,7 +28,7 @@ class CronScheduler(Scheduler):
         month: int = 0,
         day: int = 0,
         week: int = 0,
-        day_of_week: int | str = None,
+        day_of_week: int | str | None = None,
         hour: int = 0,
         minute: int = 0,
         second: int = 0,
@@ -123,7 +123,7 @@ class IntervalScheduler(Scheduler):
         index = 1
         time_section = False
         value = ""
-        result = {
+        result: dict[str, int | float] = {
             "years": 0,
             "months": 0,
             "weeks": 0,
@@ -185,7 +185,9 @@ class IntervalScheduler(Scheduler):
 
         # assume 365 days per year and 30 days per month
         # since timedelta doesn't work with months and years
-        result["days"] = result["days"] + 365 * result["years"] + 30 * result["months"]
+        result["days"] = int(
+            result["days"] + 365 * result["years"] + 30 * result["months"]
+        )
         result["years"] = 0
         result["months"] = 0
 

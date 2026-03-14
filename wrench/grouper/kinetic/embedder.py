@@ -30,7 +30,7 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         if isinstance(embedder, SentenceTransformer):
             self.embedding_model: SentenceTransformer = embedder
         elif isinstance(embedder, str):
-            self.embedding_model: SentenceTransformer = SentenceTransformer(embedder)
+            self.embedding_model = SentenceTransformer(embedder)
 
     def embed(
         self,

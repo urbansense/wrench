@@ -8,7 +8,6 @@
 # needs of this project.
 
 import logging
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -48,7 +47,7 @@ class PipelineConfig(BaseModel):
     metadataenricher: MetadataEnricher | None = None
     cataloger: Cataloger | None = None
 
-    template_: Literal[PipelineType.NONE] = PipelineType.NONE
+    template_: PipelineType = PipelineType.NONE
 
     def _get_components(self) -> list[ComponentDefinition]:
         """Get component definitions. Override in subclasses for template pipelines."""

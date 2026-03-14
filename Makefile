@@ -1,10 +1,10 @@
-.PHONY: clean test test_github install lint lint_src lint_tests lint_types help
+.PHONY: setup clean install test test_unit test_integration test_e2e lint lint_src lint_tests lint_types lint-fix format spell_check spell_fix help
 
 setup:
 	rm -rf .venv/
 	uv venv
-	. .venv/bin/activate
 	uv sync --group lint --group test --group dev
+	uv run pre-commit install
 
 clean:
 	rm -rf build/
@@ -20,13 +20,16 @@ install: clean
 	uv pip install -e "."
 
 test:
-	uv run pytest -v --cov-report=term-missing
+	uv run pytest tests/unit tests/integration -v --cov=wrench --cov-report=term-missing
 
 test_unit:
-	uv run pytest ./tests/unit-test --doctest-modules --junitxml="junit/test-results.xml" --cov=com --cov-report=xml --cov-report=html
+	uv run pytest tests/unit -v --cov=wrench --cov-report=term-missing
+
+test_integration:
+	uv run pytest tests/integration -v --cov=wrench --cov-report=term-missing
 
 test_e2e:
-	uv run pytest ./tests/e2e --doctest-modules --junitxml="junit/test-results.xml" --cov=com --cov-report=xml --cov-report=html
+	uv run pytest tests/e2e -v --cov=wrench --cov-report=term-missing
 
 # Check source code
 lint_src:
@@ -45,7 +48,7 @@ lint_types:
 	uv run --group lint mypy wrench
 
 # Main lint command that runs all groups
-lint: lint_src
+lint: lint_src lint_tests
 
 lint-fix:
 	uv run --group lint ruff check wrench --fix
@@ -63,11 +66,27 @@ spell_fix:
 
 # Help target
 help:
-	@echo "Available lint commands:"
-	@echo "  make lint      - Run all lint checks"
-	@echo "  make lint_src  - Lint source code only"
-	@echo "  make lint_tests- Lint test code only"
-	@echo "  make lint_types- Check type hints"
+	@echo "Setup:"
+	@echo "  make setup       - Create venv, install all deps, install pre-commit hooks"
+	@echo "  make install     - Install package in editable mode"
+	@echo "  make clean       - Remove build artifacts and caches"
 	@echo ""
-	@echo "Available format commands:"
+	@echo "Testing:"
+	@echo "  make test            - Run unit + integration tests with coverage"
+	@echo "  make test_unit       - Run unit tests only"
+	@echo "  make test_integration - Run integration tests only"
+	@echo "  make test_e2e        - Run end-to-end tests only"
+	@echo ""
+	@echo "Linting:"
+	@echo "  make lint        - Run all lint checks (src + tests)"
+	@echo "  make lint_src    - Lint source code only"
+	@echo "  make lint_tests  - Lint test code only"
+	@echo "  make lint_types  - Check type hints with mypy"
+	@echo "  make lint-fix    - Auto-fix lint issues in source"
+	@echo ""
+	@echo "Formatting:"
 	@echo "  make format      - Format all code"
+	@echo ""
+	@echo "Spell checking:"
+	@echo "  make spell_check - Check for misspellings"
+	@echo "  make spell_fix   - Auto-fix misspellings"
