@@ -20,11 +20,11 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
-          python-version: 3.12
+          python-version: 3.14
       - name: Set up uv
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
-          version: "0.6.x"
+          version: "0.10.x"
       - name: Install dependencies
         run: |
           uv sync --group lint
