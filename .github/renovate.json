@@ -9,6 +9,7 @@
   "schedule": ["before 9am on monday"],
   "timezone": "Europe/Berlin",
   "minimumReleaseAge": "3 days",
+  "dependencyDashboard": true,
   "dependencyDashboardApproval": false,
   "lockFileMaintenance": {
     "enabled": true,
