@@ -1,0 +1,107 @@
+name: PR Meta
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - labeled
+      - unlabeled
+      - reopened
+      - ready_for_review
+
+permissions:
+  pull-requests: read
+
+jobs:
+  # ── Conventional Commits title ──────────────────────────────────
+  #
+  # Validates that the PR title follows the pattern:
+  #   type(optional-scope): lowercase description
+  #
+  # Uses https://github.com/amannn/action-semantic-pull-request
+  pr-title:
+    name: PR title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5f7536c8d1 # v5.5.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Allowed Conventional Commit types.
+          # Keep in sync with whatever generates your changelog/release notes.
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          # Require the first letter after "type(scope): " to be lowercase.
+          # This regex says: first char must be a-z or a digit.
+          subjectPattern: ^[a-z\d].*$
+          subjectPatternError: >
+            The subject "{subject}" found in the PR title "{title}"
+            must start with a lowercase letter or digit.
+            Example: "fix: resolve intermittent timeout" (not "fix: Resolve ...").
+          # Do not require a scope -- scopes are optional.
+          requireScope: false
+          # If you squash-merge, the PR title becomes the commit message,
+          # so validating the title is sufficient.
+          validateSingleCommit: false
+
+  # ── Required labels ─────────────────────────────────────────────
+  #
+  # At least one label must be present before the PR can merge.
+  # This ensures every merged PR is categorisable in release notes.
+  #
+  # Uses https://github.com/mheap/github-action-required-labels
+  required-labels:
+    name: Required labels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mheap/github-action-required-labels@8bdd0b8abc4e6110e0e73bc7a03e14b5bb7767ce # v5.5.0
+        with:
+          mode: minimum
+          count: 1
+
+  # ── PR hygiene ──────────────────────────────────────────────────
+  #
+  # Lightweight checks that run as shell commands -- no extra actions needed.
+  pr-hygiene:
+    name: PR hygiene
+    runs-on: ubuntu-latest
+    steps:
+      # Block merging PRs whose title starts with WIP (case-insensitive).
+      - name: No WIP in title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if echo "$PR_TITLE" | grep -iqE '^\[?wip\]?'; then
+            echo "::error::PR title starts with WIP -- mark as Draft instead."
+            exit 1
+          fi
+
+      # Require a non-trivial PR body (more than just the template headings).
+      # Strips HTML comments (<!-- ... -->), blank lines, and lines that are
+      # only markdown headings (## ...) or checkbox items, then checks if
+      # anything remains.
+      - name: PR body is not empty
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # Strip HTML comments, heading-only lines, empty checkbox lines, blank lines
+          cleaned=$(echo "$PR_BODY" \
+            | sed 's/<!--.*-->//g' \
+            | grep -vE '^\s*(#{1,6}\s|$|-\s*\[\s?\])' \
+            || true)
+          if [ -z "$cleaned" ]; then
+            echo "::error::PR body is empty or contains only template headings. Please describe your changes."
+            exit 1
+          fi
