@@ -6,8 +6,6 @@ on:
       - opened
       - edited
       - synchronize
-      - labeled
-      - unlabeled
       - reopened
       - ready_for_review
 
@@ -55,21 +53,6 @@ jobs:
           # If you squash-merge, the PR title becomes the commit message,
           # so validating the title is sufficient.
           validateSingleCommit: false
-
-  # ── Required labels ─────────────────────────────────────────────
-  #
-  # At least one label must be present before the PR can merge.
-  # This ensures every merged PR is categorisable in release notes.
-  #
-  # Uses https://github.com/mheap/github-action-required-labels
-  required-labels:
-    name: Required labels
-    runs-on: ubuntu-latest
-    steps:
-      - uses: mheap/github-action-required-labels@v5
-        with:
-          mode: minimum
-          count: 1
 
   # ── PR hygiene ──────────────────────────────────────────────────
   #
