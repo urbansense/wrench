@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-03-21
+
+### Added
+- Multidatastreams support for SensorThings harvester (#53)
+- Tools CLI with experiment, evaluate, and pipeline commands (#45, #56)
+- PR meta checks workflow enforcing Conventional Commits and PR hygiene (#67)
+- Renovate config for automated dependency updates (#59)
+
+### Fixed
+- YAKE keyword extraction bug (#55)
+- Tools CLI using `items` instead of `devices` (#46)
+- Minor inconsistencies across components (#47)
+
+### Changed
+- License changed to Apache 2.0 (#44)
+
+## [0.3.0] - 2025-09-17
+
+### Added
+- BERTopic and LDA groupers (#43)
+- Clustering grouper (#34)
+- KINETIC grouper improvements (#35)
+- SensorThings metadata builder improvements (#37)
+- Basic scheduler for periodic pipeline execution (#31)
+- Early stopping support in pipeline (#30)
+- Pipeline loading from config file (#32)
+
 ## [0.2.0] - 2025-01-01
 
 ### Added
