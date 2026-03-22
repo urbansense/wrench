@@ -142,6 +142,51 @@ source = ["wrench"]
 [tool.mypy]
 disable_error_code = ["import-untyped"]
 
+# ── git-cliff changelog generator ─────────────────────────────────
+# Body template: .github/cliff-template.tera (passed via --body flag)
+# Usage:
+#   Full changelog:    git cliff --body .github/cliff-template.tera -o CHANGELOG.md
+#   Single release:    git cliff --body .github/cliff-template.tera --latest --strip header
+[tool.git-cliff.changelog]
+header = """# Changelog\n
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n
+"""
+# Body template is in .github/cliff-template.tera — pass via CLI:
+#   git cliff --body .github/cliff-template.tera
+footer = ""
+trim = true
+
+[tool.git-cliff.git]
+conventional_commits = true
+filter_unconventional = false
+split_commits = false
+commit_parsers = [
+    { message = "^feat", group = "New Features" },
+    { message = "^fix", group = "Bug Fixes" },
+    { message = "^perf", group = "Enhancements" },
+    { message = "^refactor", group = "Enhancements" },
+    { message = "^doc", group = "Documentation" },
+    { message = "^test", group = "Testing" },
+    { message = "^chore", skip = true },
+    { message = "^ci", skip = true },
+    { message = "^build", skip = true },
+    { message = "^style", skip = true },
+    { message = "^revert", skip = true },
+]
+protect_breaking_commits = false
+filter_commits = false
+tag_pattern = "v?[0-9].*"
+skip_tags = ""
+topo_order = false
+sort_commits = "oldest"
+
+[tool.git-cliff.remote.github]
+owner = "urbansense"
+repo = "wrench"
+
 # Optional extras not installed in the lint environment
 [[tool.mypy.overrides]]
 module = [
