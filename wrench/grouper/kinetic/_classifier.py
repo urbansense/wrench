@@ -238,15 +238,16 @@ class JevClassifier(BaseClassifier):
         self._max_workers = max_workers
         self._logger = wrench_logger.getChild(self.__class__.__name__)
         self._session = requests.Session()
-        self._session.headers.update({
-            "Authorization": f"Bearer {self._api_key}",
-            "Content-Type": "application/json",
-        })
+        self._session.headers.update(
+            {
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+            }
+        )
 
     def _build_criteria(self, clusters: list[Cluster]) -> dict[str, str]:
         criteria = {
-            f"cluster_{i}": ", ".join(c.keywords)
-            for i, c in enumerate(clusters)
+            f"cluster_{i}": ", ".join(c.keywords) for i, c in enumerate(clusters)
         }
         criteria[self._UNCLASSIFIED_KEY] = (
             "Does not clearly belong to any of the listed categories."

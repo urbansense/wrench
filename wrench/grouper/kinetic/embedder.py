@@ -77,7 +77,9 @@ class OpenAIEmbedder(BaseEmbedder):
     and any other provider that exposes POST /v1/embeddings.
     """
 
-    def __init__(self, model: str, base_url: str | None = None, api_key: str = "ollama"):
+    def __init__(
+        self, model: str, base_url: str | None = None, api_key: str = "ollama"
+    ):
         import openai
 
         self.embedding_model = model
@@ -96,8 +98,12 @@ class OpenAIEmbedder(BaseEmbedder):
         all_embeddings: list[np.ndarray] = []
         for i in range(0, len(documents), batch_size):
             batch = documents[i : i + batch_size]
-            response = self._client.embeddings.create(model=self.embedding_model, input=batch)
-            vecs = np.array([item.embedding for item in response.data], dtype=np.float32)
+            response = self._client.embeddings.create(
+                model=self.embedding_model, input=batch
+            )
+            vecs = np.array(
+                [item.embedding for item in response.data], dtype=np.float32
+            )
             all_embeddings.append(vecs)
         return np.vstack(all_embeddings)
 
