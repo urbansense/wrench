@@ -30,22 +30,25 @@ def experiment():
     "--name", "-n", default=None, help="Experiment name (auto-generated if omitted)"
 )
 @click.option("--embedding-model", "-em", default=None, help="Embeddings model name")
+@click.option(
+    "--embedding-provider",
+    "-ep",
+    type=click.Choice(["sentence-transformers", "openai"]),
+    default="sentence-transformers",
+    help="Embedding backend (sentence-transformers uses local HuggingFace models; openai uses any OpenAI-compatible endpoint)",
+)
+@click.option("--embedding-base-url", default=None, help="Base URL for openai embedding provider (e.g. http://localhost:11434/v1 for Ollama)")
+@click.option("--embedding-api-key", default=None, help="API key for openai embedding provider")
+@click.option(
+    "--classifier",
+    type=click.Choice(["embedding", "jev"]),
+    default="embedding",
+    help="Classifier backend (embedding = local cosine similarity; jev = TypeSafe Jev via OpenRouter)",
+)
 @click.option("--llm-model", default=None, help="LLM model name")
 @click.option("--llm-base-url", default=None, help="LLM base URL")
 @click.option("--llm-api-key", default=None, help="LLM API key")
-@click.option(
-    "--keyword-extractor",
-    type=click.Choice(["keybert", "yake"]),
-    default="keybert",
-    help="Keyword extractor to use",
-)
-@click.option("--keybert-top-n", type=int, default=7, help="KeyBERT top_n")
-@click.option("--keybert-use-mmr", is_flag=True, help="Enable MMR in KeyBERT")
-@click.option("--keybert-diversity", type=float, default=0.5, help="KeyBERT diversity")
 @click.option("--resolution", "-r", type=int, default=1, help="Louvain resolution")
-@click.option(
-    "--cooccurrence-top-n", type=int, default=7, help="Co-occurrence top-n keywords"
-)
 @click.option(
     "--ground-truth",
     "-gt",
@@ -61,15 +64,14 @@ def run(
     source: str,
     name: str | None,
     embedding_model: str | None,
+    embedding_provider: str,
+    embedding_base_url: str | None,
+    embedding_api_key: str | None,
+    classifier: str,
     llm_model: str | None,
     llm_base_url: str | None,
     llm_api_key: str | None,
-    keyword_extractor: str,
-    keybert_top_n: int,
-    keybert_use_mmr: bool,
-    keybert_diversity: float,
     resolution: int,
-    cooccurrence_top_n: int,
     ground_truth: str | None,
     lang: str,
     env: str | None,
@@ -83,11 +85,12 @@ def run(
 
         load_dotenv(env)
 
-    from wrench.grouper.kinetic.kinetic import KINETIC
-
     from tools.core.cache import DataCache
     from tools.core.config import resolve_llm_config
     from tools.core.metrics import compute_clustering_metrics, display_metrics
+    from wrench.grouper.kinetic._classifier import JevClassifier
+    from wrench.grouper.kinetic.embedder import OpenAIEmbedder, SentenceTransformerEmbedder
+    from wrench.grouper.kinetic.kinetic import KINETIC
 
     if name is None:
         name = f"{source}_r{resolution}_{datetime.now().strftime('%H%M%S')}"
@@ -100,24 +103,43 @@ def run(
         devices = cache.load_devices(source)
     console.print(f"[green]✓[/green] Loaded {len(devices)} devices from cache\n")
 
-    # Build LLM config
-    llm_cfg = resolve_llm_config(llm_base_url, llm_model, llm_api_key, embedding_model)
+    llm_cfg = resolve_llm_config(llm_base_url, llm_model, llm_api_key)
+
+    # Build embedder object
+    if embedding_provider == "openai":
+        resolved_model = embedding_model or "text-embedding-3-small"
+        resolved_api_key = embedding_api_key or llm_cfg.api_key
+        embedder = OpenAIEmbedder(
+            model=resolved_model,
+            base_url=embedding_base_url,
+            api_key=resolved_api_key,
+        )
+        embedder_label = f"openai/{resolved_model}"
+    else:
+        resolved_model = embedding_model or "intfloat/multilingual-e5-large-instruct"
+        embedder = resolved_model  # KINETIC wraps str in SentenceTransformerEmbedder
+        embedder_label = resolved_model
 
     console.print(f"[dim]LLM base_url:       {llm_cfg.base_url}[/dim]")
     console.print(f"[dim]LLM model:          {llm_cfg.model}[/dim]")
-    console.print(
-        f"[dim]Embedding model:    {llm_cfg.embedding_model or 'local (e5-large)'}[/dim]"
-    )
+    console.print(f"[dim]Embedding provider: {embedding_provider}[/dim]")
+    console.print(f"[dim]Embedding model:    {embedder_label}[/dim]")
+    console.print(f"[dim]Classifier:         {classifier}[/dim]")
     console.print(f"[dim]LLM api_key:        {llm_cfg.api_key[:8]}...[/dim]\n")
+
+    # Build classifier
+    classifier_obj = None
+    if classifier == "jev":
+        jev_api_key = llm_cfg.api_key
+        classifier_obj = JevClassifier(api_key=jev_api_key)
 
     # Instantiate KINETIC
     kinetic = KINETIC(
         llm_config=llm_cfg,
-        embedder=None,
+        embedder=embedder,
+        classifier=classifier_obj,
         lang=lang,
         resolution=resolution,
-        enable_trace=True,
-        cache_doc_embeddings=True,
     )
 
     # Run grouping
@@ -129,11 +151,15 @@ def run(
     # Build results dict
     results = {group.name: [str(d.id) for d in group.devices] for group in groups}
 
-    # Config
-    config = kinetic.get_config()
-
-    # Similarity scores
-    similarity_scores = kinetic.get_similarity_scores()
+    # Config snapshot for tracking
+    config = {
+        "resolution": resolution,
+        "lang": lang,
+        "llm_model": llm_cfg.model,
+        "embedding_provider": embedding_provider,
+        "embedding_model": embedder_label,
+        "classifier": classifier,
+    }
 
     # Metrics (if ground truth provided)
     metrics = None
@@ -151,8 +177,8 @@ def run(
         results=results,
         config=config,
         metrics=metrics,
-        similarity_scores=similarity_scores,
-        trace=kinetic.last_trace,
+        similarity_scores=None,
+        trace=None,
     )
 
     console.print(f"[green]✓[/green] Experiment saved to [cyan]{exp_dir}[/cyan]")
@@ -180,6 +206,7 @@ def list_experiments(source: str | None):
     table.add_column("Name", style="bold")
     table.add_column("Source")
     table.add_column("Timestamp")
+    table.add_column("Provider", max_width=20)
     table.add_column("Embedding Model", max_width=30)
     table.add_column("LLM Model", max_width=25)
     table.add_column("Resolution", justify="right")
@@ -195,6 +222,7 @@ def list_experiments(source: str | None):
             exp.get("name", ""),
             exp.get("source", ""),
             exp.get("timestamp", ""),
+            str(config.get("embedding_provider", "sentence-transformers")),
             str(config.get("embedding_model", "—")),
             str(config.get("llm_model", "—")),
             str(config.get("resolution", "—")),

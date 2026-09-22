@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from typing import Any, Literal
 
 import openai
@@ -10,11 +12,14 @@ from wrench.log import logger
 from wrench.models import Device, Group
 from wrench.utils.config import LLMConfig
 
-from ._classifier import Classifier
+from ._classifier import BaseClassifier, EmbeddingClassifier
 from .cooccurence import build_cooccurence_network
 from .embedder import SentenceTransformerEmbedder
 from .keyword_extractor import KeyBERTAdapter
 from .llm_topic_generator import LLMTopicGenerator
+
+_CACHE_DIR = Path(".kineticache")
+_CLUSTERS_CACHE = _CACHE_DIR / "clusters.json"
 
 
 class KINETIC(BaseGrouper):
@@ -29,7 +34,7 @@ class KINETIC(BaseGrouper):
     Attributes:
         keyword_extractor (KeyBERTAdapter): Uses KeyBERT to extract keywords from a
             list of document bodies.
-        classifier (Classifier): Classifies input documents into different clusters,
+        classifier (BaseClassifier): Classifies input documents into different clusters,
             created from the extracted keywords.
         generator (LLMTopicGenerator): Generates coherent topic groups based on created
             clusters.
@@ -41,6 +46,7 @@ class KINETIC(BaseGrouper):
         self,
         llm_config: LLMConfig,
         embedder: str | BaseEmbedder = "intfloat/multilingual-e5-large-instruct",
+        classifier: BaseClassifier | None = None,
         lang: Literal["de", "en"] = "de",
         resolution: int = 1,
     ):
@@ -49,23 +55,27 @@ class KINETIC(BaseGrouper):
 
         Arguments:
             llm_config (LLMConfig): The LLM configuration including host, model
-                and api_key. By default this is set to use an "ollama" as the API key.
-                To use OpenAI's models, generate an API key on the OpenAI Platform.
-            embedder (str): The embeddings model compatible with the
-                `SentenceTransformers` library. Defaults to
-                `intfloat/multilingual-e5-large-instruct`, use `all-MiniLM-L12-v2` for
-                english data.
-            lang (["en", "de"]): The language of the source data. Default is "de" for
-                german.
-            resolution (int): The resolution of the clusters, larger than 1 for smaller
-                clusters, smaller than 1 for bigger clusters.
+                and api_key.
+            embedder (str | BaseEmbedder): The embeddings model used for keyword
+                extraction (KeyBERT) and, when no custom classifier is provided,
+                for document classification too. Accepts a SentenceTransformers
+                model name string or a BaseEmbedder instance.
+            classifier (BaseClassifier | None): Classifier to assign devices to
+                clusters. Defaults to EmbeddingClassifier(embedder). Supply a
+                custom implementation (e.g. JevClassifier) to replace the
+                embedding-based approach entirely.
+            lang (["en", "de"]): The language of the source data. Default is "de".
+            resolution (int): The resolution of the clusters, larger than 1 for
+                smaller clusters, smaller than 1 for bigger clusters.
         """
         if isinstance(embedder, str):
             embedder = SentenceTransformerEmbedder(embedder)
 
         self.keyword_extractor = KeyBERTAdapter(embedder, lang=lang)
 
-        self.classifier = Classifier(embedder)
+        self.classifier = (
+            classifier if classifier is not None else EmbeddingClassifier(embedder)
+        )
 
         self.generator = LLMTopicGenerator(
             llm_client=openai.OpenAI(
@@ -106,10 +116,15 @@ class KINETIC(BaseGrouper):
             for device in devices
         ]
 
-        if self.classifier.is_cached():
-            clusters = self.classifier._load_clusters()
+        if _CLUSTERS_CACHE.exists():
+            self.logger.info("Loading cached clusters")
+            with open(_CLUSTERS_CACHE) as f:
+                clusters = [Cluster.model_validate(c) for c in json.load(f)]
         else:
             clusters = self.build_clusters(docs)
+            _CACHE_DIR.mkdir(exist_ok=True)
+            with open(_CLUSTERS_CACHE, "w") as f:
+                json.dump([c.model_dump(mode="json") for c in clusters], f)
 
         doc_ids = self.classifier.classify(docs, clusters)
 

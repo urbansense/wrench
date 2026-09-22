@@ -179,8 +179,8 @@ def _display_stats(stats: dict):
 )
 @click.option(
     "--handle-missing",
-    type=click.Choice(["skip", "error", "assign_new_cluster"]),
-    default="skip",
+    type=click.Choice(["singleton", "skip", "assign_new_cluster"]),
+    default="singleton",
     help="How to handle items missing from one of the datasets",
 )
 def compute_metrics(ground_truth: str, results: str, output: str, handle_missing: str):
@@ -325,6 +325,101 @@ def compare_results(ground_truth: str, results: str, detailed: bool):
                     console.print(
                         f"  Missing from results: {diff['only_in_json1'][:5]}..."
                     )
+
+
+@evaluate.command(name="cross-tab")
+@click.argument("ground_truth", type=click.Path(exists=True))
+@click.argument("results", type=click.Path(exists=True))
+@click.option(
+    "--show-devices",
+    "-d",
+    is_flag=True,
+    help="List device IDs for each misclassified cell",
+)
+def cross_tab(ground_truth: str, results: str, show_devices: bool):
+    """Show a cross-tabulation of GT clusters vs result clusters.
+
+    Rows are ground truth categories; columns are the predicted cluster each
+    GT device actually landed in.  Unclassified devices (in GT but missing
+    from results) are shown in an [unclassified] column.
+
+    GROUND_TRUTH: Path to ground truth JSON file
+    RESULTS: Path to clustering results JSON file
+    """
+    with open(ground_truth) as f:
+        gt_data = json.load(f)
+
+    with open(results) as f:
+        result_data = json.load(f)
+
+    # Build reverse map: device_id -> result cluster (or None)
+    device_to_pred: dict[str, str | None] = {}
+    for cluster, devices in result_data.items():
+        for d in devices:
+            device_to_pred[d] = cluster
+
+    # For each GT cluster, tally where its devices landed
+    # cross[(gt_cluster, pred_cluster)] = [device_ids]
+    from collections import defaultdict
+
+    cross: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for gt_cluster, devices in gt_data.items():
+        for d in devices:
+            pred = device_to_pred.get(d, "__unclassified__")
+            cross[(gt_cluster, pred)].append(d)
+
+    # Determine result cluster columns (sorted by total count, desc)
+    pred_clusters: dict[str, int] = defaultdict(int)
+    for (_, pred), devs in cross.items():
+        pred_clusters[pred] += len(devs)
+    ordered_preds = sorted(pred_clusters, key=lambda k: pred_clusters[k], reverse=True)
+
+    gt_clusters = list(gt_data.keys())
+
+    # Build display table
+    table = Table(title="GT → Predicted cross-tabulation", show_lines=True)
+    table.add_column("GT cluster", style="bold cyan", min_width=20)
+    table.add_column("Total", style="bold", justify="right")
+    for pred in ordered_preds:
+        label = pred if pred != "__unclassified__" else "[yellow](unclassified)[/yellow]"
+        table.add_column(label, justify="right", max_width=28, no_wrap=False)
+
+    for gt in gt_clusters:
+        total = len(gt_data[gt])
+        row = [gt, str(total)]
+        for pred in ordered_preds:
+            count = len(cross.get((gt, pred), []))
+            if count == 0:
+                row.append("")
+            elif pred == "__unclassified__":
+                row.append(f"[yellow]{count}[/yellow]")
+            else:
+                # highlight dominant cell (most devices from this GT cluster)
+                gt_counts = {p: len(cross.get((gt, p), [])) for p in ordered_preds}
+                dominant = max(gt_counts, key=gt_counts.get)
+                if pred == dominant and count > 0:
+                    row.append(f"[green]{count}[/green]")
+                else:
+                    row.append(f"[red]{count}[/red]")
+        table.add_row(*row)
+
+    console.print(table)
+
+    if show_devices:
+        console.print("\n[bold]Misclassified devices (non-dominant cells):[/bold]")
+        for gt in gt_clusters:
+            gt_counts = {
+                p: cross.get((gt, p), []) for p in ordered_preds
+            }
+            dominant = max(gt_counts, key=lambda p: len(gt_counts[p]))
+            for pred, devs in gt_counts.items():
+                if pred != dominant and devs:
+                    label = pred if pred != "__unclassified__" else "(unclassified)"
+                    console.print(
+                        f"\n  [cyan]{gt}[/cyan] → [red]{label}[/red] "
+                        f"({len(devs)} devices)"
+                    )
+                    console.print(f"    {devs}")
 
 
 def _compare_json_lists(json1, json2):
