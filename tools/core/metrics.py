@@ -12,15 +12,18 @@ from tools.core.console import console
 def dicts_to_labels(
     true_dict: dict,
     pred_dict: dict,
-    handle_missing: str = "skip",
+    handle_missing: str = "singleton",
 ) -> tuple[list, list[int], list[int]]:
     """Convert cluster dictionaries to label arrays for sklearn metrics.
 
     Args:
         true_dict: Ground truth mapping (cluster name -> item IDs).
         pred_dict: Predicted mapping (cluster name -> item IDs).
-        handle_missing: How to handle items missing from one dataset
-            ("skip", "error", or "assign_new_cluster").
+        handle_missing: How to handle items missing from one dataset.
+            "singleton": each unclassified device gets its own unique cluster
+                (recommended — a grouper that ignores devices is penalised).
+            "skip": silently drop devices absent from either dict.
+            "assign_new_cluster": lump all unclassified devices into one cluster.
 
     Returns:
         Tuple of (item_ids, true_labels, predicted_labels).
@@ -51,6 +54,14 @@ def dicts_to_labels(
             for item in all_items
             if item in true_item_to_cluster and item in pred_item_to_cluster
         ]
+    elif handle_missing == "singleton":
+        # Each unclassified device becomes its own unique cluster so the
+        # grouper is penalised for every device it drops.
+        for item in all_items:
+            if item not in true_item_to_cluster:
+                true_item_to_cluster[item] = f"__missing_true_{item}"
+            if item not in pred_item_to_cluster:
+                pred_item_to_cluster[item] = f"__missing_pred_{item}"
     elif handle_missing == "assign_new_cluster":
         next_true_cluster = f"missing_true_{len(true_dict)}"
         next_pred_cluster = f"missing_pred_{len(pred_dict)}"
@@ -95,7 +106,7 @@ def compute_clustering_metrics(ground_truth_path: str, results: dict) -> dict | 
         with open(ground_truth_path) as f:
             gt_data = json.load(f)
 
-        x, y_true, y_pred = dicts_to_labels(gt_data, results, "skip")
+        x, y_true, y_pred = dicts_to_labels(gt_data, results, "singleton")
 
         nmi = normalized_mutual_info_score(y_true, y_pred)
         h, c, v = homogeneity_completeness_v_measure(y_true, y_pred)

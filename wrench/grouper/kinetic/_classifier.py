@@ -1,8 +1,11 @@
+import hashlib
 import json
-import os
+from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import numpy as np
+import requests
 
 from wrench.grouper.kinetic.embedder import BaseEmbedder
 from wrench.log import logger as wrench_logger
@@ -14,7 +17,26 @@ _CLUSTER_PROMPT = PromptManager.get_prompt("embed_topics.txt")
 _DOC_PROMPT = PromptManager.get_prompt("embed_documents.txt")
 
 
-class Classifier:
+class BaseClassifier(ABC):
+    @abstractmethod
+    def classify(
+        self,
+        docs: list[str],
+        clusters: list[Cluster],
+    ) -> list[np.ndarray]:
+        """Assign documents to clusters.
+
+        Args:
+            docs: Document strings, one per device.
+            clusters: Cluster objects (each has .keywords and ._devices).
+
+        Returns:
+            List of length len(clusters). Each element is an int array of
+            document indices assigned to that cluster.
+        """
+
+
+class EmbeddingClassifier(BaseClassifier):
     def __init__(
         self,
         embedder: BaseEmbedder,
@@ -24,8 +46,8 @@ class Classifier:
 
         self.cache_dir = Path(".kineticache")
         self.cache_dir.mkdir(exist_ok=True)
-        self.cache_clusters = self.cache_dir / "clusters.json"
         self.cache_embeddings = self.cache_dir / "embeddings.npz"
+        self.cache_doc_embeddings = self.cache_dir / "doc_embeddings.npz"
 
     def _embed_clusters(self, cluster_kws: list[list[str]]) -> np.ndarray:
         # embeddings shape is [num_clusters, D]
@@ -35,29 +57,22 @@ class Classifier:
         )
 
     def is_cached(self) -> bool:
-        return os.path.isfile(self.cache_clusters) and os.path.isfile(
-            self.cache_embeddings
-        )
+        return self.cache_embeddings.exists()
 
     def _embed_docs(self, documents: list[str]) -> np.ndarray:
-        return self._embedder.embed(documents, prompt=_DOC_PROMPT)
-
-    def _load_clusters(self) -> list[Cluster]:
-        with open(self.cache_clusters, "r") as f:
-            clusters: dict = json.load(f)
-
-        return [Cluster.model_validate(c) for c in clusters]
+        if self.cache_doc_embeddings.exists():
+            self._logger.info("Loading cached document embeddings")
+            return np.load(self.cache_doc_embeddings)["embeddings"]
+        self._logger.info("Embedding %d documents (will cache result)", len(documents))
+        embeddings = self._embedder.embed(documents, prompt=_DOC_PROMPT)
+        np.savez_compressed(self.cache_doc_embeddings, embeddings=embeddings)
+        return embeddings
 
     def _load_embeddings(self) -> np.ndarray:
-        data = np.load(self.cache_embeddings)
+        return np.load(self.cache_embeddings)["embeddings"]
 
-        return data["embeddings"]
-
-    def _save_clusters(self, clusters: list[Cluster], embeddings: np.ndarray):
+    def _save_embeddings(self, embeddings: np.ndarray):
         np.savez_compressed(self.cache_embeddings, embeddings=embeddings)
-
-        with open(self.cache_clusters, "w") as f:
-            json.dump([c.model_dump(mode="json") for c in clusters], f)
 
     def classify(
         self,
@@ -132,13 +147,10 @@ class Classifier:
 
     def _check_cache(self, clusters: list[Cluster]) -> np.ndarray:
         if self.is_cached():
-            clusters = self._load_clusters()
-            embeddings = self._load_embeddings()
-
-            return embeddings
+            return self._load_embeddings()
 
         cluster_embeddings = self._embed_clusters([c.keywords for c in clusters])
-        self._save_clusters(clusters, cluster_embeddings)
+        self._save_embeddings(cluster_embeddings)
         return cluster_embeddings
 
     def _calc_substring_similarity(
@@ -191,3 +203,137 @@ class Classifier:
         # similarity_matrix shape (n_doc, n_cluster)
 
         return similarity_matrix
+
+
+class JevClassifier(BaseClassifier):
+    """Classifier backed by TypeSafe's Jev model via OpenRouter.
+
+    Each device gets one API call with a single 'choice' question whose
+    criteria are the cluster keyword sets.  All N calls are dispatched in
+    parallel via a thread pool so wall-clock time scales with the slowest
+    call, not the sum.
+
+    Usage::
+
+        from wrench.grouper.kinetic._classifier import JevClassifier
+        from wrench.grouper.kinetic.kinetic import KINETIC
+
+        kinetic = KINETIC(
+            llm_config=cfg,
+            classifier=JevClassifier(api_key="sk-or-..."),
+        )
+    """
+
+    _OPENROUTER_URL = "https://openrouter.ai/api/alpha/decisions"
+    _UNCLASSIFIED_KEY = "__unclassified__"
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "typesafe/jev-1.13",
+        max_workers: int = 20,
+    ):
+        self._api_key = api_key
+        self._model = model
+        self._max_workers = max_workers
+        self._logger = wrench_logger.getChild(self.__class__.__name__)
+        self._session = requests.Session()
+        self._session.headers.update({
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        })
+
+    def _build_criteria(self, clusters: list[Cluster]) -> dict[str, str]:
+        criteria = {
+            f"cluster_{i}": ", ".join(c.keywords)
+            for i, c in enumerate(clusters)
+        }
+        criteria[self._UNCLASSIFIED_KEY] = (
+            "Does not clearly belong to any of the listed categories."
+        )
+        return criteria
+
+    def _call_jev(self, doc: str, criteria: dict[str, str]) -> str:
+        payload = {
+            "model": self._model,
+            "state": doc,
+            "questions": {
+                "cluster": {
+                    "type": "choice",
+                    "instructions": (
+                        "Which sensor category does this IoT device belong to?"
+                    ),
+                    "criteria": criteria,
+                }
+            },
+        }
+        response = self._session.post(self._OPENROUTER_URL, json=payload)
+        response.raise_for_status()
+        return response.json()["answers"]["cluster"]["choice"]
+
+    def _fetch_assignments(
+        self, docs: list[str], criteria: dict[str, str]
+    ) -> list[str]:
+        """Call Jev API for every doc and return the chosen key per doc."""
+        assignments: list[str | None] = [None] * len(docs)
+        with ThreadPoolExecutor(max_workers=self._max_workers) as pool:
+            futures = {
+                pool.submit(self._call_jev, doc, criteria): idx
+                for idx, doc in enumerate(docs)
+            }
+            for future in as_completed(futures):
+                idx = futures[future]
+                try:
+                    assignments[idx] = future.result()
+                except Exception as exc:
+                    self._logger.warning(
+                        "Jev call failed for doc %d: %s — marking unclassified",
+                        idx,
+                        exc,
+                    )
+                    assignments[idx] = self._UNCLASSIFIED_KEY
+        return assignments  # type: ignore[return-value]
+
+    def classify(
+        self,
+        docs: list[str],
+        clusters: list[Cluster],
+    ) -> list[np.ndarray]:
+        criteria = self._build_criteria(clusters)
+
+        # Assignment cache keyed on (docs, criteria) so clusters changes invalidate it
+        cache_dir = Path(".kineticache")
+        cache_key = hashlib.md5(
+            json.dumps({"criteria": criteria, "docs": docs}, sort_keys=True).encode()
+        ).hexdigest()[:12]
+        cache_file = cache_dir / f"jev_{cache_key}.json"
+
+        if cache_file.exists():
+            self._logger.info("Loading cached Jev assignments (%s)", cache_file.name)
+            with open(cache_file) as f:
+                assignments: list[str] = json.load(f)
+        else:
+            self._logger.info(
+                "Classifying %d documents into %d clusters via Jev (%s workers)",
+                len(docs),
+                len(clusters),
+                self._max_workers,
+            )
+            assignments = self._fetch_assignments(docs, criteria)
+            cache_dir.mkdir(exist_ok=True)
+            with open(cache_file, "w") as f:
+                json.dump(assignments, f)
+
+        buckets: list[list[int]] = [[] for _ in clusters]
+        unclassified = 0
+        for doc_idx, chosen in enumerate(assignments):
+            if chosen == self._UNCLASSIFIED_KEY or chosen is None:
+                unclassified += 1
+            else:
+                cluster_idx = int(chosen.split("_", 1)[1])
+                buckets[cluster_idx].append(doc_idx)
+
+        if unclassified:
+            self._logger.info("%d documents left unclassified by Jev", unclassified)
+
+        return [np.array(b, dtype=int) for b in buckets]
