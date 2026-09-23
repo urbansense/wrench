@@ -129,12 +129,15 @@ Compute clustering metrics by comparing results to ground truth.
 **Options:**
 
 - `--output, -o <path>`: Save metrics to JSON file
-- `--handle-missing <strategy>`: How to handle missing items (skip/error/assign_new_cluster)
+- `--handle-missing <strategy>`: How to handle devices missing from results
+  - `singleton` *(default)*: each unclassified device becomes its own cluster — groupers that drop devices are penalised
+  - `skip`: silently ignore devices absent from either dict
+  - `assign_new_cluster`: lump all unclassified devices into one shared cluster
 
 **Examples:**
 
 ```bash
-# Compute metrics
+# Compute metrics (singleton penalisation on by default)
 wrench-tools evaluate metrics data/hamburg_gt.json results/hamburg_results.json
 
 # Compute and save metrics
@@ -147,6 +150,24 @@ wrench-tools evaluate metrics data/gt.json results.json --output metrics.json
 - Homogeneity
 - Completeness
 - V-Measure
+
+#### `evaluate cross-tab <ground_truth> <results>`
+
+Show a cross-tabulation of ground-truth clusters vs predicted clusters. Each row is a GT category; each column is the predicted cluster its devices actually landed in. Dominant cells are green, leakage is red, unclassified devices are yellow.
+
+**Options:**
+
+- `--show-devices, -d`: List individual device IDs for every non-dominant cell
+
+**Examples:**
+
+```bash
+# Cross-tabulation summary
+wrench-tools evaluate cross-tab data/hamburg_gt.json results/hamburg_results.json
+
+# Show which devices leaked into wrong clusters
+wrench-tools evaluate cross-tab data/gt.json results.json --show-devices
+```
 
 #### `evaluate compare <ground_truth> <results>`
 
@@ -164,6 +185,90 @@ wrench-tools evaluate compare data/gt.json results.json
 
 # Detailed comparison
 wrench-tools evaluate compare data/gt.json results.json --detailed
+```
+
+---
+
+### Experiment tracking (`experiment`)
+
+Run KINETIC with different configurations, track results, and compare experiments.
+
+#### `experiment run <source>`
+
+Run KINETIC on a cached data source. Results, config, and metrics are saved to `.experiments/`.
+
+**Arguments:**
+
+- `source`: Name of the cached data source (e.g. `hamburg`, `osnabrueck`)
+
+**Options:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--name, -n` | auto | Experiment name (auto-generated if omitted) |
+| `--classifier` | `embedding` | `embedding` (local cosine similarity) or `jev` (TypeSafe Jev via OpenRouter) |
+| `--embedding-provider, -ep` | `sentence-transformers` | `sentence-transformers` or `openai` |
+| `--embedding-model, -em` | model-dependent | Embedding model name |
+| `--embedding-base-url` | — | Base URL for OpenAI-compatible embedding endpoint |
+| `--embedding-api-key` | — | API key for embedding endpoint |
+| `--llm-model` | — | LLM model for topic naming |
+| `--llm-base-url` | — | LLM base URL |
+| `--llm-api-key` | — | LLM API key |
+| `--resolution, -r` | `1` | Louvain resolution (higher = smaller clusters) |
+| `--ground-truth, -gt` | — | Ground truth JSON for automatic metrics |
+| `--lang` | `de` | Language (`de` or `en`) |
+| `--env, -e` | — | Load environment variables from a `.env` file |
+
+**Examples:**
+
+```bash
+# Default embedding classifier (no API cost)
+uv run python -m tools.cli experiment run hamburg \
+    --env .env \
+    --ground-truth tools/fixtures/data/hamburg_gt.json
+
+# Jev classifier via OpenRouter (⚠ costs API credits)
+uv run python -m tools.cli experiment run hamburg \
+    --classifier jev \
+    --env .env \
+    --ground-truth tools/fixtures/data/hamburg_gt.json
+
+# Ollama embeddings instead of local SentenceTransformers
+uv run python -m tools.cli experiment run hamburg \
+    --embedding-provider openai \
+    --embedding-model nomic-embed-text \
+    --embedding-base-url http://localhost:11434/v1 \
+    --env .env
+```
+
+#### `experiment list`
+
+List all tracked experiments, with NMI and V-Measure scores where available.
+
+```bash
+uv run python -m tools.cli experiment list
+uv run python -m tools.cli experiment list --source hamburg
+```
+
+#### `experiment show <exp_id>`
+
+Show full details of a single experiment: config, metrics, and topic breakdown. Opens a per-document similarity score report in the browser when available.
+
+```bash
+uv run python -m tools.cli experiment show hamburg_r1_182317_20260922_182449
+```
+
+#### `experiment compare <exp_id>...`
+
+Generate an interactive HTML report comparing two or more experiments side by side.
+
+**Options:**
+
+- `--output, -o <path>`: Output HTML path (auto-generated if omitted)
+- `--open-browser`: Open report in browser immediately
+
+```bash
+uv run python -m tools.cli experiment compare <exp_id_1> <exp_id_2> --open-browser
 ```
 
 ---
@@ -343,22 +448,20 @@ wrench-tools pipeline list-configs --component harvester
 
 ### Environment Variables
 
-Create a `.env` file in the `test_script` directory or your home directory (`~/.wrench.env`):
+Create a `.env` file in the project root (pass via `--env .env`):
 
 ```bash
-# CKAN/SDDI Configuration
+# LLM for topic naming (required for experiment run)
+LLM_API_KEY=sk-or-...          # OpenRouter or any OpenAI-compatible key
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=llama3.3:70b-instruct-q4_K_M
+
+# CKAN/SDDI (required for catalog commands)
 CKAN_BASE_URL=http://localhost:5000
 CKAN_API_TOKEN=your_api_token_here
-
-# LLM Configuration
-OLLAMA_URL=http://localhost:11434/v1
-OLLAMA_MODEL=llama3.1:8b
-OLLAMA_API_KEY=ollama
-
-GEMINI_URL=https://generativelanguage.googleapis.com/v1beta
-GEMINI_MODEL=gemini-pro
-GEMINI_API_KEY=your_gemini_key_here
 ```
+
+`LLM_API_KEY` is also reused as the Jev API key when `--classifier jev` is set, since both go through OpenRouter.
 
 ### Data Cache
 
@@ -374,45 +477,6 @@ tools/fixtures/data/
 
 ---
 
-## Migration from test_script
-
-The tools CLI replaces scattered test scripts with a unified interface:
-
-### Before (test_script)
-
-```bash
-# Had to know which file to run and modify
-python test_script/checkout_sta_server.py  # Manual code edits needed
-python test_script/evaluate.py             # Manual code edits needed
-python test_script/delete_sddi_entries.py  # Manual list editing needed
-```
-
-### After (tools CLI)
-
-```bash
-# Clean, documented interface
-wrench-tools data fetch hamburg
-wrench-tools evaluate metrics gt.json results.json
-wrench-tools catalog delete-batch packages.txt
-```
-
-### Command Mapping
-
-| Old Script | New Command |
-|------------|-------------|
-| `dataloader.py` | `wrench-tools data fetch <source>` |
-| `checkout_sta_server.py` | `wrench-tools data fetch <source>` |
-| `ground_truth.py` | `wrench-tools evaluate create-ground-truth` |
-| `evaluate.py` | `wrench-tools evaluate metrics` |
-| `check_accuracy.py` | `wrench-tools evaluate compare` |
-| `validate_*_results.py` | `wrench-tools evaluate compare` |
-| `delete_sddi_entries.py` | `wrench-tools catalog delete-batch` |
-| `checkout_sddi_catalog.py` | `wrench-tools catalog list/show` |
-| `test_pipeline_framework.py` | `wrench-tools pipeline run --once` |
-| `test_teleclass.py` | `wrench-tools pipeline test grouper` |
-
----
-
 ## Architecture
 
 ```
@@ -420,16 +484,20 @@ tools/
 ├── cli.py                    # Main CLI entry point
 ├── commands/                 # Command modules
 │   ├── data.py              # Data management commands
-│   ├── evaluate.py          # Evaluation commands
+│   ├── evaluate.py          # Evaluation commands (metrics, cross-tab, compare)
+│   ├── experiment.py        # Experiment run/list/show/compare
 │   ├── catalog.py           # Catalog management
 │   └── pipeline.py          # Pipeline execution
 ├── core/                    # Core utilities
 │   ├── cache.py             # Unified caching system
-│   ├── config_loader.py     # Configuration management
-│   └── ground_truth.py      # Ground truth utilities
+│   ├── config.py            # LLM config resolution
+│   ├── experiment.py        # Experiment tracker
+│   ├── metrics.py           # NMI / V-Measure computation
+│   ├── ground_truth.py      # Ground truth utilities
+│   └── report.py            # HTML report generation
 ├── fixtures/                # Test data and configs
 │   ├── data_sources.py      # Known SensorThings servers
-│   ├── data/               # Cached test data
+│   ├── data/               # Cached test data and ground-truth files
 │   └── configs/            # Template configurations
 └── notebooks/              # Exploratory analysis notebooks
 ```
@@ -489,19 +557,30 @@ KNOWN_SOURCES = {
 
 ```bash
 # 1. Fetch and cache Hamburg data
-wrench-tools data fetch hamburg --embeddings
+wrench-tools data fetch hamburg
 
 # 2. Create ground truth
-wrench-tools evaluate create-ground-truth hamburg data/hamburg_gt.json
+wrench-tools evaluate create-ground-truth hamburg tools/fixtures/data/hamburg_gt.json
 
-# 3. Run clustering pipeline
-wrench-tools pipeline run configs/hamburg_pipeline.yaml --once --save-results results/hamburg_results.json
+# 3. Run experiment with default embedding classifier
+uv run python -m tools.cli experiment run hamburg \
+    --env .env \
+    --ground-truth tools/fixtures/data/hamburg_gt.json
 
-# 4. Compute metrics
-wrench-tools evaluate metrics data/hamburg_gt.json results/hamburg_results.json --output metrics/hamburg_metrics.json
+# 4. Run the same data with Jev classifier for comparison (⚠ costs API credits)
+uv run python -m tools.cli experiment run hamburg \
+    --classifier jev \
+    --env .env \
+    --ground-truth tools/fixtures/data/hamburg_gt.json
 
-# 5. View detailed comparison
-wrench-tools evaluate compare data/hamburg_gt.json results/hamburg_results.json --detailed
+# 5. Compare both experiments
+uv run python -m tools.cli experiment list --source hamburg
+uv run python -m tools.cli experiment compare <embedding_exp_id> <jev_exp_id> --open-browser
+
+# 6. Inspect misclassified devices
+uv run python -m tools.cli evaluate cross-tab \
+    tools/fixtures/data/hamburg_gt.json \
+    .experiments/<exp_id>/results.json --show-devices
 ```
 
 ### Clean Up Test Catalog

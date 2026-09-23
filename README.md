@@ -16,10 +16,10 @@ Wrench is a modular, extensible workflow framework designed to streamline the pr
 
 - 🔄 **Automated Metadata Harvesting**: Extract metadata from various IoT data sources with minimal configuration
 - 📊 **Standardized Data Models**: Type-safe data structures using Pydantic for consistent handling of metadata
-- 🔍 **Advanced Classification**: Group similar sensors using machine learning and taxonomy-based approaches
+- 🔍 **Advanced Classification**: Group similar sensors using ML, embeddings, or probabilistic AI (Jev)
 - ✨ **Metadata Enrichment**: Enhance sensor descriptions with contextual information using LLM technologies
 - 🏗️ **Modular Architecture**: Compose workflows from interchangeable components for maximum flexibility
-- 🔌 **Extensible Interfaces**: Easily add support for new data sources and catalog systems
+- 🔌 **Extensible Interfaces**: Easily add support for new data sources, catalog systems, and classifier backends
 - 🤖 **LLM Integration**: Leverage AI capabilities for automatic content generation and classification
 
 ## Installation
@@ -184,22 +184,92 @@ Catalogers register metadata into data catalogs:
 
 ## Advanced Features
 
-### Advanced grouping with ML
+### KINETIC grouper
 
-Different groupers offer various approaches for sensor classification:
+KINETIC (Keyword-Informed, Network-Enhanced Topical Intelligence Classifier) is the primary grouper. It runs a three-stage pipeline:
+
+1. **Keyword extraction** — KeyBERT extracts keywords from each device's metadata
+2. **Co-occurrence clustering** — a Louvain graph detects communities of co-occurring keywords, forming clusters
+3. **Classification** — a classifier assigns each device to a cluster; an LLM then names each cluster
+
+#### Embedder backends
+
+By default KINETIC loads a SentenceTransformers model locally. You can pass any `BaseEmbedder` instead:
 
 ```python
-from wrench.utils.config import LLMConfig
-
-# KINETIC for hierarchical topic clustering
 from wrench.grouper.kinetic import KINETIC
+from wrench.grouper.kinetic.embedder import OpenAIEmbedder
+
+# Local SentenceTransformers (default)
 grouper = KINETIC(
-    llm_config=LLMConfig(base_url="https://my-llm.com", model="llama3.3:70b-instruct-q4_K_M"),
+    llm_config=llm_config,
     embedder="intfloat/multilingual-e5-large-instruct",
-    lang="en",
-    resolution=1,
 )
 
+# Any OpenAI-compatible endpoint (OpenAI, Ollama, etc.)
+grouper = KINETIC(
+    llm_config=llm_config,
+    embedder=OpenAIEmbedder(
+        model="text-embedding-3-small",
+        base_url="https://api.openai.com/v1",
+        api_key="sk-...",
+    ),
+)
+
+# Ollama locally
+grouper = KINETIC(
+    llm_config=llm_config,
+    embedder=OpenAIEmbedder(
+        model="nomic-embed-text",
+        base_url="http://localhost:11434/v1",
+    ),
+)
+```
+
+#### Classifier backends
+
+The classifier step is pluggable via the `BaseClassifier` interface. The default `EmbeddingClassifier` assigns devices by cosine similarity against cluster keyword embeddings. `JevClassifier` uses [TypeSafe's Jev model](https://typesafe.ai/jev) — a probabilistic decision model that selects the best-matching category without generating free text.
+
+```python
+from wrench.grouper.kinetic import KINETIC
+from wrench.grouper.kinetic._classifier import JevClassifier
+
+# Default: embedding-based cosine similarity (no extra API calls)
+grouper = KINETIC(llm_config=llm_config)
+
+# Jev via OpenRouter — parallel API calls, one per device
+grouper = KINETIC(
+    llm_config=llm_config,
+    classifier=JevClassifier(
+        api_key="sk-or-...",         # OpenRouter key
+        model="typesafe/jev-1.13",   # default
+        max_workers=20,              # parallel threads
+    ),
+)
+```
+
+Jev receives each device's text description as the `state` and a `choice` question whose `criteria` map cluster keys to their keyword lists. It returns which cluster best fits the device. Results are cached locally by a content hash so re-runs are free.
+
+#### Custom classifier
+
+Implement `BaseClassifier` to plug in any assignment logic:
+
+```python
+from wrench.grouper.kinetic._classifier import BaseClassifier, Cluster
+import numpy as np
+
+class MyClassifier(BaseClassifier):
+    def classify(self, docs: list[str], clusters: list[Cluster]) -> list[np.ndarray]:
+        # return a list of length len(clusters);
+        # each element is an int array of doc indices assigned to that cluster
+        ...
+
+grouper = KINETIC(llm_config=llm_config, classifier=MyClassifier())
+```
+
+### Other groupers
+
+```python
 # LDA for topic modeling (no extra dependencies required)
 from wrench.grouper.lda import LDAGrouper
 from wrench.grouper.lda.models import LDAConfig
@@ -210,6 +280,37 @@ from wrench.grouper.bertopic import BERTopicGrouper
 from wrench.grouper.bertopic.models import BERTopicConfig
 grouper = BERTopicGrouper(config=BERTopicConfig(min_topic_size=10))
 ```
+
+## Evaluation tooling
+
+The `tools/` directory contains a CLI for running and evaluating KINETIC experiments against ground-truth datasets.
+
+```bash
+# Run an experiment (devices must be cached first)
+uv run python -m tools.cli experiment run hamburg \
+    --classifier jev \
+    --env .env \
+    --ground-truth tools/fixtures/data/hamburg_gt.json
+
+# Switch embedding backend
+uv run python -m tools.cli experiment run hamburg \
+    --embedding-provider openai \
+    --embedding-model nomic-embed-text \
+    --embedding-base-url http://localhost:11434/v1
+
+# Compute clustering metrics against ground truth
+uv run python -m tools.cli evaluate metrics \
+    tools/fixtures/data/hamburg_gt.json results.json
+
+# Cross-tabulation: see which GT clusters leaked into which predicted clusters
+uv run python -m tools.cli evaluate cross-tab \
+    tools/fixtures/data/hamburg_gt.json results.json --show-devices
+
+# Compare multiple experiments
+uv run python -m tools.cli experiment compare <exp_id_1> <exp_id_2> --open-browser
+```
+
+Metrics use NMI and V-Measure. Devices that the grouper drops are penalised via a **singleton** strategy — each unclassified device becomes its own unique cluster — so a grouper cannot inflate its score by ignoring hard cases.
 
 ## Development
 
